@@ -31,6 +31,10 @@ public class Projection {
     // Constructors
     //-------------------------------------------------------------
 
+    public Projection() {
+    }
+
+
     public Projection(String field, Object details) {
         this.field = field;
         this.details = details;

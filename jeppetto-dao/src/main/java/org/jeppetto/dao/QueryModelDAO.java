@@ -74,15 +74,16 @@ public interface QueryModelDAO<T, PK extends Serializable> extends GenericDAO<T,
      * used to build up the resulting QueryModel that will ultimately be
      * passed back to the one of the find/project methods above.
      *
-     * @param conditionType the type of Condition object to construct
+     *
      * @param conditionField the field upon which the Condition should be made
+     * @param conditionType the type of Condition object to construct
      * @param argsIterator an Iterator that may contain values used during the
      *                     construction of the Condition
      *
      * @return corresponding Condition object
      */
-    Condition buildCondition(ConditionType conditionType,
-                             String conditionField,
+    Condition buildCondition(String conditionField,
+                             ConditionType conditionType,
                              Iterator argsIterator);
 
 
@@ -91,14 +92,15 @@ public interface QueryModelDAO<T, PK extends Serializable> extends GenericDAO<T,
      * used to build up the resulting QueryModel that will ultimately be
      * passed back to the projectUsingQueryModel() method.
      *
-     * @param projectionType the type of Projection object to construct
+     *
      * @param projectionField the field upon which the Projection should be made
+     * @param projectionType the type of Projection object to construct
      * @param argsIterator an Iterator that may contain values used during the
      *                     construction of the Projection
      *
      * @return corresponding Projection object
      */
-    Projection buildProjection(ProjectionType projectionType,
-                               String projectionField,
+    Projection buildProjection(String projectionField,
+                               ProjectionType projectionType,
                                Iterator argsIterator);
 }

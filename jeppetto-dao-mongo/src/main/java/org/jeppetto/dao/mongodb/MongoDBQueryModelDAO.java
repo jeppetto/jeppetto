@@ -315,7 +315,9 @@ public class MongoDBQueryModelDAO<T>
 
 
     @Override
-    public Condition buildCondition(ConditionType conditionType, String conditionField, Iterator argsIterator) {
+    public Condition buildCondition(String conditionField,
+                                    ConditionType conditionType,
+                                    Iterator argsIterator) {
         MongoDBOperator mongoDBOperator = CONDITION_TYPE_TO_MONGO_OPERATOR.get(conditionType);
 
         if (mongoDBOperator == null) {
@@ -331,7 +333,9 @@ public class MongoDBQueryModelDAO<T>
 
 
     @Override
-    public Projection buildProjection(ProjectionType projectionType, String projectionField, Iterator argsIterator) {
+    public Projection buildProjection(String projectionField,
+                                      ProjectionType projectionType,
+                                      Iterator argsIterator) {
         return new Projection(projectionField, projectionType);
     }
 
@@ -694,14 +698,12 @@ public class MongoDBQueryModelDAO<T>
 
     private MongoDBCommand buildCommand(QueryModel queryModel) {
         BasicDBObject query = buildQueryObject(queryModel);
-        Projection projection = queryModel.getProjection();
-
         MongoDBCommand command;
 
-        if (projection == null) {
+        if (queryModel.getProjection() == null) {
             command = new BasicDBObjectCommand(query, enhancer);
         } else {
-            command = ProjectionCommands.forProjection(projection, query);
+            command = ProjectionCommands.forProjection(queryModel.getProjection(), query);
         }
 
         if (showQueries) {

@@ -80,13 +80,17 @@ public class DummyQueryModelDAO<T, PK extends Serializable>
 
 
     @Override
-    public Condition buildCondition(ConditionType conditionType, String conditionField, Iterator argsIterator) {
+    public Condition buildCondition(String conditionField,
+                                    ConditionType conditionType,
+                                    Iterator argsIterator) {
         return null;
     }
 
 
     @Override
-    public Projection buildProjection(ProjectionType projectionType, String projectionField, Iterator argsIterator) {
+    public Projection buildProjection(String projectionField,
+                                      ProjectionType projectionType,
+                                      Iterator argsIterator) {
         return null;
     }
 

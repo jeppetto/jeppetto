@@ -31,6 +31,10 @@ public class Condition {
     // Constructors
     //-------------------------------------------------------------
 
+    public Condition() {
+    }
+
+
     public Condition(String field, Object constraint) {
         this.field = field;
         this.constraint = constraint;
