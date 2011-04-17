@@ -1,0 +1,124 @@
+#* @vtlvariable name="getters" type="javassist.CtMethod[]" *#
+#* @vtlvariable name="base" type="javassist.CtClass" *#
+#* @vtlvariable name="_" type="org.jeppetto.enhance.TemplateHelper" *#
+#set( $baseName = $base.getName() )
+#set( $Q = '"')
+public $_.cls("${baseName}Dirtyable").ext($base).impl("org.jeppetto.dao.mongodb.enhance.Dirtyable") {
+
+    #set( $thisName = $_.clsName() )
+
+    //-------------------------------------------------------------
+    // Variables - Private
+    //-------------------------------------------------------------
+
+    #foreach ( $getter in $getters )
+    #set( $getterName = $getter.getName() )
+    $_.field("private Object __${getterName}_cache;")
+    #end
+
+    $_.field("private Object __acl_cache;")
+    $_.field("private Object __olv_cache;")
+    $_.field("private boolean __neverMarkedClean = true;")
+    $_.field("private final $baseName __delegate;")
+
+
+    //-------------------------------------------------------------
+    // Constructors
+    //-------------------------------------------------------------
+
+    $_.ctor("public $thisName() {
+        __delegate = null;
+    }")
+
+    $_.ctor("public $thisName($baseName copyMe) {
+        __delegate = copyMe;
+    }")
+
+
+    //-------------------------------------------------------------
+    // Methods - Delegates and overrides 
+    //-------------------------------------------------------------
+
+    #foreach ( $getter in $getters )
+        #set( $getterName = $getter.getName() )
+        #set( $setterName = $_.asSetter($getter) )
+        #set( $returnType = $getter.getReturnType().getName() )
+
+        $_.method("public $returnType $getterName() {
+            return (__delegate == null) ? super.$getterName() : __delegate.$getterName();
+        }")
+        
+        $_.method("public void $setterName($returnType value) {
+            if (__delegate != null) {
+                __delegate.$setterName(value);
+            } else {
+                super.$setterName(value);
+            }
+        }")
+    #end
+
+
+    //-------------------------------------------------------------
+    // Implementation - Dirtyable
+    //-------------------------------------------------------------
+
+    $_.method("public boolean isDirty() {
+        if (__neverMarkedClean) {
+            return true;
+        }
+
+        Object[] cached = new Object[] {
+        #foreach( $getter in $getters )
+        __${getter.getName()}_cache#if( $velocityHasNext ),#end
+        #end
+        };
+        Object[] current = new Object[] {
+        #foreach ( $getter in $getters )
+        org.jeppetto.enhance.ReferenceUtil.asObject(${getter.getName()}())#if( $velocityHasNext ),#end
+        #end
+        };
+
+        for (int i = 0; i < current.length; i++) {
+            Object o = current[i];
+            if (o instanceof org.jeppetto.dao.mongodb.enhance.Dirtyable) {
+                if (((org.jeppetto.dao.mongodb.enhance.Dirtyable) o).isDirty()) {
+                    return true;
+                } else if (cached[i] != null) {
+                    current[i] = cached[i]; // do this to avoid needless potentially-deep comparisons
+                }
+            } else if (org.jeppetto.dao.mongodb.enhance.DBObjectUtil.objectIsMutable(o)) {
+                // MUTABLE OBJECT WITHOUT DIRTY DETECTION, RETURN TRUE TO BE SAFE
+                return true;
+            }
+        }
+
+        if (!java.util.Arrays.deepEquals(cached, current)) {
+            return true;
+        }
+
+        if (this instanceof com.mongodb.DBObject) {
+            return !java.util.Arrays.deepEquals(
+                new Object[] { __acl_cache, __olv_cache },
+                new Object[] { ((com.mongodb.DBObject) this).get(${Q}__acl${Q}),
+                               ((com.mongodb.DBObject) this).get(${Q}__olv${Q}) });
+        }
+
+        return false;
+    }")
+
+    $_.method("public void markCurrentAsClean() {
+        __neverMarkedClean = false;
+        #foreach ( $getter in $getters )
+        #set( $getterName = $getter.getName() )
+        __${getterName}_cache = org.jeppetto.enhance.ReferenceUtil.asObject(${getterName}());
+        if (__${getterName}_cache instanceof org.jeppetto.dao.mongodb.enhance.Dirtyable) {
+            ((org.jeppetto.dao.mongodb.enhance.Dirtyable) __${getterName}_cache).markCurrentAsClean();
+        }
+        #end
+        if (this instanceof com.mongodb.DBObject) {
+            __acl_cache = ((com.mongodb.DBObject) this).get(${Q}__acl${Q});
+            __olv_cache = ((com.mongodb.DBObject) this).get(${Q}__olv${Q});
+        }
+        return this;
+    }")
+}
