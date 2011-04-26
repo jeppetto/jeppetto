@@ -141,8 +141,8 @@ public class DAOBuilder {
     private static void buildQueryModelFromAnnotation(DataAccessMethod dataAccessMethod, StringBuilder sb) {
         if (dataAccessMethod.conditions() != null && dataAccessMethod.conditions().length > 0) {
             for (org.jeppetto.dao.annotation.Condition conditionAnnotation : dataAccessMethod.conditions()) {
-                sb.append(String.format("    queryModel.addCondition(buildCondition(org.jeppetto.dao.ConditionType.%s, \"%s\", argsIterator));\n",
-                                        conditionAnnotation.type().name(), conditionAnnotation.field()));
+                sb.append(String.format("    queryModel.addCondition(buildCondition(\"%s\", org.jeppetto.dao.ConditionType.%s, argsIterator));\n",
+                                        conditionAnnotation.field(), conditionAnnotation.type().name()));
             }
 
             sb.append('\n');
@@ -151,8 +151,8 @@ public class DAOBuilder {
         if (dataAccessMethod.associations() != null && dataAccessMethod.associations().length > 0) {
             for (org.jeppetto.dao.annotation.Association associationAnnotation : dataAccessMethod.associations()) {
                 for (org.jeppetto.dao.annotation.Condition conditionAnnotation : associationAnnotation.conditions()) {
-                    sb.append(String.format("    queryModel.addAssociationCondition(\"%s\", buildCondition(org.jeppetto.dao.ConditionType.%s, \"%s\", argsIterator));\n",
-                                            associationAnnotation.field(), conditionAnnotation.type().name(), conditionAnnotation.field()));
+                    sb.append(String.format("    queryModel.addAssociationCondition(\"%s\", buildCondition(\"%s\", org.jeppetto.dao.ConditionType.%s, argsIterator));\n",
+                                            associationAnnotation.field(), conditionAnnotation.field(), conditionAnnotation.type().name()));
                 }
             }
 
@@ -160,8 +160,8 @@ public class DAOBuilder {
         }
 
         if (dataAccessMethod.projections() != null && dataAccessMethod.projections().length > 0) {
-            sb.append(String.format("    queryModel.setProjection(buildProjection(org.jeppetto.dao.ProjectionType.%s, \"%s\", argsIterator));\n\n",
-                                    dataAccessMethod.projections()[0].type().name(), dataAccessMethod.projections()[0].field()));
+            sb.append(String.format("    queryModel.setProjection(buildProjection(\"%s\", org.jeppetto.dao.ProjectionType.%s, argsIterator));\n\n",
+                                    dataAccessMethod.projections()[0].field(), dataAccessMethod.projections()[0].type().name()));
         }
 
         if (dataAccessMethod.sorts() != null && dataAccessMethod.sorts().length > 0) {
@@ -228,6 +228,7 @@ public class DAOBuilder {
             queryString = methodName.substring("findBy".length());
         } else if (methodName.startsWith("countBy")) {
             sb.append("    queryModel.setProjection(buildProjection(org.jeppetto.dao.ProjectionType.RowCount, null, argsIterator));\n\n");
+            sb.append("    queryModel.setProjection(buildProjection(null, org.jeppetto.dao.ProjectionType.RowCount, argsIterator));\n\n");
 
             queryString = methodName.substring("countBy".length());
         } else {
@@ -254,8 +255,8 @@ public class DAOBuilder {
                 for (String conditionString : conditionStrings) {
                     String conditionName = getConditionNameFromString(conditionString);
 
-                    sb.append(String.format("    queryModel.addCondition(buildCondition(org.jeppetto.dao.ConditionType.%s, \"%s\", argsIterator));\n",
-                                            conditionName, pruneFieldNameFromString(conditionString, conditionName)));
+                    sb.append(String.format("    queryModel.addCondition(buildCondition(\"%s\", org.jeppetto.dao.ConditionType.%s, argsIterator));\n",
+                                            pruneFieldNameFromString(conditionString, conditionName), conditionName));
                 }
 
                 sb.append('\n');
@@ -269,9 +270,9 @@ public class DAOBuilder {
                 for (String conditionString : conditionStrings) {
                     String conditionName = getConditionNameFromString(conditionString);
 
-                    sb.append(String.format("    queryModel.addAssociationCondition(\"%s\", buildCondition(org.jeppetto.dao.ConditionType.%s, \"%s\", argsIterator));\n",
+                    sb.append(String.format("    queryModel.addAssociationCondition(\"%s\", buildCondition(\"%s\", org.jeppetto.dao.ConditionType.%s, argsIterator));\n",
                                             Character.toLowerCase(associationString.charAt(0)) + associationString.substring(1, withIndex),
-                                            conditionName, pruneFieldNameFromString(conditionString, conditionName)));
+                                            pruneFieldNameFromString(conditionString, conditionName), conditionName));
                 }
 
                 sb.append('\n');
