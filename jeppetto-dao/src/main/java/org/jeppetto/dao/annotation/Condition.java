@@ -29,10 +29,6 @@ import java.lang.annotation.ElementType;
 @Target(ElementType.ANNOTATION_TYPE)
 public @interface Condition {
 
-    //-------------------------------------------------------------
-    // Methods - Abstract
-    //-------------------------------------------------------------
-
     public abstract String field();
 
     public abstract ConditionType type();

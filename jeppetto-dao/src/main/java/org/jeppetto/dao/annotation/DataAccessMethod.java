@@ -27,10 +27,6 @@ import java.lang.annotation.Target;
 @Target(ElementType.METHOD)
 public @interface DataAccessMethod {
 
-    //-------------------------------------------------------------
-    // Methods - Abstract
-    //-------------------------------------------------------------
-
     public abstract Condition[] conditions() default {};
 
     public abstract Association[] associations() default {};
@@ -42,4 +38,8 @@ public @interface DataAccessMethod {
     public abstract boolean limitResults() default false;
 
     public abstract boolean skipResults() default false;
+
+    public abstract boolean useSecurityContextArgument() default false;
+
+    public abstract String securityContextRole() default "";
 }

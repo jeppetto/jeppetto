@@ -27,10 +27,6 @@ import java.lang.annotation.Target;
 @Target(ElementType.METHOD)
 public @interface Projection {
 
-    //-------------------------------------------------------------
-    // Methods - Abstract
-    //-------------------------------------------------------------
-
     public abstract String field() default "";
 
     public abstract ProjectionType type();

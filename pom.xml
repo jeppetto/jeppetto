@@ -16,6 +16,6 @@
         <module>jeppetto-dao-mongo</module>
         <module>jeppetto-enhance</module>
         <module>jeppetto-test-support</module>
-    	<!-- <module>jeppetto-security</module> -->
+        <module>jeppetto-security</module>
     </modules>
 </project>

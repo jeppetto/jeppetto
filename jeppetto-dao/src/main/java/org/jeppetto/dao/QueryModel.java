@@ -17,6 +17,8 @@
 package org.jeppetto.dao;
 
 
+import org.jeppetto.security.SecurityContext;
+
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -35,6 +37,7 @@ public class QueryModel {
     private Projection projection;
     private int maxResults = -1;
     private int firstResult = -1;
+    private SecurityContext securityContext;
 
 
     //-------------------------------------------------------------
@@ -127,5 +130,15 @@ public class QueryModel {
 
     public void setFirstResult(int firstResult) {
         this.firstResult = firstResult;
+    }
+
+
+    public SecurityContext getSecurityContext() {
+        return securityContext;
+    }
+
+
+    public void setSecurityContext(SecurityContext securityContext) {
+        this.securityContext = securityContext;
     }
 }

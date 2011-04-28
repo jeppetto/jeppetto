@@ -54,10 +54,40 @@ public class DAOBuilder {
                                                                                        Class<I> daoInterface,
                                                                                        Class<? extends QueryModelDAO<T, PK>> partialDAOClass,
                                                                                        Map<String, Object> daoProperties) {
-        Class<? extends I> fullDAOClass = completeDAO(modelClass, daoInterface, partialDAOClass);
+        boolean enableAccessControl;
+
+        if (AccessControllable.class.isAssignableFrom(daoInterface)) {
+            // Verify the DAO implementation can support AccessControllable...
+
+            // ...if not assignable from AccessControllable, then fail...
+            if (!AccessControllable.class.isAssignableFrom(partialDAOClass)) {
+                throw new RuntimeException("Concrete DAO doesn't support AccessControllable (which is expected by DAO interface)");
+            }
+
+            // ...if no matching constructor, then fail...
+            try {
+                partialDAOClass.getConstructor(Class.class, Map.class, boolean.class);
+            } catch (Exception e) {
+                throw new RuntimeException("Concrete DAO doesn't support AccessControllable (which is expected by DAO interface)");
+            }
+
+            // TODO: validate AccessControllable methods exist
+
+            enableAccessControl = true;
+         } else {
+            enableAccessControl = false;
+        }
+
+        Class<? extends I> fullDAOClass = completeDAO(modelClass, daoInterface, partialDAOClass, enableAccessControl);
 
         try {
-            return fullDAOClass.getDeclaredConstructor(Class.class, Map.class).newInstance(modelClass, daoProperties);
+            if (enableAccessControl) {
+                return fullDAOClass.getDeclaredConstructor(Class.class, Map.class, boolean.class).newInstance(modelClass,
+                                                                                                              daoProperties,
+                                                                                                              true);
+            } else {
+                return fullDAOClass.getDeclaredConstructor(Class.class, Map.class).newInstance(modelClass, daoProperties);
+            }
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -70,7 +100,8 @@ public class DAOBuilder {
 
     private static <T, PK extends Serializable, I extends GenericDAO<T, PK>> Class<? extends I> completeDAO(Class<T> modelClass,
                                                                                                             Class<I> daoInterface,
-                                                                                                            Class<? extends QueryModelDAO<T, PK>> partialDAOClass) {
+                                                                                                            Class<? extends QueryModelDAO<T, PK>> partialDAOClass,
+                                                                                                            boolean enableAccessControl) {
         try {
             ClassPool pool = ClassPool.getDefault();
             CtClass daoInterfaceCtClass = pool.get(daoInterface.getName());
@@ -80,10 +111,19 @@ public class DAOBuilder {
             concrete.setSuperclass(partialDAOCtClass);
             concrete.addInterface(daoInterfaceCtClass);
 
-            String constructorCode = String.format("public %s(Class entityClass, java.util.Map daoProperties) { " +
-                                                   "    super(entityClass, daoProperties); " +
-                                                   "}",
-                                                   concrete.getSimpleName());
+            String constructorCode;
+
+            if (enableAccessControl) {
+                constructorCode = String.format("public %s(Class entityClass, java.util.Map daoProperties, boolean enableAccessControl) { " +
+                                                "    super(entityClass, daoProperties, enableAccessControl); " +
+                                                "}",
+                                                concrete.getSimpleName());
+            } else {
+                constructorCode = String.format("public %s(Class entityClass, java.util.Map daoProperties) { " +
+                                                "    super(entityClass, daoProperties); " +
+                                                "}",
+                                                concrete.getSimpleName());
+            }
 
             concrete.addConstructor(CtNewConstructor.make(constructorCode, concrete));
 
@@ -99,7 +139,7 @@ public class DAOBuilder {
                     // If the method is not declared in the partial class, we fall through to implementation
                 }
 
-                implementMethod(concrete, interfaceMethod, modelClass);
+                implementMethod(concrete, interfaceMethod, modelClass, enableAccessControl);
             }
 
             return ClassLoadingUtil.toClass(concrete);
@@ -109,7 +149,7 @@ public class DAOBuilder {
     }
 
 
-    private static <T> void implementMethod(CtClass concrete, CtMethod interfaceMethod, Class<T> modelClass)
+    private static <T> void implementMethod(CtClass concrete, CtMethod interfaceMethod, Class<T> modelClass, boolean enableAccessControl)
             throws CannotCompileException, ClassNotFoundException {
         CtMethod concreteMethod = CtNewMethod.copy(interfaceMethod, concrete, null);
         StringBuilder sb = new StringBuilder();
@@ -121,18 +161,45 @@ public class DAOBuilder {
 
         if ((dataAccessMethod = (DataAccessMethod) interfaceMethod.getAnnotation(DataAccessMethod.class)) != null) {
             buildQueryModelFromAnnotation(dataAccessMethod, sb);
+
+            if (enableAccessControl) {
+                if (dataAccessMethod.useSecurityContextArgument()) {
+                    sb.append("    queryModel.setSecurityContext(argsIterator.getNext());\n\n");
+                } else if (!dataAccessMethod.securityContextRole().isEmpty()) {
+                    sb.append("    SecurityContext securityContext = new SecurityContext();\n");
+                    sb.append("    securityContext.setRole(\"");
+                    sb.append(dataAccessMethod.securityContextRole());
+                    sb.append("\");\n\n");
+                } else {
+                    sb.append("    queryModel.setSecurityContext(SecurityContext.getCurrent());\n\n");
+                }
+            }
         } else {
+            // deal w/ '...As()' case
             buildQueryModelFromMethodName(interfaceMethod.getName(), sb);
+
+            if (enableAccessControl) {
+                if (!interfaceMethod.getName().endsWith("As")) {
+                    sb.append("    queryModel.setSecurityContext(argsIterator.getNext());\n\n");
+                } else {
+                    sb.append("    queryModel.setSecurityContext(SecurityContext.getCurrent());\n\n");
+                }
+            }
         }
 
         buildReturnClause(interfaceMethod, sb, modelClass);
+
         sb.append('\n').append('}');
 
         if (logger.isDebugEnabled()) {
             logDerivedMethod(interfaceMethod, sb);
         }
 
-        concreteMethod.setBody(sb.toString());
+        try {
+            concreteMethod.setBody(sb.toString());
+        } catch (CannotCompileException e) {
+            throw new RuntimeException("Unable to add method:\n" + sb.toString(), e);
+        }
 
         concrete.addMethod(concreteMethod);
     }
@@ -227,7 +294,6 @@ public class DAOBuilder {
         if (methodName.startsWith("findBy")) {
             queryString = methodName.substring("findBy".length());
         } else if (methodName.startsWith("countBy")) {
-            sb.append("    queryModel.setProjection(buildProjection(org.jeppetto.dao.ProjectionType.RowCount, null, argsIterator));\n\n");
             sb.append("    queryModel.setProjection(buildProjection(null, org.jeppetto.dao.ProjectionType.RowCount, argsIterator));\n\n");
 
             queryString = methodName.substring("countBy".length());
@@ -337,7 +403,7 @@ public class DAOBuilder {
 
             if (modelClass.getName().equals(returnTypeName)) {
                 if (method.getExceptionTypes().length > 0) {
-                    sb.append(  "\n    return ($r) findUniqueUsingQueryModel(queryModel);");
+                    sb.append("\n    return ($r) findUniqueUsingQueryModel(queryModel);");
                 } else {
                     sb.append(  "    try {\n"
                               + "        return ($r) findUniqueUsingQueryModel(queryModel);\n"

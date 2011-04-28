@@ -27,10 +27,6 @@ import java.lang.annotation.ElementType;
 @Target(ElementType.ANNOTATION_TYPE)
 public @interface Association {
 
-    //-------------------------------------------------------------
-    // Methods - Abstract
-    //-------------------------------------------------------------
-
     public abstract String field();
 
     public abstract Condition[] conditions();

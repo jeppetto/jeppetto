@@ -16,6 +16,12 @@
         </dependency>
 
         <dependency>
+            <groupId>org.jeppetto</groupId>
+            <artifactId>jeppetto-security</artifactId>
+            <version>0.5-SNAPSHOT</version>
+        </dependency>
+
+        <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
             <version>1.6.1</version>
