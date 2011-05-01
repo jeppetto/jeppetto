@@ -36,7 +36,6 @@ public class MongoDatabaseProvider
     //-------------------------------------------------------------
 
     private MongoDatabase db;
-    private final Object context;
     private String mongoPortProperty = "mongodb.left.port";
     private String altMongoPortProperty = "mongodb.port";
     private String mongoDbNameProperty = "mongodb.dbname";
@@ -46,9 +45,12 @@ public class MongoDatabaseProvider
     // Constructors
     //-------------------------------------------------------------
 
-    public MongoDatabaseProvider(Object context, String mongoPortProperty, String mongoDbNameProperty) {
-        this.context = context;
+    public MongoDatabaseProvider() {
+        this(null, null);
+    }
 
+
+    public MongoDatabaseProvider(String mongoPortProperty, String mongoDbNameProperty) {
         if (mongoPortProperty != null) {
             this.mongoPortProperty = mongoPortProperty;
         }
@@ -57,23 +59,6 @@ public class MongoDatabaseProvider
             this.mongoDbNameProperty = mongoDbNameProperty;
         }
     }
-
-
-    public MongoDatabaseProvider(String mongoPortProperty, String mongoDbNameProperty) {
-        this("", mongoPortProperty, mongoDbNameProperty);
-    }
-
-
-    public MongoDatabaseProvider(Object context) {
-        this(context, null, null);
-    }
-
-
-    public MongoDatabaseProvider() {
-        this("");
-    }
-
-
 
 
     //-------------------------------------------------------------
@@ -89,13 +74,9 @@ public class MongoDatabaseProvider
          */
 
         String baseName = properties.getProperty(mongoDbNameProperty);
-        String uniqueName = String.format("%s_%s_%s",
-                                          UUID.randomUUID().toString(),
-                                          context,
+        String uniqueName = String.format("%s_%s",
+                                          UUID.randomUUID().toString().substring(0, 3),
                                           baseName);
-        if (uniqueName.length() > 32) {
-            uniqueName = uniqueName.substring(uniqueName.length() - 32);
-        }
 
         int port;
         try {
