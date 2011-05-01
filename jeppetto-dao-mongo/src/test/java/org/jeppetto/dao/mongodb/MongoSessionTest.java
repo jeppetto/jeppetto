@@ -48,7 +48,7 @@ public class MongoSessionTest {
     public void setUp() {
         testContext = new TestContext("MongoDAOTest.spring.xml",
                                       "MongoDAOTest.properties",
-                                      new MongoDatabaseProvider(getClass().getSimpleName()));
+                                      new MongoDatabaseProvider());
 
         simpleObjectDAO = (SimpleObjectDAO) testContext.getBean("simpleObjectDAO");
     }
@@ -85,6 +85,7 @@ public class MongoSessionTest {
         }
     }
 
+
     @Test
     public void saveThenFindByUniquenessConstraintWorksWithSession()
             throws NoSuchItemException {
@@ -111,6 +112,7 @@ public class MongoSessionTest {
         }
     }
 
+
     @Test
     public void saveFlushAndFind()
             throws NoSuchItemException {
@@ -129,6 +131,7 @@ public class MongoSessionTest {
 
         MongoDBSession.remove();
     }
+
 
     @Test
     public void sessionIsReentrant() {

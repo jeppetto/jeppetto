@@ -17,6 +17,8 @@
 package org.jeppetto.dao.mongodb;
 
 
+import org.jeppetto.dao.AccessControlContextProvider;
+import org.jeppetto.dao.AccessControllable;
 import org.jeppetto.dao.Condition;
 import org.jeppetto.dao.ConditionType;
 import org.jeppetto.dao.NoSuchItemException;
@@ -26,6 +28,9 @@ import org.jeppetto.dao.QueryModel;
 import org.jeppetto.dao.QueryModelDAO;
 import org.jeppetto.dao.Sort;
 import org.jeppetto.dao.SortDirection;
+import org.jeppetto.dao.annotation.AccessControl;
+import org.jeppetto.dao.annotation.AccessControlRule;
+import org.jeppetto.dao.annotation.AccessControlType;
 import org.jeppetto.dao.mongodb.enhance.DBObjectUtil;
 import org.jeppetto.dao.mongodb.enhance.Dirtyable;
 import org.jeppetto.dao.mongodb.enhance.EnhancerHelper;
@@ -90,7 +95,7 @@ import java.util.concurrent.Callable;
  */
 // TODO: support createdDate/lastModifiedDate (createdDate from get("_id").getTime()?)
 public class MongoDBQueryModelDAO<T>
-        implements QueryModelDAO<T, String> {
+        implements QueryModelDAO<T, String>, AccessControllable<String> {
 
     //-------------------------------------------------------------
     // Constants
@@ -98,6 +103,7 @@ public class MongoDBQueryModelDAO<T>
 
     private static final String ID_FIELD = "_id";
     private static final String OPTIMISTIC_LOCK_VERSION_FIELD = "__olv";
+    private static final String ACCESS_CONTROL_LIST_FIELD = "__acl";
     private static final Enhancer<MongoDBError> ERROR_ENHANCER = EnhancerHelper.getDBObjectEnhancer(MongoDBError.class);
     private static final Map<ConditionType, MongoDBOperator> CONDITION_TYPE_TO_MONGO_OPERATOR = new HashMap<ConditionType, MongoDBOperator>() { {
             put(ConditionType.Equal, MongoDBOperator.Equal);
@@ -122,6 +128,7 @@ public class MongoDBQueryModelDAO<T>
     private DB db;
     private DBCollection dbCollection;
     private Enhancer<T> enhancer;
+    private AccessControlContextProvider accessControlContextProvider;
     private Map<String, Set<String>> uniqueIndexes;
     private boolean optimisticLockEnabled;
     private boolean showQueries;
@@ -132,8 +139,14 @@ public class MongoDBQueryModelDAO<T>
     // Constructors
     //-------------------------------------------------------------
 
-    @SuppressWarnings( { "unchecked" })
     protected MongoDBQueryModelDAO(Class<T> entityClass, Map<String, Object> daoProperties) {
+        this(entityClass, daoProperties, null);
+    }
+
+
+    @SuppressWarnings( { "unchecked" })
+    protected MongoDBQueryModelDAO(Class<T> entityClass, Map<String, Object> daoProperties,
+                                   AccessControlContextProvider accessControlContextProvider) {
         this.db = (DB) daoProperties.get("db");
         this.dbCollection = db.getCollection(entityClass.getSimpleName());
         this.enhancer = EnhancerHelper.getDirtyableDBObjectEnhancer(entityClass);
@@ -147,6 +160,7 @@ public class MongoDBQueryModelDAO<T>
             }
         };
 
+        this.accessControlContextProvider = accessControlContextProvider;
         this.uniqueIndexes = ensureIndexes((List<String>) daoProperties.get("uniqueIndexes"), true);
         ensureIndexes((List<String>) daoProperties.get("nonUniqueIndexes"), false);
         this.optimisticLockEnabled = Boolean.parseBoolean((String) daoProperties.get("optimisticLockEnabled"));
@@ -162,11 +176,12 @@ public class MongoDBQueryModelDAO<T>
     public T findById(String primaryKey)
             throws NoSuchItemException {
         try {
-            List<Condition> conditions = new ArrayList<Condition>(2);
-            conditions.add(buildIdCondition(primaryKey));
-
             QueryModel queryModel = new QueryModel();
-            queryModel.setConditions(conditions);
+            queryModel.addCondition(buildIdCondition(primaryKey));
+
+            if (accessControlContextProvider != null) {
+                queryModel.setAccessControlContext(accessControlContextProvider.getCurrent());
+            }
 
             return findUniqueUsingQueryModel(queryModel);
         } catch (IllegalArgumentException e) {
@@ -177,7 +192,13 @@ public class MongoDBQueryModelDAO<T>
 
     @Override
     public final Iterable<T> findAll() {
-        return findUsingQueryModel(new QueryModel());
+        QueryModel queryModel = new QueryModel();
+
+        if (accessControlContextProvider != null) {
+            queryModel.setAccessControlContext(accessControlContextProvider.getCurrent());
+        }
+
+        return findUsingQueryModel(queryModel);
     }
 
 
@@ -341,6 +362,74 @@ public class MongoDBQueryModelDAO<T>
 
 
     //-------------------------------------------------------------
+    // Implementation - AccessControllable
+    //-------------------------------------------------------------
+
+    @Override
+    public void grantAccess(String id, String accessId) {
+        T entity;
+
+        try {
+            entity = findById(id);
+        } catch (NoSuchItemException e) {
+            throw new RuntimeException(e);
+        }
+
+        entity = getEnhancer().enhance(entity);
+        DBObject dbObject = (DBObject) entity;
+
+        @SuppressWarnings( { "unchecked" })
+        List<String> accessControlList = (List<String>) dbObject.get(ACCESS_CONTROL_LIST_FIELD);
+
+        if (accessControlList == null) {
+            accessControlList = new ArrayList<String>();
+        }
+
+        // TODO: handle dups...
+        accessControlList.add(accessId);
+
+        dbObject.put(ACCESS_CONTROL_LIST_FIELD, accessControlList);
+
+        save(entity);
+    }
+
+
+    @Override
+    public void revokeAccess(String id, String accessId) {
+        T entity;
+
+        try {
+            entity = findById(id);
+        } catch (NoSuchItemException e) {
+            throw new RuntimeException(e);
+        }
+
+        entity = getEnhancer().enhance(entity);
+        DBObject dbObject = (DBObject) entity;
+
+        @SuppressWarnings( { "unchecked" })
+        List<String> accessControlList = (List<String>) dbObject.get(ACCESS_CONTROL_LIST_FIELD);
+
+        if (accessControlList == null) {
+            return;
+        }
+
+        // TODO: verify no dups
+        accessControlList.remove(accessId);
+
+        dbObject.put(ACCESS_CONTROL_LIST_FIELD, accessControlList);
+
+        save(entity);
+    }
+
+
+    @Override
+    public AccessControlContextProvider getAccessControlContextProvider() {
+        return accessControlContextProvider;
+    }
+
+
+    //-------------------------------------------------------------
     // Methods - Protected
     //-------------------------------------------------------------
 
@@ -350,6 +439,12 @@ public class MongoDBQueryModelDAO<T>
 
         if (dbo.get(ID_FIELD) == null) {
             dbo.put(ID_FIELD, findOrCreateIdFor(dbo));
+        }
+
+        if (accessControlContextProvider != null) {
+            if (!roleAllowsAccess(accessControlContextProvider.getCurrent().getRole())) {
+                dbo.put(ACCESS_CONTROL_LIST_FIELD, Collections.singletonList(accessControlContextProvider.getCurrent().getAccessId()));
+            }
         }
 
         DBObject identifier = createPrimaryIdentifyingQuery(dbo);
@@ -362,11 +457,6 @@ public class MongoDBQueryModelDAO<T>
 
         return enhanced;
     }
-
-
-//    protected QueryModel augmentQueryModel(QueryModel queryModel) {
-//        return ;
-//    }
 
 
     /**
@@ -762,9 +852,6 @@ public class MongoDBQueryModelDAO<T>
 
     private BasicDBObject buildQueryObject(QueryModel queryModel) {
         BasicDBObject query = new BasicDBObject();
-
-        // TODO: add "augmentConditions() support back in....
-
         List<Condition> allCriteria = new ArrayList<Condition>();
 
         if (queryModel.getConditions() != null) {
@@ -792,6 +879,13 @@ public class MongoDBQueryModelDAO<T>
             query.put(condition.getField(), constraint);
         }
 
+        if (accessControlContextProvider != null) {
+            if (!roleAllowsAccess(queryModel.getAccessControlContext().getRole())) {
+                // NB: will match any item w/in the ACL list.
+                query.put(ACCESS_CONTROL_LIST_FIELD, queryModel.getAccessControlContext().getAccessId());
+            }
+        }
+
         return query;
     }
 
@@ -799,7 +893,7 @@ public class MongoDBQueryModelDAO<T>
     /**
      * Checks for errors. An example error, returned when a uniqueness constraint is violated, is:
      * <code>
-     * {err=E11000 duplicate key error index: 4f78-aa0b-f805692e8356--unittest.SimpleObject.$intValue_1 dup key: { : 3 },
+     * {err=E11000 duplicate key error index: 4f7_unittest.SimpleObject.$intValue_1 dup key: { : 3 },
      *  code=11000,
      *  n=0,
      *  ok=1.0,
@@ -844,5 +938,44 @@ public class MongoDBQueryModelDAO<T>
         ((DBObject) err).putAll(lastError);
 
         return err;
+    }
+
+
+    private boolean roleAllowsAccess(String role) {
+        AccessControl accessControl;
+
+        if (role == null || role.isEmpty()) {
+            return false;
+        }
+
+        if ((accessControl = getAccessControlAnnotation()) == null) {
+            return false;
+        }
+
+        for (AccessControlRule accessControlRule : accessControl.rules()) {
+            if (accessControlRule.type() == AccessControlType.Role && accessControlRule.value().equals(role)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+
+    private AccessControl getAccessControlAnnotation() {
+        Class collectionClass = getCollectionClass();
+
+        while (collectionClass != null) {
+            // noinspection unchecked
+            AccessControl accessControl = (AccessControl) collectionClass.getAnnotation(AccessControl.class);
+
+            if (accessControl != null) {
+                return accessControl;
+            }
+
+            collectionClass = collectionClass.getSuperclass();
+        }
+
+        return null;
     }
 }
