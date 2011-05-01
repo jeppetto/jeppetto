@@ -74,7 +74,7 @@ public class DAOBuilder {
 
             // ...if no matching constructor, then fail...
             try {
-                partialDAOClass.getConstructor(Class.class, Map.class, boolean.class);
+                partialDAOClass.getDeclaredConstructor(Class.class, Map.class, AccessControlContextProvider.class);
             } catch (Exception e) {
                 throw new RuntimeException("Concrete DAO doesn't support AccessControllable (which is expected by DAO interface)");
             }
@@ -122,7 +122,7 @@ public class DAOBuilder {
             String constructorCode;
 
             if (accessControlEnabled) {
-                constructorCode = String.format("public %s(Class entityClass, java.util.Map daoProperties, AccessControlContextProvider accessControlContextProvider) { " +
+                constructorCode = String.format("public %s(Class entityClass, java.util.Map daoProperties, org.jeppetto.dao.AccessControlContextProvider accessControlContextProvider) { " +
                                                 "    super(entityClass, daoProperties, accessControlContextProvider); " +
                                                 "}",
                                                 concrete.getSimpleName());
@@ -172,14 +172,10 @@ public class DAOBuilder {
 
             if (accessControlEnabled) {
                 if (dataAccessMethod.useAccessControlContextArgument()) {
-                    sb.append("    queryModel.setAccessControlContext(argsIterator.getNext());\n\n");
+                    sb.append("    queryModel.setAccessControlContext((org.jeppetto.dao.AccessControlContext) argsIterator.next());\n\n");
                 } else if (!dataAccessMethod.invokeWithRole().isEmpty()) {
-                    sb.append("    AccessControlContext accessControlContext = new AccessControlContext() {\n");
-                    sb.append("        public String getAccessId() { return null; }\n\n");
-                    sb.append("        public String getRole() {\n");
-                    sb.append("            return \"").append(dataAccessMethod.invokeWithRole()).append("\");\n");
-                    sb.append("        }\n");
-                    sb.append("    }\n\n");
+                    sb.append("    org.jeppetto.dao.SimpleAccessControlContext accessControlContext = new org.jeppetto.dao.SimpleAccessControlContext();\n");
+                    sb.append("    accessControlContext.setRole(\"").append(dataAccessMethod.invokeWithRole()).append("\");\n");
                     sb.append("    queryModel.setAccessControlContext(accessControlContext);\n\n");
                 } else {
                     sb.append("    queryModel.setAccessControlContext(getAccessControlContextProvider().getCurrent());\n\n");
@@ -190,8 +186,8 @@ public class DAOBuilder {
             buildQueryModelFromMethodName(interfaceMethod.getName(), sb);
 
             if (accessControlEnabled) {
-                if (!interfaceMethod.getName().endsWith("As")) {
-                    sb.append("    queryModel.setAccessControlContext(argsIterator.getNext());\n\n");
+                if (interfaceMethod.getName().endsWith("As")) {
+                    sb.append("    queryModel.setAccessControlContext((org.jeppetto.dao.AccessControlContext) argsIterator.next());\n\n");
                 } else {
                     sb.append("    queryModel.setAccessControlContext(getAccessControlContextProvider().getCurrent());\n\n");
                 }
