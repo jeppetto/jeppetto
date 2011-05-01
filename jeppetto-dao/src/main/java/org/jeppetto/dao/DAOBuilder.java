@@ -50,12 +50,20 @@ public class DAOBuilder {
     // Methods - Public
     //-------------------------------------------------------------
 
+
     public static <T, PK extends Serializable, I extends GenericDAO<T, PK>> I buildDAO(Class<T> modelClass,
                                                                                        Class<I> daoInterface,
                                                                                        Class<? extends QueryModelDAO<T, PK>> partialDAOClass,
                                                                                        Map<String, Object> daoProperties) {
-        boolean enableAccessControl;
+        return buildDAO(modelClass, daoInterface, partialDAOClass, daoProperties, null);
+    }
 
+
+    public static <T, PK extends Serializable, I extends GenericDAO<T, PK>> I buildDAO(Class<T> modelClass,
+                                                                                       Class<I> daoInterface,
+                                                                                       Class<? extends QueryModelDAO<T, PK>> partialDAOClass,
+                                                                                       Map<String, Object> daoProperties,
+                                                                                       AccessControlContextProvider accessControlContextProvider) {
         if (AccessControllable.class.isAssignableFrom(daoInterface)) {
             // Verify the DAO implementation can support AccessControllable...
 
@@ -73,18 +81,18 @@ public class DAOBuilder {
 
             // TODO: validate AccessControllable methods exist
 
-            enableAccessControl = true;
-         } else {
-            enableAccessControl = false;
+            if (accessControlContextProvider == null) {
+                throw new RuntimeException("No AccessControlContextProvider specified.");
+            }
         }
 
-        Class<? extends I> fullDAOClass = completeDAO(modelClass, daoInterface, partialDAOClass, enableAccessControl);
+        Class<? extends I> fullDAOClass = completeDAO(modelClass, daoInterface, partialDAOClass, accessControlContextProvider != null);
 
         try {
-            if (enableAccessControl) {
-                return fullDAOClass.getDeclaredConstructor(Class.class, Map.class, boolean.class).newInstance(modelClass,
-                                                                                                              daoProperties,
-                                                                                                              true);
+            if (accessControlContextProvider != null) {
+                return fullDAOClass.getDeclaredConstructor(Class.class, Map.class, AccessControlContextProvider.class).newInstance(modelClass,
+                                                                                                                                   daoProperties,
+                                                                                                                                   accessControlContextProvider);
             } else {
                 return fullDAOClass.getDeclaredConstructor(Class.class, Map.class).newInstance(modelClass, daoProperties);
             }
@@ -101,7 +109,7 @@ public class DAOBuilder {
     private static <T, PK extends Serializable, I extends GenericDAO<T, PK>> Class<? extends I> completeDAO(Class<T> modelClass,
                                                                                                             Class<I> daoInterface,
                                                                                                             Class<? extends QueryModelDAO<T, PK>> partialDAOClass,
-                                                                                                            boolean enableAccessControl) {
+                                                                                                            boolean accessControlEnabled) {
         try {
             ClassPool pool = ClassPool.getDefault();
             CtClass daoInterfaceCtClass = pool.get(daoInterface.getName());
@@ -113,9 +121,9 @@ public class DAOBuilder {
 
             String constructorCode;
 
-            if (enableAccessControl) {
-                constructorCode = String.format("public %s(Class entityClass, java.util.Map daoProperties, boolean enableAccessControl) { " +
-                                                "    super(entityClass, daoProperties, enableAccessControl); " +
+            if (accessControlEnabled) {
+                constructorCode = String.format("public %s(Class entityClass, java.util.Map daoProperties, AccessControlContextProvider accessControlContextProvider) { " +
+                                                "    super(entityClass, daoProperties, accessControlContextProvider); " +
                                                 "}",
                                                 concrete.getSimpleName());
             } else {
@@ -139,7 +147,7 @@ public class DAOBuilder {
                     // If the method is not declared in the partial class, we fall through to implementation
                 }
 
-                implementMethod(concrete, interfaceMethod, modelClass, enableAccessControl);
+                implementMethod(concrete, interfaceMethod, modelClass, accessControlEnabled);
             }
 
             return ClassLoadingUtil.toClass(concrete);
@@ -149,7 +157,7 @@ public class DAOBuilder {
     }
 
 
-    private static <T> void implementMethod(CtClass concrete, CtMethod interfaceMethod, Class<T> modelClass, boolean enableAccessControl)
+    private static <T> void implementMethod(CtClass concrete, CtMethod interfaceMethod, Class<T> modelClass, boolean accessControlEnabled)
             throws CannotCompileException, ClassNotFoundException {
         CtMethod concreteMethod = CtNewMethod.copy(interfaceMethod, concrete, null);
         StringBuilder sb = new StringBuilder();
@@ -162,27 +170,30 @@ public class DAOBuilder {
         if ((dataAccessMethod = (DataAccessMethod) interfaceMethod.getAnnotation(DataAccessMethod.class)) != null) {
             buildQueryModelFromAnnotation(dataAccessMethod, sb);
 
-            if (enableAccessControl) {
-                if (dataAccessMethod.useSecurityContextArgument()) {
-                    sb.append("    queryModel.setSecurityContext(argsIterator.getNext());\n\n");
-                } else if (!dataAccessMethod.securityContextRole().isEmpty()) {
-                    sb.append("    SecurityContext securityContext = new SecurityContext();\n");
-                    sb.append("    securityContext.setRole(\"");
-                    sb.append(dataAccessMethod.securityContextRole());
-                    sb.append("\");\n\n");
+            if (accessControlEnabled) {
+                if (dataAccessMethod.useAccessControlContextArgument()) {
+                    sb.append("    queryModel.setAccessControlContext(argsIterator.getNext());\n\n");
+                } else if (!dataAccessMethod.invokeWithRole().isEmpty()) {
+                    sb.append("    AccessControlContext accessControlContext = new AccessControlContext() {\n");
+                    sb.append("        public String getAccessId() { return null; }\n\n");
+                    sb.append("        public String getRole() {\n");
+                    sb.append("            return \"").append(dataAccessMethod.invokeWithRole()).append("\");\n");
+                    sb.append("        }\n");
+                    sb.append("    }\n\n");
+                    sb.append("    queryModel.setAccessControlContext(accessControlContext);\n\n");
                 } else {
-                    sb.append("    queryModel.setSecurityContext(SecurityContext.getCurrent());\n\n");
+                    sb.append("    queryModel.setAccessControlContext(getAccessControlContextProvider().getCurrent());\n\n");
                 }
             }
         } else {
             // deal w/ '...As()' case
             buildQueryModelFromMethodName(interfaceMethod.getName(), sb);
 
-            if (enableAccessControl) {
+            if (accessControlEnabled) {
                 if (!interfaceMethod.getName().endsWith("As")) {
-                    sb.append("    queryModel.setSecurityContext(argsIterator.getNext());\n\n");
+                    sb.append("    queryModel.setAccessControlContext(argsIterator.getNext());\n\n");
                 } else {
-                    sb.append("    queryModel.setSecurityContext(SecurityContext.getCurrent());\n\n");
+                    sb.append("    queryModel.setAccessControlContext(getAccessControlContextProvider().getCurrent());\n\n");
                 }
             }
         }

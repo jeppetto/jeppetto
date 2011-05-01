@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package org.jeppetto.dao;
+package org.jeppetto.dao.annotation;
 
 
 public enum AccessControlType {
-    Entry,
+    TargetId,
     Role
 }

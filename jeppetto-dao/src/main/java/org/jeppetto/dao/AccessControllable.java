@@ -17,15 +17,16 @@
 package org.jeppetto.dao;
 
 
-import org.jeppetto.security.SecurityContext;
-
 import java.io.Serializable;
 
 
 public interface AccessControllable<PK extends Serializable> {
 
-    void grantAccess(PK id, SecurityContext securityContext);
+    void grantAccess(PK id, String accessId);
 
 
-    void revokeAccess(PK id, SecurityContext securityContext);
+    void revokeAccess(PK id, String accessId);
+
+
+    AccessControlContextProvider getAccessControlContextProvider();
 }

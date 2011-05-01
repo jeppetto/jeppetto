@@ -39,7 +39,7 @@ public @interface DataAccessMethod {
 
     public abstract boolean skipResults() default false;
 
-    public abstract boolean useSecurityContextArgument() default false;
+    public abstract boolean useAccessControlContextArgument() default false;
 
-    public abstract String securityContextRole() default "";
+    public abstract String invokeWithRole() default "";
 }

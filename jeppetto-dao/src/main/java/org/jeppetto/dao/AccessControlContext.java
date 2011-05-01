@@ -14,19 +14,12 @@
  * limitations under the License.
  */
 
-package org.jeppetto.dao.annotation;
+package org.jeppetto.dao;
 
 
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+public interface AccessControlContext {
 
+    String getAccessId();
 
-@Retention(RetentionPolicy.RUNTIME)
-@Target(value = { })
-public @interface AccessControlRule {
-
-    AccessControlType type();
-
-    String value();
+    String getRole();
 }
