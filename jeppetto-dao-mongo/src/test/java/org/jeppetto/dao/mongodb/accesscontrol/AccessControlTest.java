@@ -114,6 +114,26 @@ public class AccessControlTest {
     }
 
 
+    @Test(expected = NoSuchItemException.class)
+    public void grantedAccessAttempt()
+            throws NoSuchItemException {
+        accessControlContextProvider.setCurrent(accessControlContext1);
+
+        AccessControllableObject accessControllableObject = new AccessControllableObject();
+
+        accessControllableObjectDAO.save(accessControllableObject);
+
+        accessControllableObjectDAO.grantAccess(accessControllableObject.getId(), accessControlContext2.getAccessId());
+
+        accessControlContextProvider.setCurrent(accessControlContext2);
+
+        AccessControllableObject resultObject = accessControllableObjectDAO.findById(accessControllableObject.getId());
+
+        Assert.assertEquals(resultObject.getId(), accessControllableObject.getId());
+        Assert.assertEquals(2, accessControllableObjectDAO.getAccessIds(resultObject.getId()).size());
+    }
+
+
     @Test
     public void getList() {
         accessControlContextProvider.setCurrent(accessControlContext1);

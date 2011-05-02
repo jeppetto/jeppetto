@@ -18,6 +18,7 @@ package org.jeppetto.dao;
 
 
 import java.io.Serializable;
+import java.util.List;
 
 
 public interface AccessControllable<PK extends Serializable> {
@@ -26,6 +27,9 @@ public interface AccessControllable<PK extends Serializable> {
 
 
     void revokeAccess(PK id, String accessId);
+
+
+    List<String> getAccessIds(PK id);
 
 
     AccessControlContextProvider getAccessControlContextProvider();

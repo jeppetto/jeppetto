@@ -367,16 +367,13 @@ public class MongoDBQueryModelDAO<T>
 
     @Override
     public void grantAccess(String id, String accessId) {
-        T entity;
+        DBObject dbObject;
 
         try {
-            entity = findById(id);
+            dbObject = (DBObject) findById(id);
         } catch (NoSuchItemException e) {
             throw new RuntimeException(e);
         }
-
-        entity = getEnhancer().enhance(entity);
-        DBObject dbObject = (DBObject) entity;
 
         @SuppressWarnings( { "unchecked" })
         List<String> accessControlList = (List<String>) dbObject.get(ACCESS_CONTROL_LIST_FIELD);
@@ -390,22 +387,20 @@ public class MongoDBQueryModelDAO<T>
 
         dbObject.put(ACCESS_CONTROL_LIST_FIELD, accessControlList);
 
-        save(entity);
+        //noinspection unchecked
+        save((T) dbObject);
     }
 
 
     @Override
     public void revokeAccess(String id, String accessId) {
-        T entity;
+        DBObject dbObject;
 
         try {
-            entity = findById(id);
+            dbObject = (DBObject) findById(id);
         } catch (NoSuchItemException e) {
             throw new RuntimeException(e);
         }
-
-        entity = getEnhancer().enhance(entity);
-        DBObject dbObject = (DBObject) entity;
 
         @SuppressWarnings( { "unchecked" })
         List<String> accessControlList = (List<String>) dbObject.get(ACCESS_CONTROL_LIST_FIELD);
@@ -419,7 +414,23 @@ public class MongoDBQueryModelDAO<T>
 
         dbObject.put(ACCESS_CONTROL_LIST_FIELD, accessControlList);
 
-        save(entity);
+        //noinspection unchecked
+        save((T) dbObject);
+    }
+
+
+    @Override
+    public List<String> getAccessIds(String id) {
+        DBObject dbObject;
+
+        try {
+            dbObject = (DBObject) findById(id);
+        } catch (NoSuchItemException e) {
+            throw new RuntimeException(e);
+        }
+
+        //noinspection unchecked
+        return (List<String>) dbObject.get(ACCESS_CONTROL_LIST_FIELD);
     }
 
 
