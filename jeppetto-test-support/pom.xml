@@ -9,11 +9,6 @@
     <version>0.5-SNAPSHOT</version>
     <packaging>jar</packaging>
 
-    <properties>
-        <mongo>1.4.0</mongo>
-	    <mongoDriverVersion>1.3-PATCH-2</mongoDriverVersion>
-    </properties>
-
     <build>
         <resources>
             <resource>

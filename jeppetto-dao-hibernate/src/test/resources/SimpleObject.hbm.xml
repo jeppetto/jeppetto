@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC
+        "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+        "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<hibernate-mapping package="org.jeppetto">
+
+    <class name="org.jeppetto.SimpleObject">
+        <id name="id" length="32">
+            <generator class="org.jeppetto.dao.hibernate.UUIDIdentifierGenerator"/>
+        </id>
+
+        <property name="intValue"/>
+
+        <set name="relatedObjects" cascade="all">
+            <key column="simpleObjectId"/>
+            <one-to-many class="org.jeppetto.RelatedObject"/>
+        </set>
+    </class>
+
+    <class name="org.jeppetto.RelatedObject">
+        <id name="id" length="32">
+            <generator class="org.jeppetto.dao.hibernate.UUIDIdentifierGenerator"/>
+        </id>
+
+        <property name="relatedIntValue"/>
+    </class>
+
+</hibernate-mapping>
