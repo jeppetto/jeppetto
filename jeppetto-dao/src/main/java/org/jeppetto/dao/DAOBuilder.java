@@ -21,6 +21,7 @@ import org.jeppetto.dao.annotation.DataAccessMethod;
 import org.jeppetto.enhance.ClassLoadingUtil;
 
 import javassist.CannotCompileException;
+import javassist.ClassClassPath;
 import javassist.ClassPool;
 import javassist.CtClass;
 import javassist.CtMethod;
@@ -112,6 +113,9 @@ public class DAOBuilder {
                                                                                                             boolean accessControlEnabled) {
         try {
             ClassPool pool = ClassPool.getDefault();
+
+            pool.insertClassPath(new ClassClassPath(daoInterface));
+
             CtClass daoInterfaceCtClass = pool.get(daoInterface.getName());
             CtClass partialDAOCtClass = pool.get(partialDAOClass.getName());
             CtClass concrete = pool.makeClass(String.format("%s$%d", daoInterface.getName(), count.incrementAndGet()));
