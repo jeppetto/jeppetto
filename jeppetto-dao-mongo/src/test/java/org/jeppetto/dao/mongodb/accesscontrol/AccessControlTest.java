@@ -114,7 +114,7 @@ public class AccessControlTest {
     }
 
 
-    @Test(expected = NoSuchItemException.class)
+    @Test
     public void grantedAccessAttempt()
             throws NoSuchItemException {
         accessControlContextProvider.setCurrent(accessControlContext1);
