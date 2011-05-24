@@ -451,10 +451,13 @@ public class MongoDBQueryModelDAO<T>
         if (dbo.get(ID_FIELD) == null) {
             dbo.put(ID_FIELD, findOrCreateIdFor(dbo));
 
-            if (accessControlContextProvider != null
-                && !roleAllowsAccess(accessControlContextProvider.getCurrent().getRole())
-                && accessControlContextProvider.getCurrent().getAccessId() != null) {
-                dbo.put(ACCESS_CONTROL_LIST_FIELD, Collections.singletonList(accessControlContextProvider.getCurrent().getAccessId()));
+            if (accessControlContextProvider != null) {
+                if (roleAllowsAccess(accessControlContextProvider.getCurrent().getRole())
+                    || accessControlContextProvider.getCurrent().getAccessId() == null) {
+                    dbo.put(ACCESS_CONTROL_LIST_FIELD, Collections.<Object>emptyList());
+                } else {
+                    dbo.put(ACCESS_CONTROL_LIST_FIELD, Collections.singletonList(accessControlContextProvider.getCurrent().getAccessId()));
+                }
             }
         }
 

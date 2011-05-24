@@ -43,6 +43,7 @@ public class AccessControlTest {
     private SimpleAccessControlContext accessControlContext1;
     private SimpleAccessControlContext accessControlContext2;
     private SimpleAccessControlContext accessControlContext3;
+    private SimpleAccessControlContext accessControlContext4;
 
 
     //-------------------------------------------------------------
@@ -69,6 +70,8 @@ public class AccessControlTest {
         accessControlContext3 = new SimpleAccessControlContext();
         accessControlContext3.setAccessId("003");
         accessControlContext3.setRole("Administrator");
+
+        accessControlContext4 = new SimpleAccessControlContext();   // No accessId or role
     }
 
 
@@ -109,6 +112,50 @@ public class AccessControlTest {
         accessControllableObjectDAO.save(accessControllableObject);
 
         accessControlContextProvider.setCurrent(accessControlContext2);
+
+        accessControllableObjectDAO.findById(accessControllableObject.getId());
+    }
+
+
+    @Test(expected = NoSuchItemException.class)
+    public void unauthorizedAccessAttemptWithEmptyAccessControlContext()
+            throws NoSuchItemException {
+        accessControlContextProvider.setCurrent(accessControlContext1);
+
+        AccessControllableObject accessControllableObject = new AccessControllableObject();
+
+        accessControllableObjectDAO.save(accessControllableObject);
+
+        accessControlContextProvider.setCurrent(accessControlContext4);
+
+        accessControllableObjectDAO.findById(accessControllableObject.getId());
+    }
+
+
+    @Test(expected = NoSuchItemException.class)
+    public void unauthorizedAccessAttemptWithEmptyACLAndEmptyAccessControlContext()
+            throws NoSuchItemException {
+        accessControlContextProvider.setCurrent(accessControlContext1);
+
+        AccessControllableObject accessControllableObject = new AccessControllableObject();
+
+        accessControllableObjectDAO.save(accessControllableObject);
+        accessControllableObjectDAO.revokeAccess(accessControllableObject.getId(), accessControlContext1.getAccessId());
+
+        accessControlContextProvider.setCurrent(accessControlContext4);
+
+        accessControllableObjectDAO.findById(accessControllableObject.getId());
+    }
+
+
+    @Test(expected = NoSuchItemException.class)
+    public void cantAccessCreatedObjectWithEmptyEmptyAccessControlContext()
+            throws NoSuchItemException {
+        accessControlContextProvider.setCurrent(accessControlContext4);
+
+        AccessControllableObject accessControllableObject = new AccessControllableObject();
+
+        accessControllableObjectDAO.save(accessControllableObject);
 
         accessControllableObjectDAO.findById(accessControllableObject.getId());
     }
