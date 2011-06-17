@@ -529,77 +529,12 @@ public class MongoDBQueryModelDAO<T>
     }
 
 
-    protected final void update(QueryModel queryModel, DBObject update) {
-        final DBObject query = buildQueryObject(queryModel);
-        DBObject dbObject = (DBObject) DBObjectUtil.toDBObject(DBObject.class, update);
-
-        if (MongoDBSession.isActive()) {
-            MongoDBSession.trackForUpdate(this, query, dbObject);
-        } else {
-            trueUpdate(query, dbObject);
-        }
-    }
-
-
-    protected final void upsert(QueryModel queryModel, DBObject upsert) {
-        final DBObject query = buildQueryObject(queryModel);
-
-        if (MongoDBSession.isActive()) {
-            MongoDBSession.trackForUpsert(this, query, upsert);
-        } else {
-            trueUpsert(query, upsert);
-        }
-    }
-
-
     protected final void deleteByIdentifier(DBObject identifier) {
         if (MongoDBSession.isActive()) {
             MongoDBSession.trackForDelete(this, identifier);
         } else {
             trueRemove(identifier);
         }
-    }
-
-
-    protected final void trueUpsert(final DBObject query, final DBObject upsert) {
-        executeAndCheckLastError(new Runnable() {
-            @Override
-            public void run() {
-                dbCollection.update(query, (DBObject) DBObjectUtil.toDBObject(DBObject.class, upsert), true, true);
-            }
-        });
-    }
-
-
-    protected final void trueUpdate(final DBObject identifier, final DBObject dbo) {
-        executeAndCheckLastError(new Runnable() {
-            @Override
-            public void run() {
-                // included this logic here just in case we want to enable
-                // retry logic inside of 'executeAndCheckLastError' (it would
-                // just need to re-run the runnable)
-                if (optimisticLockEnabled) {
-                    Integer optimisticLockVersion = (Integer) dbo.get(OPTIMISTIC_LOCK_VERSION_FIELD);
-
-                    if (optimisticLockVersion == null) {
-                        dbo.put(OPTIMISTIC_LOCK_VERSION_FIELD, 1);
-                    } else {
-                        identifier.put(OPTIMISTIC_LOCK_VERSION_FIELD, optimisticLockVersion);
-
-                        dbo.put(OPTIMISTIC_LOCK_VERSION_FIELD, optimisticLockVersion + 1);
-                    }
-                }
-
-                if (showQueries) {
-                    queryLogger.debug("Updating {} ({}) with query {}",
-                                      new Object[] { getCollectionClass().getSimpleName(),
-                                                     dbo.toMap(),
-                                                     identifier.toMap() } );
-                }
-
-                dbCollection.update(identifier, dbo, false, true);
-            }
-        });
     }
 
 

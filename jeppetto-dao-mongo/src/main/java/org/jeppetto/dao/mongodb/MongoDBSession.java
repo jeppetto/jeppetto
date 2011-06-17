@@ -17,7 +17,6 @@
 package org.jeppetto.dao.mongodb;
 
 
-import org.jeppetto.dao.mongodb.enhance.DBObjectUtil;
 import org.jeppetto.dao.mongodb.enhance.Dirtyable;
 
 import com.mongodb.DBObject;
@@ -26,7 +25,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.HashMap;
@@ -47,8 +45,6 @@ class MongoDBSession {
     private final Map<String, MongoDBSessionCache> caches = new HashMap<String, MongoDBSessionCache>();
     private final Map<MongoDBQueryModelDAO<?>, Map<DBObject, Object>> savedPerDAO = new HashMap<MongoDBQueryModelDAO<?>, Map<DBObject, Object>>();
     private final Map<MongoDBQueryModelDAO<?>, Collection<DBObject>> deletedPerDAO = new HashMap<MongoDBQueryModelDAO<?>, Collection<DBObject>>();
-    private final Map<MongoDBQueryModelDAO<?>, Collection<Pair<DBObject, DBObject>>> upsertedPerDAO = new HashMap<MongoDBQueryModelDAO<?>, Collection<Pair<DBObject, DBObject>>>();
-    private final Map<MongoDBQueryModelDAO<?>, Collection<Pair<DBObject, DBObject>>> updatedPerDAO = new HashMap<MongoDBQueryModelDAO<?>, Collection<Pair<DBObject, DBObject>>>();
     private final Deque<SessionEntryPoint> creators = new ArrayDeque<SessionEntryPoint>();
 
 
@@ -91,22 +87,6 @@ class MongoDBSession {
                 LOCAL.remove();
             }
         }
-    }
-
-
-    static void trackForUpdate(MongoDBQueryModelDAO<?> mongoDBQueryModelDAO, DBObject query, DBObject update) {
-        validateState();
-
-        LOCAL.get().doTrackForUpdate(mongoDBQueryModelDAO, query, update);
-    }
-
-
-    static void trackForUpsert(MongoDBQueryModelDAO<?> mongoDBQueryModelDAO, DBObject query, DBObject upsert) {
-        validateState();
-
-        MongoDBSession mongoDBSession = LOCAL.get();
-
-        mongoDBSession.doTrackForUpsert(mongoDBQueryModelDAO, query, upsert);
     }
 
 
@@ -156,9 +136,7 @@ class MongoDBSession {
 
         deletedEntityIdentifiers.add(identifier);
 
-        Map<DBObject, Object> upsertedEntities = mongoDBSession.savedPerDAO.get(mongoDBQueryModelDAO);
-
-        if (upsertedEntities != null) {
+        if (mongoDBSession.savedPerDAO.get(mongoDBQueryModelDAO) != null) {
             mongoDBSession.savedPerDAO.get(mongoDBQueryModelDAO).remove(identifier);
         }
     }
@@ -179,8 +157,6 @@ class MongoDBSession {
 
             daoSet.addAll(mongoDBSession.savedPerDAO.keySet());
             daoSet.addAll(mongoDBSession.deletedPerDAO.keySet());
-            daoSet.addAll(mongoDBSession.upsertedPerDAO.keySet());
-            daoSet.addAll(mongoDBSession.updatedPerDAO.keySet());
 
             for (MongoDBQueryModelDAO<?> mongoDBQueryModelDAO : daoSet) {
                 mongoDBSession.doFlush(mongoDBQueryModelDAO);
@@ -290,38 +266,10 @@ class MongoDBSession {
     }
 
 
-    private void doTrackForUpsert(MongoDBQueryModelDAO<?> mongoDBQueryModelDAO, DBObject query, DBObject upsert) {
-        Collection<Pair<DBObject, DBObject>> upserts = upsertedPerDAO.get(mongoDBQueryModelDAO);
-
-        if (upserts == null) {
-            upserts = new ArrayList<Pair<DBObject, DBObject>>();
-
-            upsertedPerDAO.put(mongoDBQueryModelDAO, upserts);
-        }
-
-        upserts.add(new Pair<DBObject, DBObject>(query, upsert));
-    }
-
-
-    private void doTrackForUpdate(MongoDBQueryModelDAO<?> mongoDBQueryModelDAO, DBObject query, DBObject update) {
-        Collection<Pair<DBObject, DBObject>> updates = updatedPerDAO.get(mongoDBQueryModelDAO);
-
-        if (updates == null) {
-            updates = new ArrayList<Pair<DBObject, DBObject>>();
-
-            updatedPerDAO.put(mongoDBQueryModelDAO, updates);
-        }
-
-        updates.add(new Pair<DBObject, DBObject>(query, update));
-    }
-
-
     private void clear() {
         savedPerDAO.clear();
         caches.clear();
         deletedPerDAO.clear();
-        upsertedPerDAO.clear();
-        updatedPerDAO.clear();
     }
 
 
@@ -372,37 +320,6 @@ class MongoDBSession {
             updatedEntities.clear();
         }
 
-        if (upsertedPerDAO.containsKey(mongoDBQueryModelDAO)) {
-            for (Iterator<Pair<DBObject, DBObject>> i = upsertedPerDAO.get(mongoDBQueryModelDAO).iterator(); i.hasNext();) {
-                Pair<DBObject, DBObject> upsert = i.next();
-
-                try {
-                    mongoDBQueryModelDAO.trueUpsert(upsert.getFirst(), upsert.getSecond());
-                    upsertCount++;
-                } catch (UniquenessViolationRuntimeException e) {
-                    logger.warn("Error saving {}. Duplicate record found on upsert.", DBObjectUtil.toDBObject(DBObject.class, upsert.getFirst()));
-                }
-
-                i.remove();
-            }
-        }
-
-        if (updatedPerDAO.containsKey(mongoDBQueryModelDAO)) {
-            for (Iterator<Pair<DBObject, DBObject>> i = updatedPerDAO.get(mongoDBQueryModelDAO).iterator(); i.hasNext();) {
-                Pair<DBObject, DBObject> update = i.next();
-
-                try {
-                    mongoDBQueryModelDAO.trueUpdate(update.getFirst(), update.getSecond());
-                    saveCount++;
-                } catch (UniquenessViolationRuntimeException e) {
-                    logger.warn("Error saving {}. Duplicate record found on update.", DBObjectUtil
-                            .toDBObject(DBObject.class, update.getFirst()));
-                }
-
-                i.remove();
-            }
-        }
-
         if (deletedPerDAO.containsKey(mongoDBQueryModelDAO)) {
             Collection<DBObject> deletedEntityIdentifiers = deletedPerDAO.get(mongoDBQueryModelDAO);
 
@@ -448,6 +365,7 @@ class MongoDBSession {
         private Logger logger;
         private String name;
 
+
         //-------------------------------------------------------------
         // Constructors
         //-------------------------------------------------------------
@@ -458,6 +376,7 @@ class MongoDBSession {
             this.name = name;
         }
 
+
         //-------------------------------------------------------------
         // Methods - Getters
         //-------------------------------------------------------------
@@ -466,85 +385,14 @@ class MongoDBSession {
             return stackTraceElement;
         }
 
+
         public Logger getLogger() {
             return logger;
         }
 
+
         public String getName() {
             return name;
-        }
-    }
-
-
-    public class Pair<E, F> {
-
-        //-------------------------------------------------------------
-        // Variables - Private
-        //-------------------------------------------------------------
-
-        private E first;
-        private F second;
-
-
-        //-------------------------------------------------------------
-        // Constructors
-        //-------------------------------------------------------------
-
-        public Pair(E first, F second) {
-            this.first = first;
-            this.second = second;
-        }
-
-
-        //-------------------------------------------------------------
-        // Methods - Getter/Setter
-        //-------------------------------------------------------------
-
-        public E getFirst() {
-            return first;
-        }
-
-
-        public F getSecond() {
-            return second;
-        }
-
-
-        //-------------------------------------------------------------
-        // Methods - Canonical
-        //-------------------------------------------------------------
-
-        @Override
-        public String toString() {
-            return "<" + this.first + ", " + this.second + ">";
-        }
-
-
-        @Override
-        public boolean equals(Object obj) {
-            if (obj == null) {
-                return false;
-            }
-
-            if (getClass() != obj.getClass()) {
-                return false;
-            }
-
-            @SuppressWarnings({ "unchecked" })
-            final Pair<E, F> other = (Pair<E, F>) obj;
-
-            return !(this.first != other.first && (this.first == null || !this.first.equals(other.first)))
-                   && !(this.second != other.second && (this.second == null || !this.second.equals(other.second)));
-
-        }
-
-
-        @Override
-        public int hashCode() {
-            int hash = 7;
-            hash = 31 * hash + (this.first != null ? this.first.hashCode() : 0);
-            hash = 31 * hash + (this.second != null ? this.second.hashCode() : 0);
-            return hash;
         }
     }
 }
