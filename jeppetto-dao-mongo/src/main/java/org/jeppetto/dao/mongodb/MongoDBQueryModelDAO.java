@@ -85,6 +85,10 @@ import java.util.concurrent.Callable;
  *                              type should have an
  *                              implicit lock version
  *                              field
+ *   "saveNulls" -> Boolean as to whether null fields       (optional)
+ *                  should be included in saved objects.
+ *                  If a field goes from a set value to
+ *                  null, it will be cleared.
  *   "showQueries" -> Boolean that indicates if additional  (optional)
  *                    info should be logged regarding the
  *                    various queries that are executed.
@@ -132,6 +136,7 @@ public class MongoDBQueryModelDAO<T>
     private Map<String, Set<String>> uniqueIndexes;
     private boolean optimisticLockEnabled;
     private boolean showQueries;
+    private boolean saveNulls;
     private Logger queryLogger = LoggerFactory.getLogger(getClass());
 
 
@@ -164,6 +169,7 @@ public class MongoDBQueryModelDAO<T>
         this.uniqueIndexes = ensureIndexes((List<String>) daoProperties.get("uniqueIndexes"), true);
         ensureIndexes((List<String>) daoProperties.get("nonUniqueIndexes"), false);
         this.optimisticLockEnabled = Boolean.parseBoolean((String) daoProperties.get("optimisticLockEnabled"));
+        this.saveNulls = Boolean.parseBoolean((String) daoProperties.get("saveNulls"));
         this.showQueries = Boolean.parseBoolean((String) daoProperties.get("showQueries"));
     }
 
@@ -539,32 +545,34 @@ public class MongoDBQueryModelDAO<T>
 
 
     protected final void trueSave(final DBObject identifier, final DBObject dbo) {
+        // included this logic here just in case we want to enable
+        // retry logic inside of 'executeAndCheckLastError' (it would
+        // just need to re-run the runnable)
+        if (optimisticLockEnabled) {
+            Integer optimisticLockVersion = (Integer) dbo.get(OPTIMISTIC_LOCK_VERSION_FIELD);
+
+            if (optimisticLockVersion == null) {
+                dbo.put(OPTIMISTIC_LOCK_VERSION_FIELD, 1);
+            } else {
+                identifier.put(OPTIMISTIC_LOCK_VERSION_FIELD, optimisticLockVersion);
+
+                dbo.put(OPTIMISTIC_LOCK_VERSION_FIELD, optimisticLockVersion + 1);
+            }
+        }
+
+        final DBObject optimalDbo = determineOptimalDBObject(dbo);
+
+        if (showQueries) {
+            queryLogger.debug("Saving {} identified by {} with document {}",
+                              new Object[] { getCollectionClass().getSimpleName(),
+                                             identifier.toMap(),
+                                             optimalDbo.toMap() } );
+        }
+
         executeAndCheckLastError(new Runnable() {
             @Override
             public void run() {
-                // included this logic here just in case we want to enable
-                // retry logic inside of 'executeAndCheckLastError' (it would
-                // just need to re-run the runnable)
-                if (optimisticLockEnabled) {
-                    Integer optimisticLockVersion = (Integer) dbo.get(OPTIMISTIC_LOCK_VERSION_FIELD);
-
-                    if (optimisticLockVersion == null) {
-                        dbo.put(OPTIMISTIC_LOCK_VERSION_FIELD, 1);
-                    } else {
-                        identifier.put(OPTIMISTIC_LOCK_VERSION_FIELD, optimisticLockVersion);
-
-                        dbo.put(OPTIMISTIC_LOCK_VERSION_FIELD, optimisticLockVersion + 1);
-                    }
-                }
-
-                if (showQueries) {
-                    queryLogger.debug("Saving new {} ({}) with query {}",
-                                      new Object[] { getCollectionClass().getSimpleName(),
-                                                     dbo.toMap(),
-                                                     identifier.toMap() } );
-                }
-
-                dbCollection.update(identifier, dbo, true, false);
+                dbCollection.update(identifier, optimalDbo, true, false);
             }
         });
     }
@@ -575,16 +583,15 @@ public class MongoDBQueryModelDAO<T>
             // TODO:
         }
 
+        if (showQueries) {
+            queryLogger.debug("Removing {}s matching {}",
+                              new Object[] { getCollectionClass().getSimpleName(),
+                                             identifier.toMap() } );
+        }
+
         executeAndCheckLastError(new Runnable() {
             @Override
             public void run() {
-
-                if (showQueries) {
-                    queryLogger.debug("Removing {}s matching {}",
-                                      new Object[] { getCollectionClass().getSimpleName(),
-                                                     identifier.toMap() } );
-                }
-
                 dbCollection.remove(identifier);
             }
         });
@@ -593,11 +600,6 @@ public class MongoDBQueryModelDAO<T>
 
     protected final DBCollection getDbCollection() {
         return dbCollection;
-    }
-
-
-    protected final Enhancer<T> getEnhancer() {
-        return enhancer;
     }
 
 
@@ -836,6 +838,13 @@ public class MongoDBQueryModelDAO<T>
         }
 
         return query;
+    }
+
+
+    private DBObject determineOptimalDBObject(DBObject dbo) {
+        // TODO: handle saveNulls...
+
+        return dbo;
     }
 
 
