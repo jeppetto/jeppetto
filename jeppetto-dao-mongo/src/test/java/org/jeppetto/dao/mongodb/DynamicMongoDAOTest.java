@@ -21,6 +21,7 @@ import org.jeppetto.dao.NoSuchItemException;
 import org.jeppetto.testsupport.MongoDatabaseProvider;
 import org.jeppetto.testsupport.TestContext;
 
+import com.mongodb.MongoException;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -235,7 +236,7 @@ public class DynamicMongoDAOTest {
         assertEquals(5, simpleObjectDAO.countDistinctIntValue());
     }
 
-    @Test(expected = UniquenessViolationRuntimeException.class)
+    @Test(expected = MongoException.DuplicateKey.class)
     public void createDuplicateOnUniquenessConstraintCausesException() {
         createDuplicateData();
     }

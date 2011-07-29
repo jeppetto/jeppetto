@@ -310,10 +310,10 @@ class MongoDBSession {
 
                     mongoDBQueryModelDAO.trueSave(entry.getKey(), (DBObject) entry.getValue());
                     saveCount++;
+                } catch (MongoException.DuplicateKey e) {
+                    logger.warn("Error saving {}. Duplicate record found.", entry.getValue());
                 } catch (MongoException e) {
                     logger.error("Error saving {}.", entry.getValue(), e); // TODO: Implement
-                } catch (UniquenessViolationRuntimeException e) {
-                    logger.warn("Error saving {}. Duplicate record found.", entry.getValue());
                 }
             }
             

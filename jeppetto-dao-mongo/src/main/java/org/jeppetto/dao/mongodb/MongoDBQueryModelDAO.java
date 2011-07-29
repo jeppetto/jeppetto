@@ -37,7 +37,6 @@ import org.jeppetto.dao.mongodb.enhance.EnhancerHelper;
 import org.jeppetto.dao.mongodb.enhance.MongoDBCallback;
 import org.jeppetto.dao.mongodb.projections.ProjectionCommands;
 import org.jeppetto.enhance.Enhancer;
-import org.jeppetto.enhance.ExceptionUtil;
 
 import com.mongodb.BasicDBObject;
 import com.mongodb.DB;
@@ -45,6 +44,7 @@ import com.mongodb.DBCallback;
 import com.mongodb.DBCollection;
 import com.mongodb.DBCursor;
 import com.mongodb.DBObject;
+import com.mongodb.WriteConcern;
 import org.bson.types.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,7 +57,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Callable;
 
 
 /**
@@ -98,6 +97,12 @@ import java.util.concurrent.Callable;
  * @param <T> the type of persistent object this DAO will manage.
  */
 // TODO: support createdDate/lastModifiedDate (createdDate from get("_id").getTime()?)
+// TODO: Implement determineOptimalDBObject
+//          - understand saveNulls
+//          - understand field-level deltas
+// TODO: become shard-aware
+// TODO: support non-error checking option
+// TODO: better checkLastError()/resetError()
 public class MongoDBQueryModelDAO<T>
         implements QueryModelDAO<T, String>, AccessControllable<String> {
 
@@ -108,7 +113,6 @@ public class MongoDBQueryModelDAO<T>
     private static final String ID_FIELD = "_id";
     private static final String OPTIMISTIC_LOCK_VERSION_FIELD = "__olv";
     private static final String ACCESS_CONTROL_LIST_FIELD = "__acl";
-    private static final Enhancer<MongoDBError> ERROR_ENHANCER = EnhancerHelper.getDBObjectEnhancer(MongoDBError.class);
     private static final Map<ConditionType, MongoDBOperator> CONDITION_TYPE_TO_MONGO_OPERATOR = new HashMap<ConditionType, MongoDBOperator>() { {
             put(ConditionType.Equal, MongoDBOperator.Equal);
             put(ConditionType.NotEqual, MongoDBOperator.NotEqual);
@@ -129,7 +133,6 @@ public class MongoDBQueryModelDAO<T>
     // Variables - Private
     //-------------------------------------------------------------
 
-    private DB db;
     private DBCollection dbCollection;
     private Enhancer<T> enhancer;
     private AccessControlContextProvider accessControlContextProvider;
@@ -152,8 +155,7 @@ public class MongoDBQueryModelDAO<T>
     @SuppressWarnings( { "unchecked" })
     protected MongoDBQueryModelDAO(Class<T> entityClass, Map<String, Object> daoProperties,
                                    AccessControlContextProvider accessControlContextProvider) {
-        this.db = (DB) daoProperties.get("db");
-        this.dbCollection = db.getCollection(entityClass.getSimpleName());
+        this.dbCollection = ((DB) daoProperties.get("db")).getCollection(entityClass.getSimpleName());
         this.enhancer = EnhancerHelper.getDirtyableDBObjectEnhancer(entityClass);
 
         dbCollection.setObjectClass(enhancer.getEnhancedClass());
@@ -569,12 +571,7 @@ public class MongoDBQueryModelDAO<T>
                                              optimalDbo.toMap() } );
         }
 
-        executeAndCheckLastError(new Runnable() {
-            @Override
-            public void run() {
-                dbCollection.update(identifier, optimalDbo, true, false);
-            }
-        });
+        dbCollection.update(identifier, optimalDbo, true, false, WriteConcern.SAFE);
     }
 
 
@@ -589,12 +586,7 @@ public class MongoDBQueryModelDAO<T>
                                              identifier.toMap() } );
         }
 
-        executeAndCheckLastError(new Runnable() {
-            @Override
-            public void run() {
-                dbCollection.remove(identifier);
-            }
-        });
+        dbCollection.remove(identifier, WriteConcern.SAFE);
     }
 
 
@@ -605,51 +597,6 @@ public class MongoDBQueryModelDAO<T>
 
     protected final Class<?> getCollectionClass() {
         return enhancer.getBaseClass();
-    }
-
-
-    /**
-     * Executes the given command inside a try-finally block that guarantees
-     * any errors provided by the server will propagate as a RuntimeException.
-     *
-     * @param command Runnable that embeds a db command to execute
-     */
-    protected final void executeAndCheckLastError(final Runnable command) {
-        executeAndCheckLastError(new Callable<Void>() {
-            @Override
-            public Void call() throws Exception {
-                command.run();
-
-                return null;
-            }
-        });
-    }
-
-
-    /**
-     * Executes the given command inside a try-finally block that guarantees
-     * any errors provided by the server will propagate as a RuntimeException.
-     *
-     * @param command Callable that embeds a db command to execute and then validate
-     *
-     * @return The result of the passed in command.
-     */
-    protected final <R> R executeAndCheckLastError(Callable<R> command) {
-        db.requestStart();
-
-        try {
-            db.resetError();
-
-            R result = command.call();
-
-            checkLastError();
-
-            return result;
-        } catch (Exception e) {
-            throw ExceptionUtil.propagate(e);
-        } finally {
-            db.requestDone();
-        }
     }
 
 
@@ -778,18 +725,12 @@ public class MongoDBQueryModelDAO<T>
 
             result.put(uniqueIndex, index.keySet());
 
-            executeAndCheckLastError(new Runnable() {
-                @Override
-                public void run() {
-                    if (showQueries) {
-                        queryLogger.debug("Ensuring index {} on {}",
-                                          new Object[] { index.toMap(),
-                                                         getCollectionClass().getSimpleName() } );
-                    }
+            if (showQueries) {
+                queryLogger.debug("Ensuring index {} on {}",
+                                  new Object[] { index.toMap(), getCollectionClass().getSimpleName() } );
+            }
 
-                    dbCollection.ensureIndex(index, createIndexName(uniqueIndex), unique);
-                }
-            });
+            dbCollection.ensureIndex(index, createIndexName(uniqueIndex), unique);
         }
 
         return result;
@@ -845,57 +786,6 @@ public class MongoDBQueryModelDAO<T>
         // TODO: handle saveNulls...
 
         return dbo;
-    }
-
-
-    /**
-     * Checks for errors. An example error, returned when a uniqueness constraint is violated, is:
-     * <code>
-     * {err=E11000 duplicate key error index: 4f7_unittest.SimpleObject.$intValue_1 dup key: { : 3 },
-     *  code=11000,
-     *  n=0,
-     *  ok=1.0,
-     *  _ns=$cmd}
-     * </code>
-     * When everything works fine, then we'll see something like:
-     * <code>
-     * {err=null, updatedExisting=false, n=1, ok=1.0, _ns=$cmd}
-     * </code>
-     */
-    private void checkLastError() {
-        MongoDBError lastError = getLastError();
-
-        if (lastError != null) {
-            String err = lastError.getErr();
-            int code = lastError.getCode();
-
-            switch (code) {
-                case MongoDBError.NO_CODE:
-                    throw new MongoDBRuntimeException(err);
-                case 10055: // fall through
-                case 10059:
-                    throw new MongoDBObjectTooLargeRuntimeException(err);
-                case 11000: // fall through
-                case 11001:
-                    throw new UniquenessViolationRuntimeException(err);
-                default:
-                    throw new MongoDBRuntimeException(code, err);
-            }
-        }
-    }
-
-
-    private MongoDBError getLastError() {
-        DBObject lastError = db.getLastError();
-
-        if (lastError == null || lastError.get("err") == null) {
-            return null;
-        }
-
-        MongoDBError err = ERROR_ENHANCER.newInstance();
-        ((DBObject) err).putAll(lastError);
-
-        return err;
     }
 
 
