@@ -88,6 +88,13 @@ import java.util.Set;
  *                  should be included in saved objects.
  *                  If a field goes from a set value to
  *                  null, it will be cleared.
+ *   "writeConcern" -> String, one of the values as         (optional)
+ *                     indicated at http://www.mongodb.org/display/DOCS/Replica+Set+Semantics.
+ *                     If not specified, the DAO defaults
+ *                     to "SAFE".  In either case, it can
+ *                     be overridden on a call-by-call
+ *                     basis by ...
+ *                     TODO: implement... (keep in mind session semantics...)
  *   "showQueries" -> Boolean that indicates if additional  (optional)
  *                    info should be logged regarding the
  *                    various queries that are executed.
@@ -102,7 +109,7 @@ import java.util.Set;
 //          - understand field-level deltas
 // TODO: become shard-aware
 // TODO: support non-error checking option
-// TODO: better checkLastError()/resetError()
+// TODO: support per-call WriteConcerns
 public class MongoDBQueryModelDAO<T>
         implements QueryModelDAO<T, String>, AccessControllable<String> {
 
@@ -138,8 +145,8 @@ public class MongoDBQueryModelDAO<T>
     private AccessControlContextProvider accessControlContextProvider;
     private Map<String, Set<String>> uniqueIndexes;
     private boolean optimisticLockEnabled;
-    private boolean showQueries;
     private boolean saveNulls;
+    private WriteConcern defaultWriteConcern;
     private Logger queryLogger = LoggerFactory.getLogger(getClass());
 
 
@@ -172,7 +179,16 @@ public class MongoDBQueryModelDAO<T>
         ensureIndexes((List<String>) daoProperties.get("nonUniqueIndexes"), false);
         this.optimisticLockEnabled = Boolean.parseBoolean((String) daoProperties.get("optimisticLockEnabled"));
         this.saveNulls = Boolean.parseBoolean((String) daoProperties.get("saveNulls"));
-        this.showQueries = Boolean.parseBoolean((String) daoProperties.get("showQueries"));
+
+        if (daoProperties.containsKey("writeConcern")) {
+            this.defaultWriteConcern = WriteConcern.valueOf((String) daoProperties.get("writeConcern"));
+        } else {
+            this.defaultWriteConcern = WriteConcern.SAFE;
+        }
+
+        if (Boolean.parseBoolean((String) daoProperties.get("showQueries"))) {
+            queryLogger = LoggerFactory.getLogger(getClass());
+        }
     }
 
 
@@ -564,14 +580,14 @@ public class MongoDBQueryModelDAO<T>
 
         final DBObject optimalDbo = determineOptimalDBObject(dbo);
 
-        if (showQueries) {
+        if (queryLogger != null) {
             queryLogger.debug("Saving {} identified by {} with document {}",
                               new Object[] { getCollectionClass().getSimpleName(),
                                              identifier.toMap(),
                                              optimalDbo.toMap() } );
         }
 
-        dbCollection.update(identifier, optimalDbo, true, false, WriteConcern.SAFE);
+        dbCollection.update(identifier, optimalDbo, true, false, getWriteConcern());
     }
 
 
@@ -580,13 +596,13 @@ public class MongoDBQueryModelDAO<T>
             // TODO:
         }
 
-        if (showQueries) {
+        if (queryLogger != null) {
             queryLogger.debug("Removing {}s matching {}",
                               new Object[] { getCollectionClass().getSimpleName(),
                                              identifier.toMap() } );
         }
 
-        dbCollection.remove(identifier, WriteConcern.SAFE);
+        dbCollection.remove(identifier, getWriteConcern());
     }
 
 
@@ -694,7 +710,7 @@ public class MongoDBQueryModelDAO<T>
             command = ProjectionCommands.forProjection(queryModel.getProjection(), query);
         }
 
-        if (showQueries) {
+        if (queryLogger != null) {
             return QueryLoggingCommand.wrap(command, queryLogger);
         } else {
             return command;
@@ -725,7 +741,7 @@ public class MongoDBQueryModelDAO<T>
 
             result.put(uniqueIndex, index.keySet());
 
-            if (showQueries) {
+            if (queryLogger != null) {
                 queryLogger.debug("Ensuring index {} on {}",
                                   new Object[] { index.toMap(), getCollectionClass().getSimpleName() } );
             }
@@ -786,6 +802,14 @@ public class MongoDBQueryModelDAO<T>
         // TODO: handle saveNulls...
 
         return dbo;
+    }
+
+
+    private WriteConcern getWriteConcern() {
+        // TODO: Add ability to swap a concern out on a per-call basis...if nothing overwrites/changes, then
+        // return the default.
+
+        return defaultWriteConcern;
     }
 
 
