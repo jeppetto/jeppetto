@@ -50,15 +50,15 @@ public class ChainingEnhancer<T> extends Enhancer<T> {
     }
 
 
-    //-------------------------------------------------------------
-    // Overrides - Enhancer
-    //-------------------------------------------------------------
-
     @Override
-    protected boolean needsEnhancement(Object object) {
+    public boolean needsEnhancement(Object object) {
         return first.needsEnhancement(object) || second.needsEnhancement(object);
     }
 
+
+    //-------------------------------------------------------------
+    // Overrides - Enhancer
+    //-------------------------------------------------------------
 
     @Override
     public Class<? extends T> getEnhancedClass() {

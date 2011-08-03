@@ -19,7 +19,6 @@ package org.jeppetto.dao.mongodb;
 
 import org.jeppetto.dao.NoSuchItemException;
 import org.jeppetto.dao.mongodb.enhance.Dirtyable;
-import org.jeppetto.enhance.Enhancer;
 
 import com.mongodb.BasicDBObject;
 import com.mongodb.DBCollection;
@@ -35,16 +34,14 @@ public class BasicDBObjectCommand extends MongoDBCommand {
     //-------------------------------------------------------------
 
     private BasicDBObject query;
-    private Enhancer enhancer;
 
 
     //-------------------------------------------------------------
     // Constructor
     //-------------------------------------------------------------
 
-    public BasicDBObjectCommand(BasicDBObject query, Enhancer enhancer) {
+    public BasicDBObjectCommand(BasicDBObject query) {
         this.query = query;
-        this.enhancer = enhancer;
     }
 
 
@@ -75,7 +72,6 @@ public class BasicDBObjectCommand extends MongoDBCommand {
             throw new RuntimeException("More than one " + dbCollection.getName() + " matches query: " + query);
         }
 
-        result = enhancer.enhance(result);
         ((Dirtyable) result).markCurrentAsClean();
 
         return result;

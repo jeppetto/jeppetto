@@ -33,7 +33,7 @@ public class NoOpEnhancer<T> extends Enhancer<T> {
     //-------------------------------------------------------------
 
     @Override
-    protected boolean needsEnhancement(Object object) {
+    public boolean needsEnhancement(Object object) {
         return false;
     }
 

@@ -135,8 +135,8 @@ public class DBObjectUtil {
         } else if (Iterable.class.isAssignableFrom(o.getClass()) && Set.class.isAssignableFrom(type)) {
             return fromSet(o, typeParameters);
         } else if (o instanceof DBObject) {
-            Enhancer<?> enhancer = EnhancerHelper.getDBObjectEnhancer(type);
-            DBObject copy = (DBObject) enhancer.newInstance();
+            // TODO: validate works on nested objects of various types...
+            DBObject copy = (DBObject) EnhancerHelper.getDirtyableDBObjectEnhancer(type).newInstance();
 
             copy.putAll((DBObject) o);
 
@@ -212,7 +212,7 @@ public class DBObjectUtil {
         } else if (Enum.class.isInstance(object)) {
             return ((Enum) object).name();
         } else {
-            Enhancer enhancer = EnhancerHelper.getDBObjectEnhancer(object.getClass());
+            Enhancer enhancer = EnhancerHelper.getDirtyableDBObjectEnhancer(object.getClass());
 
             //noinspection unchecked
             return enhancer.enhance(object);

@@ -45,11 +45,15 @@ public abstract class Enhancer<T> {
 
 
     //-------------------------------------------------------------
-    // Methods - Abstract - Protected
+    // Methods - Abstract - Public
     //-------------------------------------------------------------
 
-    protected abstract boolean needsEnhancement(Object object);
+    public abstract boolean needsEnhancement(Object object);
 
+
+    //-------------------------------------------------------------
+    // Methods - Abstract - Protected
+    //-------------------------------------------------------------
 
     protected abstract Class<? extends T> enhanceClass(Class<T> baseClass);
 

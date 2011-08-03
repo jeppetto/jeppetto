@@ -108,8 +108,8 @@ import java.util.Set;
 //          - understand saveNulls
 //          - understand field-level deltas
 // TODO: become shard-aware
-// TODO: support non-error checking option
 // TODO: support per-call WriteConcerns
+// TODO: investigate usage of ClassLoader so new instances are already enhanced
 public class MongoDBQueryModelDAO<T>
         implements QueryModelDAO<T, String>, AccessControllable<String> {
 
@@ -234,6 +234,8 @@ public class MongoDBQueryModelDAO<T>
 
     @Override
     public final void delete(T entity) {
+        // TODO: Probably don't want to enhance this object as we may need a previously retrieved object so
+        // we can construct an appropriate identifying query w/ __olv
         DBObject dbo = (DBObject) enhancer.enhance(entity);
 
         DBObject identifier = createPrimaryIdentifyingQuery(dbo);
@@ -324,19 +326,18 @@ public class MongoDBQueryModelDAO<T>
                     @Override
                     @SuppressWarnings( { "unchecked" })
                     public T next() {
-                        DBObject raw = finalDbCursor.next();
-                        T t = enhancer.enhance((T) raw);
+                        DBObject result = finalDbCursor.next();
 
-                        ((Dirtyable) t).markCurrentAsClean();
+                        ((Dirtyable) result).markCurrentAsClean();
 
                         if (MongoDBSession.isActive()) {
                             MongoDBSession.trackForSave(MongoDBQueryModelDAO.this,
-                                                        createPrimaryIdentifyingQuery(raw),
-                                                        t,
-                                                        createIdentifyingQueries(raw));
+                                                        createPrimaryIdentifyingQuery(result),
+                                                        (T) result,
+                                                        createIdentifyingQueries(result));
                         }
 
-                        return t;
+                        return (T) result;
                     }
 
 
@@ -469,8 +470,15 @@ public class MongoDBQueryModelDAO<T>
     //-------------------------------------------------------------
 
     protected final T saveAndReturn(T entity) {
-        T enhanced = enhancer.enhance(entity);
-        DBObject dbo = (DBObject) enhanced;
+        T enhancedEntity;
+
+        if (enhancer.needsEnhancement(entity)) {
+            enhancedEntity = enhancer.enhance(entity);
+        } else {
+            enhancedEntity = entity;
+        }
+
+        DBObject dbo = (DBObject) enhancedEntity;
 
         if (dbo.get(ID_FIELD) == null) {
             dbo.put(ID_FIELD, findOrCreateIdFor(dbo));
@@ -488,12 +496,12 @@ public class MongoDBQueryModelDAO<T>
         DBObject identifier = createPrimaryIdentifyingQuery(dbo);
 
         if (MongoDBSession.isActive()) {
-            MongoDBSession.trackForSave(this, identifier, enhanced, createIdentifyingQueries(dbo));
+            MongoDBSession.trackForSave(this, identifier, enhancedEntity, createIdentifyingQueries(dbo));
         } else {
             trueSave(identifier, dbo);
         }
 
-        return enhanced;
+        return enhancedEntity;
     }
 
 
@@ -588,6 +596,10 @@ public class MongoDBQueryModelDAO<T>
         }
 
         dbCollection.update(identifier, optimalDbo, true, false, getWriteConcern());
+
+        if (Dirtyable.class.isAssignableFrom(dbo.getClass())) {
+            ((Dirtyable) dbo).markCurrentAsClean();
+        }
     }
 
 
@@ -705,7 +717,7 @@ public class MongoDBQueryModelDAO<T>
         MongoDBCommand command;
 
         if (queryModel.getProjection() == null) {
-            command = new BasicDBObjectCommand(query, enhancer);
+            command = new BasicDBObjectCommand(query);
         } else {
             command = ProjectionCommands.forProjection(queryModel.getProjection(), query);
         }

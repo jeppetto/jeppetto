@@ -34,7 +34,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 
 
 public class TemplateHelper {
@@ -43,7 +42,6 @@ public class TemplateHelper {
     // Variables - Private
     //-------------------------------------------------------------
 
-    private static AtomicInteger COUNT = new AtomicInteger(1);  // A counter to uniquify enhanced class names, starts at 1.
     private static Map<Class<?>, Class<?>> PRIMITIVE_WRAPPERS;
 
     private String className;
@@ -81,9 +79,7 @@ public class TemplateHelper {
     //-------------------------------------------------------------
 
     public TemplateHelper cls(String name) {
-        String newClassName = new StringBuilder(name).append("$").append(COUNT.getAndIncrement()).toString();
-
-        thisClass = pool.makeClass(newClassName);
+        thisClass = pool.makeClass(name);
         className = thisClass.getSimpleName();
 
         return this;
@@ -116,9 +112,10 @@ public class TemplateHelper {
     public String field(String code)
             throws CannotCompileException {
         CtField field = CtField.make(code, thisClass);
+
         thisClass.addField(field);
 
-        return decorateForDebug(code);
+        return code;
     }
 
 
@@ -128,7 +125,7 @@ public class TemplateHelper {
 
         thisClass.addConstructor(constructor);
 
-        return decorateForDebug(code);
+        return code;
     }
 
 
@@ -138,7 +135,7 @@ public class TemplateHelper {
 
         thisClass.addMethod(m);
 
-        return decorateForDebug(code);
+        return code;
     }
 
 
@@ -243,11 +240,6 @@ public class TemplateHelper {
     //-------------------------------------------------------------
     // Methods - Private
     //-------------------------------------------------------------
-
-    private String decorateForDebug(String code) {
-        return code;
-    }
-
 
     @SuppressWarnings({"ConstantConditions"})
     private Pair<Class<?>, Class<?>[]> getGenericTypePair(Type type) {

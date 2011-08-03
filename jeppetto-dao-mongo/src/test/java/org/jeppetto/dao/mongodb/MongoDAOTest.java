@@ -93,10 +93,34 @@ public class MongoDAOTest {
         assertDirty(resultObject, false);
         resultObject.setIntValue(4321);
         assertDirty(resultObject, true);
+    }
 
-        // objects are detached
-        resultObject.setIntValue(1234);
-        simpleObject.setIntValue(9876);
+
+    @Test
+    public void fieldChangesAreDirty()
+            throws NoSuchItemException {
+        SimpleObject simpleObject = new SimpleObject();
+        simpleObject.setIntValue(1234);
+        simpleObjectDAO.save(simpleObject);
+
+        SimpleObject resultObject;
+
+        resultObject = simpleObjectDAO.findById(simpleObject.getId());
+        assertDirty(resultObject, false);
+        resultObject.setSimpleEnum(SimpleEnum.EnumValue);
+        assertDirty(resultObject, true);
+
+        simpleObjectDAO.save(resultObject);
+
+        assertDirty(resultObject, false);
+
+        resultObject = simpleObjectDAO.findById(simpleObject.getId());
+        assertDirty(resultObject, false);
+        resultObject.setIntValue(9876);
+        assertDirty(resultObject, true);
+
+        simpleObjectDAO.save(resultObject);
+
         assertDirty(resultObject, false);
     }
 

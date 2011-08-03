@@ -53,7 +53,7 @@ public class EnhancerHelper {
         //-------------------------------------------------------------
 
         @Override
-        protected boolean needsEnhancement(Object object) {
+        public boolean needsEnhancement(Object object) {
             return object != null && !(object instanceof Snapshot);
         }
 
