@@ -17,7 +17,6 @@
 package org.jeppetto.dao.mongodb.enhance;
 
 
-import com.mongodb.DBObject;
 import org.bson.BSONObject;
 
 import java.util.Collection;
@@ -27,8 +26,8 @@ import java.util.Set;
 
 
 @SuppressWarnings({ "unchecked" })
-public class DirtyableMap
-        implements Map, Dirtyable, DBObject {
+public class DirtyableDBObjectMap
+        implements Map, DirtyableDBObject {
 
     //-------------------------------------------------------------
     // Variables - Private
@@ -42,12 +41,12 @@ public class DirtyableMap
     // Constructors
     //-------------------------------------------------------------
 
-    public DirtyableMap() {
+    public DirtyableDBObjectMap() {
         this.delegate = new HashMap();
     }
 
 
-    public DirtyableMap(Map delegate) {
+    public DirtyableDBObjectMap(Map delegate) {
         this.delegate = delegate;
     }
 
@@ -59,7 +58,7 @@ public class DirtyableMap
     @Override
     public Object put(Object key, Object value) {
         dirty = true;
-        
+
         return delegate.put(key, value);
     }
 
@@ -148,7 +147,7 @@ public class DirtyableMap
 
 
     //-------------------------------------------------------------
-    // Implementation - Dirtyable
+    // Implementation - DirtyableDBObject
     //-------------------------------------------------------------
 
     @Override

@@ -3,7 +3,7 @@
 #* @vtlvariable name="_" type="org.jeppetto.enhance.TemplateHelper" *#
 #set( $baseName = $base.getName() )
 #set( $Q = '"')
-public $_.cls("${baseName}$Enhanced").ext($base).impl("com.mongodb.DBObject").impl("org.jeppetto.dao.mongodb.enhance.Dirtyable") {
+public $_.cls("${baseName}$DirtyableDBObject").ext($base).impl("org.jeppetto.dao.mongodb.enhance.DirtyableDBObject") {
 
     #set( $thisName = $_.clsName() )
 
@@ -264,7 +264,7 @@ public $_.cls("${baseName}$Enhanced").ext($base).impl("com.mongodb.DBObject").im
 
 
     //-------------------------------------------------------------
-    // Implementation - Dirtyable
+    // Implementation - DirtyableDBObject
     //-------------------------------------------------------------
 
     $_.method("
@@ -282,8 +282,8 @@ public $_.cls("${baseName}$Enhanced").ext($base).impl("com.mongodb.DBObject").im
 
         Object __$variableName = $getterName();
 
-        if ((__$variableName instanceof org.jeppetto.dao.mongodb.enhance.Dirtyable
-             && ((org.jeppetto.dao.mongodb.enhance.Dirtyable) __$variableName).isDirty())
+        if ((__$variableName instanceof org.jeppetto.dao.mongodb.enhance.DirtyableDBObject
+             && ((org.jeppetto.dao.mongodb.enhance.DirtyableDBObject) __$variableName).isDirty())
             || org.jeppetto.dao.mongodb.enhance.DBObjectUtil.objectIsMutable(__$variableName)) {
             return true;
         }
@@ -306,8 +306,8 @@ public $_.cls("${baseName}$Enhanced").ext($base).impl("com.mongodb.DBObject").im
 
         Object __$variableName = $getterName();
 
-        if (__$variableName instanceof org.jeppetto.dao.mongodb.enhance.Dirtyable) {
-            ((org.jeppetto.dao.mongodb.enhance.Dirtyable) __$variableName).markCurrentAsClean();
+        if (__$variableName instanceof org.jeppetto.dao.mongodb.enhance.DirtyableDBObject) {
+            ((org.jeppetto.dao.mongodb.enhance.DirtyableDBObject) __$variableName).markCurrentAsClean();
         }
         #end
         #end

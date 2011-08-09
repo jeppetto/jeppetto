@@ -17,7 +17,6 @@
 package org.jeppetto.dao.mongodb.enhance;
 
 
-import com.mongodb.DBObject;
 import org.bson.BSONObject;
 
 import java.util.ArrayList;
@@ -32,8 +31,8 @@ import java.util.Set;
 
 
 @SuppressWarnings({ "unchecked" })
-public class DirtyableList
-        implements List, Dirtyable, DBObject {
+public class DirtyableDBObjectList
+        implements List, DirtyableDBObject {
 
     //-------------------------------------------------------------
     // Variables - Private
@@ -47,12 +46,12 @@ public class DirtyableList
     // Constructors
     //-------------------------------------------------------------
 
-    public DirtyableList() {
+    public DirtyableDBObjectList() {
         this.delegate = new ArrayList();
     }
 
 
-    public DirtyableList(List delegate) {
+    public DirtyableDBObjectList(List delegate) {
         this.delegate = delegate;
     }
 
@@ -234,7 +233,7 @@ public class DirtyableList
 
 
     //-------------------------------------------------------------
-    // Implementation - Dirtyable
+    // Implementation - DirtyableDBObject
     //-------------------------------------------------------------
 
     @Override
@@ -255,7 +254,7 @@ public class DirtyableList
 
     @Override
     public void markAsPartialObject() {
-        throw new RuntimeException("Can't mark DirtyableList as partial");
+        throw new RuntimeException("Can't mark DirtyableDBObjectList as partial");
     }
 
 

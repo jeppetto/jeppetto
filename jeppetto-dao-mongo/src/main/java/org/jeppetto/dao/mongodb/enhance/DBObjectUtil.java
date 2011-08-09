@@ -94,7 +94,7 @@ public class DBObjectUtil {
 
     /**
      * Returns true if the given object is a "mutable" type that needs to be enhanced
-     * as Dirtyable to prevent lost changes. Array types are ok because the default
+     * as DirtyableDBObject to prevent lost changes. Array types are ok because the default
      * isDirty method will detect changes there.
      *
      * @param object object to check
@@ -354,8 +354,8 @@ public class DBObjectUtil {
 
 
     private static Map<?, ?> fromMap(final Object source, final Class<?>... typeParameters) {
-        if (DirtyableMap.class.isAssignableFrom(source.getClass())) {
-            return (Map<?,?>) source;
+        if (DirtyableDBObjectMap.class.isAssignableFrom(source.getClass())) {
+            return (Map<?, ?>) source;
         }
 
         Function<Object, Object> valueFunction = fromObjectFunction(coalesceTypeParam(typeParameters, 1));
@@ -363,7 +363,7 @@ public class DBObjectUtil {
         if (String.class != coalesceTypeParam(typeParameters, 0)) {
             Function<Object, Object> keyFunction = fromObjectFunction(coalesceTypeParam(typeParameters, 0));
             Map<?, ?> sourceMap = (Map<?, ?>) source;
-            DirtyableMap converted = new DirtyableMap();
+            DirtyableDBObjectMap converted = new DirtyableDBObjectMap();
 
             for (Map.Entry<?, ?> entry : sourceMap.entrySet()) {
                 converted.put(keyFunction.apply(entry.getKey()), valueFunction.apply(entry.getValue()));
@@ -373,30 +373,30 @@ public class DBObjectUtil {
             
             return converted;
         } else {
-            return new DirtyableMap(Maps.transformValues((Map<?, ?>) source, valueFunction));
+            return new DirtyableDBObjectMap(Maps.transformValues((Map<?, ?>) source, valueFunction));
         }
     }
 
 
     private static Set<?> fromSet(final Object source, final Class<?>... typeParameters) {
-        if (DirtyableSet.class.isAssignableFrom(source.getClass())) {
+        if (DirtyableDBObjectSet.class.isAssignableFrom(source.getClass())) {
             return (Set<?>) source;
         }
 
         Function<Object, Object> valueFunction = fromObjectFunction(coalesceTypeParam(typeParameters, 0));
 
-        return new DirtyableSet(Sets.newHashSet(Iterables.transform((Set<?>) source, valueFunction)));
+        return new DirtyableDBObjectSet(Sets.newHashSet(Iterables.transform((Set<?>) source, valueFunction)));
     }
 
 
     private static List<?> fromList(final Object source, final Class<?>... typeParameters) {
-        if (DirtyableList.class.isAssignableFrom(source.getClass())) {
+        if (DirtyableDBObjectList.class.isAssignableFrom(source.getClass())) {
             return (List<?>) source;
         }
 
         Function<Object, Object> valueFunction = fromObjectFunction(coalesceTypeParam(typeParameters, 0));
 
-        return new DirtyableList(Lists.transform((List<?>) source, valueFunction));
+        return new DirtyableDBObjectList(Lists.transform((List<?>) source, valueFunction));
     }
 
 

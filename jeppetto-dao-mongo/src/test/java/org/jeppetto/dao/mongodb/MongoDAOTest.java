@@ -19,7 +19,7 @@ package org.jeppetto.dao.mongodb;
 
 import org.jeppetto.dao.GenericDAO;
 import org.jeppetto.dao.NoSuchItemException;
-import org.jeppetto.dao.mongodb.enhance.Dirtyable;
+import org.jeppetto.dao.mongodb.enhance.DirtyableDBObject;
 import org.jeppetto.testsupport.MongoDatabaseProvider;
 import org.jeppetto.testsupport.TestContext;
 
@@ -288,7 +288,7 @@ public class MongoDAOTest {
     }
 
     private void assertDirty(Object obj, boolean dirty) {
-        assertTrue(obj instanceof Dirtyable);
-        assertEquals(dirty, ((Dirtyable) obj).isDirty());
+        assertTrue(obj instanceof DirtyableDBObject);
+        assertEquals(dirty, ((DirtyableDBObject) obj).isDirty());
     }
 }

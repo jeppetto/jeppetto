@@ -18,7 +18,7 @@ package org.jeppetto.dao.mongodb;
 
 
 import org.jeppetto.dao.NoSuchItemException;
-import org.jeppetto.dao.mongodb.enhance.Dirtyable;
+import org.jeppetto.dao.mongodb.enhance.DirtyableDBObject;
 
 import com.mongodb.BasicDBObject;
 import com.mongodb.DBCollection;
@@ -72,7 +72,7 @@ public class BasicDBObjectCommand extends MongoDBCommand {
             throw new RuntimeException("More than one " + dbCollection.getName() + " matches query: " + query);
         }
 
-        ((Dirtyable) result).markCurrentAsClean();
+        ((DirtyableDBObject) result).markCurrentAsClean();
 
         return result;
     }

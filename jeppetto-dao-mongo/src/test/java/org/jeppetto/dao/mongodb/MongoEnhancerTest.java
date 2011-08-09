@@ -18,7 +18,7 @@ package org.jeppetto.dao.mongodb;
 
 
 import org.jeppetto.dao.mongodb.enhance.DBObjectUtil;
-import org.jeppetto.dao.mongodb.enhance.Dirtyable;
+import org.jeppetto.dao.mongodb.enhance.DirtyableDBObject;
 import org.jeppetto.dao.mongodb.enhance.EnhancerHelper;
 import org.jeppetto.enhance.Enhancer;
 
@@ -103,7 +103,7 @@ public class MongoEnhancerTest {
         Circular c1 = enhancer.newInstance();
         c1.setParent(enhancer.newInstance());
         Circular c2 = c1.getParent();
-        ((Dirtyable) c2).markCurrentAsClean();
+        ((DirtyableDBObject) c2).markCurrentAsClean();
         assertDirty(c1);
         assertNotDirty(c2);
     }
@@ -125,14 +125,14 @@ public class MongoEnhancerTest {
     //-------------------------------------------------------------
 
     private void assertDirty(Circular c1) {
-        assertTrue(c1 instanceof Dirtyable);
-        assertTrue(((Dirtyable) c1).isDirty());
+        assertTrue(c1 instanceof DirtyableDBObject);
+        assertTrue(((DirtyableDBObject) c1).isDirty());
     }
 
 
     private void assertNotDirty(Circular c1) {
-        assertTrue(c1 instanceof Dirtyable);
-        assertFalse(((Dirtyable) c1).isDirty());
+        assertTrue(c1 instanceof DirtyableDBObject);
+        assertFalse(((DirtyableDBObject) c1).isDirty());
     }
 
 

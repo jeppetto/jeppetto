@@ -17,7 +17,7 @@
 package org.jeppetto.dao.mongodb;
 
 
-import org.jeppetto.dao.mongodb.enhance.Dirtyable;
+import org.jeppetto.dao.mongodb.enhance.DirtyableDBObject;
 
 import com.mongodb.DBObject;
 import com.mongodb.MongoException;
@@ -241,7 +241,7 @@ class MongoDBSession {
 
                     for (Map.Entry<MongoDBQueryModelDAO<?>, Map<DBObject, Object>> updatedPerDAOEntry : savedPerDAO.entrySet()) {
                         for (Object entity : updatedPerDAOEntry.getValue().values()) {
-                            if (entity instanceof Dirtyable && ((Dirtyable) entity).isDirty()) {
+                            if (entity instanceof DirtyableDBObject && ((DirtyableDBObject) entity).isDirty()) {
                                 logger.warn("{} is still dirty: {}", updatedPerDAOEntry.getKey().getClass(), entity);
                              }
                         }
@@ -297,8 +297,8 @@ class MongoDBSession {
                 }
 
                 try {
-                    if (entry.getValue() instanceof Dirtyable) {
-                        if (!((Dirtyable) entry.getValue()).isDirty()) {
+                    if (entry.getValue() instanceof DirtyableDBObject) {
+                        if (!((DirtyableDBObject) entry.getValue()).isDirty()) {
                             dirtyCheckCost += (System.nanoTime() - beforeDirtyCheck);
 
                             continue;

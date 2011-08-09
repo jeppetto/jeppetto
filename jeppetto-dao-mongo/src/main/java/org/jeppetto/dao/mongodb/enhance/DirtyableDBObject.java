@@ -17,7 +17,10 @@
 package org.jeppetto.dao.mongodb.enhance;
 
 
-public interface Dirtyable {
+import com.mongodb.DBObject;
+
+
+public interface DirtyableDBObject extends DBObject {
 
     /**
      * @return true if this object is dirtied from it's persisted state

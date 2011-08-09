@@ -32,7 +32,7 @@ import org.jeppetto.dao.annotation.AccessControl;
 import org.jeppetto.dao.annotation.AccessControlRule;
 import org.jeppetto.dao.annotation.AccessControlType;
 import org.jeppetto.dao.mongodb.enhance.DBObjectUtil;
-import org.jeppetto.dao.mongodb.enhance.Dirtyable;
+import org.jeppetto.dao.mongodb.enhance.DirtyableDBObject;
 import org.jeppetto.dao.mongodb.enhance.EnhancerHelper;
 import org.jeppetto.dao.mongodb.enhance.MongoDBCallback;
 import org.jeppetto.dao.mongodb.projections.ProjectionCommands;
@@ -147,7 +147,7 @@ public class MongoDBQueryModelDAO<T>
     private boolean optimisticLockEnabled;
     private boolean saveNulls;
     private WriteConcern defaultWriteConcern;
-    private Logger queryLogger = LoggerFactory.getLogger(getClass());
+    private Logger queryLogger;
 
 
     //-------------------------------------------------------------
@@ -287,7 +287,7 @@ public class MongoDBQueryModelDAO<T>
 
         if (MongoDBSession.isActive()) {
             DBObject identifier = createPrimaryIdentifyingQuery((DBObject) result);
-            MongoDBSession.trackForSave(MongoDBQueryModelDAO.this, identifier, result,
+            MongoDBSession.trackForSave(this, identifier, result,
                                         createIdentifyingQueries((DBObject) result));
         }
 
@@ -328,7 +328,7 @@ public class MongoDBQueryModelDAO<T>
                     public T next() {
                         DBObject result = finalDbCursor.next();
 
-                        ((Dirtyable) result).markCurrentAsClean();
+                        ((DirtyableDBObject) result).markCurrentAsClean();
 
                         if (MongoDBSession.isActive()) {
                             MongoDBSession.trackForSave(MongoDBQueryModelDAO.this,
@@ -597,8 +597,8 @@ public class MongoDBQueryModelDAO<T>
 
         dbCollection.update(identifier, optimalDbo, true, false, getWriteConcern());
 
-        if (Dirtyable.class.isAssignableFrom(dbo.getClass())) {
-            ((Dirtyable) dbo).markCurrentAsClean();
+        if (DirtyableDBObject.class.isAssignableFrom(dbo.getClass())) {
+            ((DirtyableDBObject) dbo).markCurrentAsClean();
         }
     }
 

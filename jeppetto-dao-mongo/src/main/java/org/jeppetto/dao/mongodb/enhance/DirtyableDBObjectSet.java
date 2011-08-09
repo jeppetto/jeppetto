@@ -17,7 +17,6 @@
 package org.jeppetto.dao.mongodb.enhance;
 
 
-import com.mongodb.DBObject;
 import org.bson.BSONObject;
 
 import java.util.Collection;
@@ -30,8 +29,8 @@ import java.util.Set;
 
 
 @SuppressWarnings( { "unchecked" })
-public class DirtyableSet
-        implements Set, Dirtyable, DBObject {
+public class DirtyableDBObjectSet
+        implements Set, DirtyableDBObject {
 
     //-------------------------------------------------------------
     // Variables - Private
@@ -45,12 +44,12 @@ public class DirtyableSet
     // Constructors
     //-------------------------------------------------------------
 
-    public DirtyableSet() {
+    public DirtyableDBObjectSet() {
         this.delegate = new HashSet();
     }
 
 
-    public DirtyableSet(Set delegate) {
+    public DirtyableDBObjectSet(Set delegate) {
         this.delegate = delegate;
     }
 
@@ -162,7 +161,7 @@ public class DirtyableSet
 
 
     //-------------------------------------------------------------
-    // Implementation - Dirtyable
+    // Implementation - DirtyableDBObject
     //-------------------------------------------------------------
 
     @Override
@@ -183,7 +182,7 @@ public class DirtyableSet
 
     @Override
     public void markAsPartialObject() {
-        throw new RuntimeException("Can't mark DirtyableSet as partial");
+        throw new RuntimeException("Can't mark DirtyableDBObjectSet as partial");
     }
 
 

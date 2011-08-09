@@ -40,7 +40,7 @@ public class EnhancerHelper {
 
     /**
      * Creates a new enhancer for the given class. If the class already implements
-     * {@link Dirtyable}, then a special "no-op" enhancer will be returned that
+     * {@link DirtyableDBObject}, then a special "no-op" enhancer will be returned that
      * doesn't do any special enhancement. Otherwise, a byte-code enhancer is returned.
      *
      * @param baseClass class for which to create an enhancer
@@ -52,7 +52,7 @@ public class EnhancerHelper {
         Enhancer<T> enhancer = (Enhancer<T>) dirtyableDBObjectEnhancers.get(baseClass);
 
         if (enhancer == null) {
-            if (Dirtyable.class.isAssignableFrom(baseClass)) {
+            if (DirtyableDBObject.class.isAssignableFrom(baseClass)) {
                 enhancer = new NoOpEnhancer<T>(baseClass);
             } else {
                 enhancer = new VelocityEnhancer<T>(baseClass) {
@@ -62,7 +62,7 @@ public class EnhancerHelper {
 
                     @Override
                     public boolean needsEnhancement(Object object) {
-                        return object != null && !(object instanceof Dirtyable);
+                        return object != null && !(object instanceof DirtyableDBObject);
                     }
 
 

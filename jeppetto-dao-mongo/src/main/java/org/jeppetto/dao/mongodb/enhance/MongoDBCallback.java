@@ -92,30 +92,30 @@ public class MongoDBCallback extends DBCallback {
             }
         } else if (Map.class.isAssignableFrom(returnClass)) {
             if (Modifier.isAbstract(returnClass.getModifiers()) || Modifier.isInterface(returnClass.getModifiers())) {
-                return new DirtyableMap();
+                return new DirtyableDBObjectMap();
             } else {
                 try {
-                    return new DirtyableMap((Map) returnClass.newInstance());
+                    return new DirtyableDBObjectMap((Map) returnClass.newInstance());
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
             }
         } else if (List.class.isAssignableFrom(returnClass)) {
             if (Modifier.isAbstract(returnClass.getModifiers()) || Modifier.isInterface(returnClass.getModifiers())) {
-                return new DirtyableList();
+                return new DirtyableDBObjectList();
             } else {
                 try {
-                    return new DirtyableList((List) returnClass.newInstance());
+                    return new DirtyableDBObjectList((List) returnClass.newInstance());
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
             }
         } else if (Set.class.isAssignableFrom(returnClass)) {
             if (Modifier.isAbstract(returnClass.getModifiers()) || Modifier.isInterface(returnClass.getModifiers())) {
-                return new DirtyableSet();
+                return new DirtyableDBObjectSet();
             } else {
                 try {
-                    return new DirtyableSet((Set) returnClass.newInstance());
+                    return new DirtyableDBObjectSet((Set) returnClass.newInstance());
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
