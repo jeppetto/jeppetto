@@ -34,6 +34,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 
 public class TemplateHelper {
@@ -42,6 +43,7 @@ public class TemplateHelper {
     // Variables - Private
     //-------------------------------------------------------------
 
+    private static AtomicInteger COUNT = new AtomicInteger(1);  // A counter to uniquify enhanced class names, starts at 1.
     private static Map<Class<?>, Class<?>> PRIMITIVE_WRAPPERS;
 
     private String className;
@@ -79,7 +81,9 @@ public class TemplateHelper {
     //-------------------------------------------------------------
 
     public TemplateHelper cls(String name) {
-        thisClass = pool.makeClass(name);
+        String newClassName = new StringBuilder(name).append("$").append(COUNT.getAndIncrement()).toString();
+
+        thisClass = pool.makeClass(newClassName);
         className = thisClass.getSimpleName();
 
         return this;
