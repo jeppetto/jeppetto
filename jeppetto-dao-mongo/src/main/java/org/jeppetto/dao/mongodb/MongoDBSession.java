@@ -29,7 +29,6 @@ import java.util.Collection;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
@@ -94,8 +93,8 @@ class MongoDBSession {
         validateState();
 
         MongoDBSession mongoDBSession = LOCAL.get();
-
         Map<DBObject, Object> savedEntities = mongoDBSession.savedPerDAO.get(mongoDBQueryModelDAO);
+        Collection<DBObject> deletedIdentifiers = mongoDBSession.deletedPerDAO.get(mongoDBQueryModelDAO);
 
         if (savedEntities == null) {
             savedEntities = new LinkedHashMap<DBObject, Object>();
@@ -103,17 +102,19 @@ class MongoDBSession {
             mongoDBSession.savedPerDAO.put(mongoDBQueryModelDAO, savedEntities);
         }
 
+        if (deletedIdentifiers != null && deletedIdentifiers.contains(identifier)) {
+            logger.debug("Item identified by {} has already been marked for delete, discarding.", identifier);
+
+            return;
+        }
+
         logger.debug("Tracking for save: {} = {}", identifier, entity);
 
-        Collection<DBObject> deletedIdentifiers;
-        if ((deletedIdentifiers = mongoDBSession.deletedPerDAO.get(mongoDBQueryModelDAO)) == null
-            || !deletedIdentifiers.contains(identifier)) {
-            savedEntities.put(identifier, entity);
+        savedEntities.put(identifier, entity);
 
-            MongoDBSessionCache sessionCache = getCache(mongoDBQueryModelDAO.getDbCollection().getName());
-            for (DBObject cacheKey : cacheKeys) {
-                sessionCache.put(cacheKey, entity);
-            }
+        MongoDBSessionCache sessionCache = getCache(mongoDBQueryModelDAO.getDbCollection().getName());
+        for (DBObject cacheKey : cacheKeys) {
+            sessionCache.put(cacheKey, entity);
         }
     }
 
@@ -128,9 +129,9 @@ class MongoDBSession {
         if (logger.isDebugEnabled()) {
             // TODO: check upsert list?
             if (deletedEntityIdentifiers.contains(identifier)) {
-                logger.debug("Object already tracked for remove: {}", identifier);
+                logger.debug("Object already tracked for delete: {}", identifier);
             } else {
-                logger.debug("Tracking for remove: {}", identifier);
+                logger.debug("Tracking for delete: {}", identifier);
             }
         }
 
@@ -278,37 +279,27 @@ class MongoDBSession {
         Logger contextLogger = creators.peek().getLogger();
         long dirtyCheckCost = 0L;
         int saveCount = 0;
-        int upsertCount = 0;
         int deleteCount = 0;
 
         // TODO : perform actions in order they're tracked
 
         if (savedPerDAO.containsKey(mongoDBQueryModelDAO)) {
-            // use get to keep objects in session
-            Map<DBObject, Object> updatedEntities = savedPerDAO.get(mongoDBQueryModelDAO);
+            Map<DBObject, Object> savedEntities = savedPerDAO.get(mongoDBQueryModelDAO);
 
-            for (Map.Entry<DBObject, Object> entry : updatedEntities.entrySet()) {
-                long beforeDirtyCheck = System.nanoTime();
-
-                if (!(entry.getValue() instanceof DBObject)) {
-                    logger.error("Non-DBObject made it into the session: {}", entry.getValue());
-
-                    continue;
-                }
-
+            for (Map.Entry<DBObject, Object> entry : savedEntities.entrySet()) {
                 try {
-                    if (entry.getValue() instanceof DirtyableDBObject) {
-                        if (!((DirtyableDBObject) entry.getValue()).isDirty()) {
-                            dirtyCheckCost += (System.nanoTime() - beforeDirtyCheck);
+                    DirtyableDBObject enhancedEntity = (DirtyableDBObject) entry.getValue();
 
-                            continue;
-                        }
-                    }
-
-                    // add here too for when object falls through condition above
+                    long beforeDirtyCheck = System.nanoTime();
+                    boolean isDirty = enhancedEntity.isDirty();
                     dirtyCheckCost += (System.nanoTime() - beforeDirtyCheck);
 
-                    mongoDBQueryModelDAO.trueSave(entry.getKey(), (DBObject) entry.getValue());
+                    if (!isDirty) {
+                        continue;
+                    }
+
+                    mongoDBQueryModelDAO.trueSave(entry.getKey(), enhancedEntity);
+
                     saveCount++;
                 } catch (MongoException.DuplicateKey e) {
                     logger.warn("Error saving {}. Duplicate record found.", entry.getValue());
@@ -317,36 +308,32 @@ class MongoDBSession {
                 }
             }
             
-            updatedEntities.clear();
+            savedEntities.clear();
         }
 
         if (deletedPerDAO.containsKey(mongoDBQueryModelDAO)) {
             Collection<DBObject> deletedEntityIdentifiers = deletedPerDAO.get(mongoDBQueryModelDAO);
 
-            for (Iterator<DBObject> iterator = deletedEntityIdentifiers.iterator(); iterator.hasNext(); ) {
-                DBObject deletedEntityIdentifier = iterator.next();
-
-                logger.debug("Remove: {}", deletedEntityIdentifier.toMap());
-
+            for (DBObject deletedEntityIdentifier : deletedEntityIdentifiers) {
                 try {
                     mongoDBQueryModelDAO.trueRemove(deletedEntityIdentifier);
-                    iterator.remove();
 
                     deleteCount++;
                 } catch (MongoException e) {
                     logger.error("Error removing {}.", deletedEntityIdentifier, e); // TODO: Implement
                 }
             }
+
+            deletedEntityIdentifiers.clear();
         }
 
         getCache(mongoDBQueryModelDAO.getDbCollection().getName()).clear();
 
-        contextLogger.debug("{} flushed {}s in {}ms. (save={}, upsert={}, delete={})",
+        contextLogger.debug("{} flushed {}s in {}ms. (save={}, delete={})",
                             new Object[] { contextName,
                                            mongoDBQueryModelDAO.getCollectionClass().getSimpleName(),
                                            TimeUnit.NANOSECONDS.toMillis(dirtyCheckCost),
                                            saveCount,
-                                           upsertCount,
                                            deleteCount } );
     }
 

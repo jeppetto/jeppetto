@@ -228,7 +228,36 @@ public class MongoDBQueryModelDAO<T>
 
     @Override
     public final void save(T entity) {
-        saveAndReturn(entity);
+        T enhancedEntity;
+
+        if (enhancer.needsEnhancement(entity)) {
+            enhancedEntity = enhancer.enhance(entity);
+        } else {
+            enhancedEntity = entity;
+        }
+
+        DirtyableDBObject dbo = (DirtyableDBObject) enhancedEntity;
+
+        if (dbo.get(ID_FIELD) == null) {
+            dbo.put(ID_FIELD, findOrCreateIdFor(dbo));
+
+            if (accessControlContextProvider != null) {
+                if (roleAllowsAccess(accessControlContextProvider.getCurrent().getRole())
+                    || accessControlContextProvider.getCurrent().getAccessId() == null) {
+                    dbo.put(ACCESS_CONTROL_LIST_FIELD, Collections.<Object>emptyList());
+                } else {
+                    dbo.put(ACCESS_CONTROL_LIST_FIELD, Collections.singletonList(accessControlContextProvider.getCurrent().getAccessId()));
+                }
+            }
+        }
+
+        DBObject identifier = createPrimaryIdentifyingQuery(dbo);
+
+        if (MongoDBSession.isActive()) {
+            MongoDBSession.trackForSave(this, identifier, enhancedEntity, createIdentifyingQueries(dbo));
+        } else {
+            trueSave(identifier, dbo);
+        }
     }
 
 
@@ -275,8 +304,7 @@ public class MongoDBQueryModelDAO<T>
             if (cached != null) {
                 DBObject identifier = createPrimaryIdentifyingQuery((DBObject) cached);
 
-                MongoDBSession.trackForSave(this, identifier, cached,
-                                            createIdentifyingQueries((DBObject) cached));
+                MongoDBSession.trackForSave(this, identifier, cached, createIdentifyingQueries((DBObject) cached));
 
                 return cached;
             }
@@ -287,8 +315,7 @@ public class MongoDBQueryModelDAO<T>
 
         if (MongoDBSession.isActive()) {
             DBObject identifier = createPrimaryIdentifyingQuery((DBObject) result);
-            MongoDBSession.trackForSave(this, identifier, result,
-                                        createIdentifyingQueries((DBObject) result));
+            MongoDBSession.trackForSave(this, identifier, result, createIdentifyingQueries((DBObject) result));
         }
 
         return result;
@@ -469,45 +496,12 @@ public class MongoDBQueryModelDAO<T>
     // Methods - Protected
     //-------------------------------------------------------------
 
-    protected final T saveAndReturn(T entity) {
-        T enhancedEntity;
-
-        if (enhancer.needsEnhancement(entity)) {
-            enhancedEntity = enhancer.enhance(entity);
-        } else {
-            enhancedEntity = entity;
-        }
-
-        DBObject dbo = (DBObject) enhancedEntity;
-
-        if (dbo.get(ID_FIELD) == null) {
-            dbo.put(ID_FIELD, findOrCreateIdFor(dbo));
-
-            if (accessControlContextProvider != null) {
-                if (roleAllowsAccess(accessControlContextProvider.getCurrent().getRole())
-                    || accessControlContextProvider.getCurrent().getAccessId() == null) {
-                    dbo.put(ACCESS_CONTROL_LIST_FIELD, Collections.<Object>emptyList());
-                } else {
-                    dbo.put(ACCESS_CONTROL_LIST_FIELD, Collections.singletonList(accessControlContextProvider.getCurrent().getAccessId()));
-                }
-            }
-        }
-
-        DBObject identifier = createPrimaryIdentifyingQuery(dbo);
-
-        if (MongoDBSession.isActive()) {
-            MongoDBSession.trackForSave(this, identifier, enhancedEntity, createIdentifyingQueries(dbo));
-        } else {
-            trueSave(identifier, dbo);
-        }
-
-        return enhancedEntity;
-    }
-
-
     /**
      * This method allows subclasses an opportunity to add any important data to a cache key, such
      * as the __acl from the AccessControlMongoDAO.
+     *
+     * TODO: revsit these methods...
+     *
      * @param key key to augment
      * @return augmented key
      */
@@ -570,16 +564,14 @@ public class MongoDBQueryModelDAO<T>
     }
 
 
-    protected final void trueSave(final DBObject identifier, final DBObject dbo) {
-        // included this logic here just in case we want to enable
-        // retry logic inside of 'executeAndCheckLastError' (it would
-        // just need to re-run the runnable)
+    protected final void trueSave(final DBObject identifier, final DirtyableDBObject dbo) {
         if (optimisticLockEnabled) {
             Integer optimisticLockVersion = (Integer) dbo.get(OPTIMISTIC_LOCK_VERSION_FIELD);
 
             if (optimisticLockVersion == null) {
                 dbo.put(OPTIMISTIC_LOCK_VERSION_FIELD, 1);
             } else {
+                // TODO: should this modification of identifier been done earlier (in save())?
                 identifier.put(OPTIMISTIC_LOCK_VERSION_FIELD, optimisticLockVersion);
 
                 dbo.put(OPTIMISTIC_LOCK_VERSION_FIELD, optimisticLockVersion + 1);
@@ -597,9 +589,7 @@ public class MongoDBQueryModelDAO<T>
 
         dbCollection.update(identifier, optimalDbo, true, false, getWriteConcern());
 
-        if (DirtyableDBObject.class.isAssignableFrom(dbo.getClass())) {
-            ((DirtyableDBObject) dbo).markCurrentAsClean();
-        }
+        dbo.markCurrentAsClean();
     }
 
 
