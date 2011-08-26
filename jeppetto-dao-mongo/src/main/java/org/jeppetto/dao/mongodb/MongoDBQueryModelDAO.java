@@ -84,6 +84,10 @@ import java.util.Set;
  *                              type should have an
  *                              implicit lock version
  *                              field
+ *   "shardKeyPattern" -> A comma-separated string of       (optional)
+ *                        fields that are used to determine
+ *                        the shard key(s) for the
+ *                        collection.
  *   "saveNulls" -> Boolean as to whether null fields       (optional)
  *                  should be included in saved objects.
  *                  If a field goes from a set value to
@@ -107,7 +111,6 @@ import java.util.Set;
 // TODO: Implement determineOptimalDBObject
 //          - understand saveNulls
 //          - understand field-level deltas
-// TODO: become shard-aware
 // TODO: support per-call WriteConcerns
 // TODO: investigate usage of ClassLoader so new instances are already enhanced
 public class MongoDBQueryModelDAO<T>
@@ -145,6 +148,7 @@ public class MongoDBQueryModelDAO<T>
     private AccessControlContextProvider accessControlContextProvider;
     private Map<String, Set<String>> uniqueIndexes;
     private boolean optimisticLockEnabled;
+    private List<String> shardKeys;
     private boolean saveNulls;
     private WriteConcern defaultWriteConcern;
     private Logger queryLogger;
@@ -178,6 +182,7 @@ public class MongoDBQueryModelDAO<T>
         this.uniqueIndexes = ensureIndexes((List<String>) daoProperties.get("uniqueIndexes"), true);
         ensureIndexes((List<String>) daoProperties.get("nonUniqueIndexes"), false);
         this.optimisticLockEnabled = Boolean.parseBoolean((String) daoProperties.get("optimisticLockEnabled"));
+        this.shardKeys = extractShardKeys((String) daoProperties.get("shardKeyPattern"));
         this.saveNulls = Boolean.parseBoolean((String) daoProperties.get("saveNulls"));
 
         if (daoProperties.containsKey("writeConcern")) {
@@ -228,14 +233,7 @@ public class MongoDBQueryModelDAO<T>
 
     @Override
     public final void save(T entity) {
-        T enhancedEntity;
-
-        if (enhancer.needsEnhancement(entity)) {
-            enhancedEntity = enhancer.enhance(entity);
-        } else {
-            enhancedEntity = entity;
-        }
-
+        T enhancedEntity = enhancer.enhance(entity);
         DirtyableDBObject dbo = (DirtyableDBObject) enhancedEntity;
 
         if (dbo.get(ID_FIELD) == null) {
@@ -268,6 +266,10 @@ public class MongoDBQueryModelDAO<T>
         DBObject dbo = (DBObject) enhancer.enhance(entity);
 
         DBObject identifier = createPrimaryIdentifyingQuery(dbo);
+
+        for (String shardKey : shardKeys) {
+            identifier.put(shardKey, dbo.get(shardKey));
+        }
 
         deleteByIdentifier(identifier);
     }
@@ -578,6 +580,10 @@ public class MongoDBQueryModelDAO<T>
             }
         }
 
+        for (String shardKey : shardKeys) {
+            identifier.put(shardKey, dbo.get(shardKey));
+        }
+
         final DBObject optimalDbo = determineOptimalDBObject(dbo);
 
         if (queryLogger != null) {
@@ -732,6 +738,8 @@ public class MongoDBQueryModelDAO<T>
             String[] indexFields = uniqueIndex.split(",");
 
             for (String indexField : indexFields) {
+                indexField = indexField.trim();
+
                 if (indexField.startsWith("+")) {
                     index.put(indexField.substring(1), 1);
                 } else if (indexField.startsWith("-")) {
@@ -757,6 +765,28 @@ public class MongoDBQueryModelDAO<T>
 
     private String createIndexName(String indexSpec) {
         return indexSpec.replace(',', '-');
+    }
+
+
+    private List<String> extractShardKeys(String shardKeyPattern) {
+        if (shardKeyPattern == null) {
+            return Collections.emptyList();
+        }
+
+        String[] shardKeyParts = shardKeyPattern.split(",");
+        List<String> shardKeys = new ArrayList<String>(shardKeyParts.length);
+
+        for (String shardKey : shardKeyParts) {
+            shardKey = shardKey.trim();
+
+            if (shardKey.equals("id") || shardKey.equals("_id")) {
+                continue;
+            }
+
+            shardKeys.add(shardKey);
+        }
+
+        return shardKeys;
     }
 
 
