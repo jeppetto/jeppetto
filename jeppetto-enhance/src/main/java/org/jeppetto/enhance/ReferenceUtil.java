@@ -63,6 +63,11 @@ public class ReferenceUtil {
     }
 
 
+    public static Object asObject(float obj) {
+        return obj;
+    }
+
+
     public static Object asObject(double obj) {
         return obj;
     }
