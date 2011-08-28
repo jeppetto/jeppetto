@@ -61,57 +61,69 @@ import java.util.Set;
 
 /**
  * Provides a QueryModelDAO implementation for Mongo.
+ * <p/>
+ * This QueryModelDAO implementation for MongoDB provides bi-directional ODM (Object to Document Mapping) as well
+ * as the rich query capabilities found in the core org.jeppetto.dao package.  It requires that the PK be a String.
  *
- * Provides bi-directional ODM (Object to Document Mapping) as well as the
- * rich query capabilities found in the core org.jeppetto.dao package.
- *
- * This implementation of the QueryModelDAO requires that the PK be a String.
- *
- * Instantiation requires a daoProperties Map<String, Object> that will look
- * for the following keys (and expected values):
- *
- *   "db" -> Instance of a configured com.mongodb.DB        (required)
- *   "uniqueIndexes" -> List<String> of various MongoDB     (optional)
- *                      index values that will be
- *                      ensured to exist and must be
- *                      unique
- *   "nonUniqueIndexes" -> List<String> of various MongoDB  (optional)
- *                         index values that will be
- *                         ensured to exist and need
- *                         not be unique
- *   "optimisticLockEnabled" -> Boolean as to whether       (optional)
- *                              instances of the tracked
- *                              type should have an
- *                              implicit lock version
- *                              field
- *   "shardKeyPattern" -> A comma-separated string of       (optional)
- *                        fields that are used to determine
- *                        the shard key(s) for the
- *                        collection.
- *   "saveNulls" -> Boolean as to whether null fields       (optional)
- *                  should be included in saved objects.
- *                  If a field goes from a set value to
- *                  null, it will be cleared.
- *   "writeConcern" -> String, one of the values as         (optional)
- *                     indicated at http://www.mongodb.org/display/DOCS/Replica+Set+Semantics.
- *                     If not specified, the DAO defaults
- *                     to "SAFE".  In either case, it can
- *                     be overridden on a call-by-call
- *                     basis by ...
- *                     TODO: implement... (keep in mind session semantics...)
- *   "showQueries" -> Boolean that indicates if additional  (optional)
- *                    info should be logged regarding the
- *                    various queries that are executed.
- *                    Logging will need need to be enabled
- *                    for the DAO's package
- *
+ * Instantiation requires a daoProperties Map<String, Object> that will look for the following keys (and expected
+ * values):
+ * <p/>
+ * <table>
+ *   <tr>
+ *     <td>Key</td>
+ *     <td>Required?</td>
+ *     <td>Description</td>
+ *   </tr>
+ *   <tr>
+ *     <td>db</td>
+ *     <td>Yes</td>
+ *     <td>Instance of a configured com.mongodb.DB</td>
+ *   </tr>
+ *   <tr>
+ *     <td>uniqueIndexes</td>
+ *     <td>No</td>
+ *     <td>List<String> of various MongoDB index values that will be ensured to exist and must be unique.</td>
+ *   </tr>
+ *   <tr>
+ *     <td>nonUniqueIndexes</td>
+ *     <td>No</td>
+ *     <td>List<String> of various MongoDB index values that will be ensured to exist and need not be unique.</td>
+ *   </tr>
+ *   <tr>
+ *     <td>optimisticLockEnabled</td>
+ *     <td>No</td>
+ *     <td>Boolean to indicate if instances of the tracked type should be protected by a Jeppetto-managed lock version field.</td>
+ *   </tr>
+ *   <tr>
+ *     <td>shardKeyPattern</td>
+ *     <td>No</td>
+ *     <td>A comma-separated string of fields that are used to determine the shard key(s) for the collection.</td>
+ *   </tr>
+ *   <tr>
+ *     <td>saveNulls</td>
+ *     <td>No</td>
+ *     <td>Boolean to indicate whether null fields should be included in MongoDB documents.</td>
+ *   </tr>
+ *   <tr>
+ *     <td>writeConcern</td>
+ *     <td>No</td>
+ *     <td>String, one of the values as indicated at http://www.mongodb.org/display/DOCS/Replica+Set+Semantics.  If
+ *         not specified, the DAO defaults to "SAFE".</td>
+ *   </tr>
+ *   <tr>
+ *     <td>showQueries</td>
+ *     <td>No</td>
+ *     <td>Boolean to indicate if executed queries should be logged.  Note that logging will need to be enabled for
+ *         the DAO's package as well.</td>
+ *   </tr>
+ * </table>
  * @param <T> the type of persistent object this DAO will manage.
  */
 // TODO: support createdDate/lastModifiedDate (createdDate from get("_id").getTime()?)
 // TODO: Implement determineOptimalDBObject
 //          - understand saveNulls
 //          - understand field-level deltas
-// TODO: support per-call WriteConcerns
+// TODO: support per-call WriteConcerns (keep in mind session semantics)
 // TODO: investigate usage of ClassLoader so new instances are already enhanced
 public class MongoDBQueryModelDAO<T>
         implements QueryModelDAO<T, String>, AccessControllable<String> {
