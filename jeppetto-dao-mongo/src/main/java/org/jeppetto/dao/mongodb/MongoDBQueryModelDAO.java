@@ -135,20 +135,6 @@ public class MongoDBQueryModelDAO<T>
     private static final String ID_FIELD = "_id";
     private static final String OPTIMISTIC_LOCK_VERSION_FIELD = "__olv";
     private static final String ACCESS_CONTROL_LIST_FIELD = "__acl";
-    private static final Map<ConditionType, MongoDBOperator> CONDITION_TYPE_TO_MONGO_OPERATOR = new HashMap<ConditionType, MongoDBOperator>() { {
-            put(ConditionType.Equal, MongoDBOperator.Equal);
-            put(ConditionType.NotEqual, MongoDBOperator.NotEqual);
-            put(ConditionType.GreaterThan, MongoDBOperator.GreaterThan);
-            put(ConditionType.GreaterThanEqual, MongoDBOperator.GreaterThanEqual);
-            put(ConditionType.LessThan, MongoDBOperator.LessThan);
-            put(ConditionType.LessThanEqual, MongoDBOperator.LessThanEqual);
-            put(ConditionType.Between, MongoDBOperator.Between);
-            put(ConditionType.Within, MongoDBOperator.Within);
-            put(ConditionType.NotWithin, MongoDBOperator.NotWithin);
-//            put(ConditionType.IsNull, MongoDBOperator.IsNull);
-//            put(ConditionType.IsNotNull, MongoDBOperator.IsNotNull);
-        }
-    };
 
 
     //-------------------------------------------------------------
@@ -405,16 +391,11 @@ public class MongoDBQueryModelDAO<T>
     public Condition buildCondition(String conditionField,
                                     ConditionType conditionType,
                                     Iterator argsIterator) {
-        MongoDBOperator mongoDBOperator = CONDITION_TYPE_TO_MONGO_OPERATOR.get(conditionType);
-
-        if (mongoDBOperator == null) {
-            throw new IllegalArgumentException("Unknown mapping for: " + conditionType);
-        }
-
         if (conditionField.equals("id")) {
             return buildIdCondition(argsIterator.next());
         } else {
-            return new Condition(conditionField, mongoDBOperator.buildConstraint(argsIterator));
+            return new Condition(conditionField,
+                                 MongoDBOperator.valueOf(conditionType.name()).buildConstraint(argsIterator));
         }
     }
 
