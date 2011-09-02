@@ -17,29 +17,26 @@
 package org.jeppetto.dao;
 
 
-import java.io.Serializable;
-
-
 /**
  * A GenericDAO is the root interface for DAOs that fit within the Jeppetto framework.  This
  * defines base functionality such as finding a specific item by its identifier and saving an
  * to the underlying data store.
  *
  * @param <T> Persistent Class
- * @param <PK> Primary key of T
+ * @param <ID> ID type for the persistent class.
  */
-public interface GenericDAO<T, PK extends Serializable> {
+public interface GenericDAO<T, ID> {
 
     /**
-     * Find an object T with the specified primary key.
+     * Find an object T with the specified id.
      *
-     * @param primaryKey of the desired object.
+     * @param id of the desired object.
      *
-     * @return Object with the specified primary key
+     * @return Object with the specified id
      *
-     * @throws NoSuchItemException if the object identified by the primary key is not found
+     * @throws NoSuchItemException if the object identified by the id is not found
      */
-    T findById(PK primaryKey)
+    T findById(ID id)
             throws NoSuchItemException;
 
 
@@ -69,11 +66,11 @@ public interface GenericDAO<T, PK extends Serializable> {
 
 
     /**
-     * Delete an object from the persistent store based on the primary key.
+     * Delete an object from the persistent store based on the id.
      *
-     * @param primaryKey of the object to delete.
+     * @param id of the object to delete.
      */
-    void delete(PK primaryKey);
+    void deleteById(ID id);
 
 
     /**

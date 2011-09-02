@@ -48,10 +48,10 @@ import java.util.Map;
  * An implementation of the QueryModelDAO interface that supports Hibernate.
  *
  * @param <T> persistent class.
- * @param <PK> PK of that persistent class.
+ * @param <ID> ID type for the persistent class.
  */
-public class HibernateQueryModelDAO<T, PK extends Serializable>
-        implements QueryModelDAO<T, PK> {
+public class HibernateQueryModelDAO<T, ID extends Serializable>
+        implements QueryModelDAO<T, ID> {
 
     //-------------------------------------------------------------
     // Variables - Private
@@ -76,12 +76,12 @@ public class HibernateQueryModelDAO<T, PK extends Serializable>
     //-------------------------------------------------------------
 
     @Override
-    public T findById(PK primaryKey)
+    public T findById(ID id)
             throws NoSuchItemException {
-        T entity = persistentClass.cast(getCurrentSession().get(persistentClass, primaryKey));
+        T entity = persistentClass.cast(getCurrentSession().get(persistentClass, id));
 
         if (entity == null) {
-            throw new NoSuchItemException(persistentClass.getSimpleName(), primaryKey.toString());
+            throw new NoSuchItemException(persistentClass.getSimpleName(), id.toString());
         }
 
         return entity;
@@ -115,9 +115,9 @@ public class HibernateQueryModelDAO<T, PK extends Serializable>
 
 
     @Override
-    public void delete(PK primaryKey) {
+    public void deleteById(ID id) {
         try {
-            getCurrentSession().delete(findById(primaryKey));
+            getCurrentSession().delete(findById(id));
         } catch (NoSuchItemException ignore) {
             // If it doesn't exist, no need to delete.
         } catch (HibernateException e) {

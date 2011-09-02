@@ -17,15 +17,14 @@
 package org.jeppetto.dao;
 
 
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
 
-public class DummyQueryModelDAO<T, PK extends Serializable>
-        implements QueryModelDAO<T, PK> {
+public class DummyQueryModelDAO<T, ID>
+        implements QueryModelDAO<T, ID> {
 
     //-------------------------------------------------------------
     // Variables - Private
@@ -96,7 +95,7 @@ public class DummyQueryModelDAO<T, PK extends Serializable>
 
 
     @Override
-    public T findById(PK primaryKey)
+    public T findById(ID id)
             throws NoSuchItemException {
         return findUniqueUsingQueryModel(null);
     }
@@ -119,7 +118,7 @@ public class DummyQueryModelDAO<T, PK extends Serializable>
 
 
     @Override
-    public void delete(PK primaryKey) {
+    public void deleteById(ID id) {
     }
 
 

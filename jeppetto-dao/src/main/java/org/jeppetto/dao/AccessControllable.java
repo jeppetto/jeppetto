@@ -17,19 +17,22 @@
 package org.jeppetto.dao;
 
 
-import java.io.Serializable;
 import java.util.List;
 
 
-public interface AccessControllable<PK extends Serializable> {
+/**
+ *
+ * @param <ID> ID type of the persistent class.
+ */
+public interface AccessControllable<ID> {
 
-    void grantAccess(PK id, String accessId);
+    void grantAccess(ID id, String accessId);
 
 
-    void revokeAccess(PK id, String accessId);
+    void revokeAccess(ID id, String accessId);
 
 
-    List<String> getAccessIds(PK id);
+    List<String> getAccessIds(ID id);
 
 
     AccessControlContextProvider getAccessControlContextProvider();

@@ -39,9 +39,9 @@ public abstract class AbstractSimpleObjectDAO extends MongoDBQueryModelDAO<Simpl
     //-------------------------------------------------------------
 
     @Override
-    public SimpleObject findById(String primaryKey) {
+    public SimpleObject findById(String id) {
         try {
-            return super.findById(primaryKey);
+            return super.findById(id);
         } catch (NoSuchItemException e) {
             return null;
         }

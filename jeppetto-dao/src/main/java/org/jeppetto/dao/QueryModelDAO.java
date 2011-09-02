@@ -17,7 +17,6 @@
 package org.jeppetto.dao;
 
 
-import java.io.Serializable;
 import java.util.Iterator;
 
 
@@ -28,9 +27,9 @@ import java.util.Iterator;
  * or more items that match the given QueryModel.
  *
  * @param <T> Persistent Class
- * @param <PK> Primary key of T
+ * @param <ID> ID type for the persistent class.
  */
-public interface QueryModelDAO<T, PK extends Serializable> extends GenericDAO<T, PK> {
+public interface QueryModelDAO<T, ID> extends GenericDAO<T, ID> {
 
     /**
      * Find an object T that satisfies the QueryModel.
@@ -39,7 +38,7 @@ public interface QueryModelDAO<T, PK extends Serializable> extends GenericDAO<T,
      *
      * @return Object that satisfies the query model
      *
-     * @throws NoSuchItemException if the object identified by the primary key
+     * @throws NoSuchItemException if the object identified by the queryModel
      * is not found
      */
     T findUniqueUsingQueryModel(QueryModel queryModel)

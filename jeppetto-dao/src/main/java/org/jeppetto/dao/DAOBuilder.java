@@ -31,7 +31,6 @@ import javassist.NotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.Serializable;
 import java.lang.reflect.Modifier;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -52,19 +51,19 @@ public class DAOBuilder {
     //-------------------------------------------------------------
 
 
-    public static <T, PK extends Serializable, I extends GenericDAO<T, PK>> I buildDAO(Class<T> modelClass,
-                                                                                       Class<I> daoInterface,
-                                                                                       Class<? extends QueryModelDAO<T, PK>> partialDAOClass,
-                                                                                       Map<String, Object> daoProperties) {
+    public static <T, ID, I extends GenericDAO<T, ID>> I buildDAO(Class<T> modelClass,
+                                                                  Class<I> daoInterface,
+                                                                  Class<? extends QueryModelDAO<T, ID>> partialDAOClass,
+                                                                  Map<String, Object> daoProperties) {
         return buildDAO(modelClass, daoInterface, partialDAOClass, daoProperties, null);
     }
 
 
-    public static <T, PK extends Serializable, I extends GenericDAO<T, PK>> I buildDAO(Class<T> modelClass,
-                                                                                       Class<I> daoInterface,
-                                                                                       Class<? extends QueryModelDAO<T, PK>> partialDAOClass,
-                                                                                       Map<String, Object> daoProperties,
-                                                                                       AccessControlContextProvider accessControlContextProvider) {
+    public static <T, ID, I extends GenericDAO<T, ID>> I buildDAO(Class<T> modelClass,
+                                                                  Class<I> daoInterface,
+                                                                  Class<? extends QueryModelDAO<T, ID>> partialDAOClass,
+                                                                  Map<String, Object> daoProperties,
+                                                                  AccessControlContextProvider accessControlContextProvider) {
         if (AccessControllable.class.isAssignableFrom(daoInterface)) {
             // Verify the DAO implementation can support AccessControllable...
 
@@ -107,10 +106,10 @@ public class DAOBuilder {
     // Methods - Private
     //-------------------------------------------------------------
 
-    private static <T, PK extends Serializable, I extends GenericDAO<T, PK>> Class<? extends I> completeDAO(Class<T> modelClass,
-                                                                                                            Class<I> daoInterface,
-                                                                                                            Class<? extends QueryModelDAO<T, PK>> partialDAOClass,
-                                                                                                            boolean accessControlEnabled) {
+    private static <T, ID, I extends GenericDAO<T, ID>> Class<? extends I> completeDAO(Class<T> modelClass,
+                                                                                       Class<I> daoInterface,
+                                                                                       Class<? extends QueryModelDAO<T, ID>> partialDAOClass,
+                                                                                       boolean accessControlEnabled) {
         try {
             ClassPool pool = ClassPool.getDefault();
 

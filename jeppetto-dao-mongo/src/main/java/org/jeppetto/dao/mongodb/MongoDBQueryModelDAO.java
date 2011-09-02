@@ -200,11 +200,11 @@ public class MongoDBQueryModelDAO<T>
     //-------------------------------------------------------------
 
     @Override
-    public T findById(String primaryKey)
+    public T findById(String id)
             throws NoSuchItemException {
         try {
             QueryModel queryModel = new QueryModel();
-            queryModel.addCondition(buildIdCondition(primaryKey));
+            queryModel.addCondition(buildIdCondition(id));
 
             if (accessControlContextProvider != null) {
                 queryModel.setAccessControlContext(accessControlContextProvider.getCurrent());
@@ -212,7 +212,7 @@ public class MongoDBQueryModelDAO<T>
 
             return findUniqueUsingQueryModel(queryModel);
         } catch (IllegalArgumentException e) {
-            throw new NoSuchItemException(getCollectionClass().getSimpleName(), primaryKey);
+            throw new NoSuchItemException(getCollectionClass().getSimpleName(), id);
         }
     }
 
@@ -274,8 +274,8 @@ public class MongoDBQueryModelDAO<T>
 
 
     @Override
-    public final void delete(String primaryKey) {
-        deleteByIdentifier(createPrimaryIdentifyingQuery(primaryKey));
+    public final void deleteById(String id) {
+        deleteByIdentifier(createPrimaryIdentifyingQuery(id));
     }
 
 
@@ -534,19 +534,19 @@ public class MongoDBQueryModelDAO<T>
     // Methods - Protected - Final
     //-------------------------------------------------------------
 
-    protected final DBObject createPrimaryIdentifyingQuery(String primaryKey) {
-        if (primaryKey == null) {
-            throw new IllegalArgumentException("Primary key cannot be null.");
-        } else if (ObjectId.isValid(primaryKey)) {
-            return createPrimaryIdentifyingQuery(new ObjectId(primaryKey));
+    protected final DBObject createPrimaryIdentifyingQuery(String id) {
+        if (id == null) {
+            throw new IllegalArgumentException("Identifier cannot be null.");
+        } else if (ObjectId.isValid(id)) {
+            return createPrimaryIdentifyingQuery(new ObjectId(id));
         } else {
-            return new BasicDBObject("_id", primaryKey);
+            return new BasicDBObject("_id", id);
         }
     }
 
 
-    protected final DBObject createPrimaryIdentifyingQuery(ObjectId primaryKey) {
-        return new BasicDBObject("_id", primaryKey);
+    protected final DBObject createPrimaryIdentifyingQuery(ObjectId id) {
+        return new BasicDBObject("_id", id);
     }
 
 
