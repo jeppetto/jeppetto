@@ -17,10 +17,17 @@
 package org.jeppetto;
 
 
+import org.jeppetto.dao.annotation.AccessControl;
+import org.jeppetto.dao.annotation.AccessControlRule;
+import org.jeppetto.dao.annotation.AccessControlType;
+
 import java.util.Set;
 import java.util.HashSet;
 
 
+@AccessControl(rules = {
+    @AccessControlRule(type = AccessControlType.Role,  value = "Administrator")
+} )
 public class SimpleObject {
 
     //-------------------------------------------------------------
@@ -30,6 +37,19 @@ public class SimpleObject {
     private String id;
     private int intValue;
     private Set<RelatedObject> relatedObjects;
+
+
+    //-------------------------------------------------------------
+    // Constructors
+    //-------------------------------------------------------------
+
+    public SimpleObject() {
+    }
+
+
+    public SimpleObject(int intValue) {
+        this.intValue = intValue;
+    }
 
 
     //-------------------------------------------------------------

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-2.0.xsd">
+    <changeSet id="security:001-access-control-entry" author="jeppetto">
+
+        <createTable tableName="AccessControlEntries">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints nullable="false" primaryKey="true"/>
+            </column>
+            <column name="objectType" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="objectId" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="accessibleBy" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createIndex tableName="AccessControlEntries" indexName="idx_AccessControlEntries_all">
+            <column name="objectId"/>
+            <column name="objectType"/>
+            <column name="accessibleBy"/>
+        </createIndex>
+
+        <createIndex tableName="AccessControlEntries" indexName="idx_AccessControlEntries_id_type">
+            <column name="objectId"/>
+            <column name="objectType"/>
+        </createIndex>
+
+        <createIndex tableName="AccessControlEntries" indexName="idx_AccessControlEntries_accessibleby_type">
+            <column name="accessibleBy"/>
+            <column name="objectType"/>
+        </createIndex>
+
+    </changeSet>
+</databaseChangeLog>

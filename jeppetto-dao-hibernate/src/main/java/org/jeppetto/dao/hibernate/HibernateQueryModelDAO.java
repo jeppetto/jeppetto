@@ -17,6 +17,9 @@
 package org.jeppetto.dao.hibernate;
 
 
+import org.jeppetto.dao.AccessControlContext;
+import org.jeppetto.dao.AccessControlContextProvider;
+import org.jeppetto.dao.AccessControllable;
 import org.jeppetto.dao.Condition;
 import org.jeppetto.dao.ConditionType;
 import org.jeppetto.dao.NoSuchItemException;
@@ -26,9 +29,13 @@ import org.jeppetto.dao.QueryModel;
 import org.jeppetto.dao.QueryModelDAO;
 import org.jeppetto.dao.Sort;
 import org.jeppetto.dao.SortDirection;
+import org.jeppetto.dao.annotation.AccessControl;
+import org.jeppetto.dao.annotation.AccessControlRule;
+import org.jeppetto.dao.annotation.AccessControlType;
 
 import org.hibernate.Criteria;
 import org.hibernate.HibernateException;
+import org.hibernate.Query;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.criterion.Criterion;
@@ -36,12 +43,20 @@ import org.hibernate.criterion.Order;
 import org.hibernate.criterion.ProjectionList;
 import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
+import org.hibernate.engine.SessionFactoryImplementor;
+import org.hibernate.engine.TypedValue;
+import org.hibernate.impl.CriteriaImpl;
+import org.hibernate.loader.criteria.CriteriaQueryTranslator;
+import org.hibernate.type.StringType;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 
 /**
@@ -51,7 +66,14 @@ import java.util.Map;
  * @param <ID> ID type for the persistent class.
  */
 public class HibernateQueryModelDAO<T, ID extends Serializable>
-        implements QueryModelDAO<T, ID> {
+        implements QueryModelDAO<T, ID>, AccessControllable<ID> {
+
+    //-------------------------------------------------------------
+    // Constants
+    //-------------------------------------------------------------
+
+    private static final StringType STRING_TYPE = new StringType();
+
 
     //-------------------------------------------------------------
     // Variables - Private
@@ -59,6 +81,9 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
 
     private Class<T> persistentClass;
     private SessionFactory sessionFactory;
+    private AccessControlEntryHelper accessControlEntryHelper;
+    private AccessControlContextProvider accessControlContextProvider;
+    private String idField = "id";      // TODO: Allow for configuration...
 
 
     //-------------------------------------------------------------
@@ -66,8 +91,16 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
     //-------------------------------------------------------------
 
     public HibernateQueryModelDAO(Class<T> persistentClass, Map<String, Object> daoProperties) {
+        this(persistentClass, daoProperties, null);
+    }
+
+
+    public HibernateQueryModelDAO(Class<T> persistentClass, Map<String, Object> daoProperties,
+                                  AccessControlContextProvider accessControlContextProvider) {
         this.persistentClass = persistentClass;
         this.sessionFactory = (SessionFactory) daoProperties.get("sessionFactory");
+        this.accessControlEntryHelper = (AccessControlEntryHelper) daoProperties.get("accessControlEntryHelper");
+        this.accessControlContextProvider = accessControlContextProvider;
     }
 
 
@@ -78,19 +111,26 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
     @Override
     public T findById(ID id)
             throws NoSuchItemException {
-        T entity = persistentClass.cast(getCurrentSession().get(persistentClass, id));
-
-        if (entity == null) {
-            throw new NoSuchItemException(persistentClass.getSimpleName(), id.toString());
+        QueryModel queryModel = new QueryModel();
+        queryModel.addCondition(buildIdCondition(id));
+        
+        if (accessControlContextProvider != null) {
+            queryModel.setAccessControlContext(accessControlContextProvider.getCurrent());
         }
 
-        return entity;
+        return findUniqueUsingQueryModel(queryModel);
     }
 
 
     @Override
     public Iterable<T> findAll() {
-        return findUsingQueryModel(new QueryModel());
+        QueryModel queryModel = new QueryModel();
+
+        if (accessControlContextProvider != null) {
+            queryModel.setAccessControlContext(accessControlContextProvider.getCurrent());
+        }
+
+        return findUsingQueryModel(queryModel);
     }
 
 
@@ -139,11 +179,15 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
     @Override
     public T findUniqueUsingQueryModel(QueryModel queryModel)
             throws NoSuchItemException {
-        Criteria criteria = buildCriteria(queryModel);
+        T result;
 
-        // keep suppressed because if the return type is 'int', then the call to Class.cast will fail
-        // noinspection unchecked
-        T result = (T) criteria.uniqueResult();
+        if (accessControlContextProvider == null || roleAllowsAccess(queryModel.getAccessControlContext().getRole())) {
+            // noinspection unchecked
+            result = (T) buildCriteria(queryModel).uniqueResult();
+        } else {
+            // noinspection unchecked
+            result = (T) createEntryBasedQuery(queryModel).uniqueResult();
+        }
 
         if (result == null) {
             throw new NoSuchItemException(persistentClass.getSimpleName(), queryModel.toString());
@@ -155,25 +199,30 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
 
     @Override
     public Iterable<T> findUsingQueryModel(QueryModel queryModel) {
-        Criteria criteria = buildCriteria(queryModel);
+        if (accessControlContextProvider == null || roleAllowsAccess(queryModel.getAccessControlContext().getRole())) {
+            Criteria criteria = buildCriteria(queryModel);
 
-        if (queryModel.getSorts() != null) {
-            for (Sort sort : queryModel.getSorts()) {
-                criteria.addOrder(sort.getSortDirection() == SortDirection.Ascending ? Order.asc(sort.getField())
-                                                                                     : Order.desc(sort.getField()));
+            if (queryModel.getSorts() != null) {
+                for (Sort sort : queryModel.getSorts()) {
+                    criteria.addOrder(sort.getSortDirection() == SortDirection.Ascending ? Order.asc(sort.getField())
+                                                                                         : Order.desc(sort.getField()));
+                }
             }
-        }
 
-        if (queryModel.getMaxResults() > 0) {
-            criteria.setMaxResults(queryModel.getMaxResults());
-        }
+            if (queryModel.getMaxResults() > 0) {
+                criteria.setMaxResults(queryModel.getMaxResults());
+            }
 
-        if (queryModel.getFirstResult() > 0) {
-            criteria.setFirstResult(queryModel.getFirstResult());
-        }
+            if (queryModel.getFirstResult() > 0) {
+                criteria.setFirstResult(queryModel.getFirstResult());
+            }
 
-        //noinspection unchecked
-        return criteria.list();
+            //noinspection unchecked
+            return criteria.list();
+        } else {
+            //noinspection unchecked
+            return createEntryBasedQuery(queryModel).list();
+        }
     }
 
 
@@ -287,6 +336,34 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
 
 
     //-------------------------------------------------------------
+    // Implementation - AccessControllable
+    //-------------------------------------------------------------
+
+    @Override
+    public AccessControlContextProvider getAccessControlContextProvider() {
+        return accessControlContextProvider;
+    }
+
+
+    @Override
+    public void grantAccess(ID id, String accessId) {
+        accessControlEntryHelper.createEntry(persistentClass, id, accessId);
+    }
+
+
+    @Override
+    public void revokeAccess(ID id, String accessId) {
+        accessControlEntryHelper.deleteEntry(persistentClass, id, accessId);
+    }
+
+
+    @Override
+    public List<String> getAccessIds(ID id) {
+        return accessControlEntryHelper.getEntries(persistentClass, id);
+    }
+
+
+    //-------------------------------------------------------------
     // Methods - Protected
     //-------------------------------------------------------------
 
@@ -295,9 +372,58 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
     }
 
 
+    protected Condition buildIdCondition(ID id) {
+        Condition condition = new Condition();
+
+        condition.setField(idField);
+        condition.setConstraint(Restrictions.eq(idField, id));
+
+        return condition;
+    }
+
+
     //-------------------------------------------------------------
     // Methods - Private
     //-------------------------------------------------------------
+
+    private boolean roleAllowsAccess(String role) {
+        AccessControl accessControl;
+
+        if (role == null || role.isEmpty()) {
+            return false;
+        }
+
+        if ((accessControl = getAccessControlAnnotation()) == null) {
+            return false;
+        }
+
+        for (AccessControlRule accessControlRule : accessControl.rules()) {
+            if (accessControlRule.type() == AccessControlType.Role && accessControlRule.value().equals(role)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+
+    private AccessControl getAccessControlAnnotation() {
+        Class classToExamine = persistentClass;
+
+        while (classToExamine != null) {
+            // noinspection unchecked
+            AccessControl accessControl = (AccessControl) classToExamine.getAnnotation(AccessControl.class);
+
+            if (accessControl != null) {
+                return accessControl;
+            }
+
+            classToExamine = classToExamine.getSuperclass();
+        }
+
+        return null;
+    }
+
 
     private Criteria buildCriteria(QueryModel queryModel) {
         Criteria criteria = getCurrentSession().createCriteria(persistentClass);
@@ -327,5 +453,155 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
         }
 
         return criteria;
+    }
+
+
+
+    // TODO: Add projection, maxResults, firstResult support
+    private Query createEntryBasedQuery(QueryModel queryModel) {
+        Criteria criteria = getCurrentSession().createCriteria(persistentClass);
+
+        for (String associationPath : queryModel.getAssociationConditions().keySet()) {
+            criteria.createCriteria(associationPath);
+        }
+
+        CriteriaQueryTranslator criteriaQueryTranslator = new CriteriaQueryTranslator((SessionFactoryImplementor) sessionFactory,
+                                                                                      (CriteriaImpl) criteria,
+                                                                                      persistentClass.getName(),
+                                                                                      CriteriaQueryTranslator.ROOT_SQL_ALIAS);
+
+        StringBuilder queryStringBuilder = new StringBuilder();
+
+        buildSelectClause(queryStringBuilder, criteriaQueryTranslator, queryModel.getAssociationConditions().keySet());
+
+        List<TypedValue> parameters = buildWhereClause(queryStringBuilder, queryModel, criteria, criteriaQueryTranslator);
+
+        if ((queryModel.getAssociationConditions() == null || queryModel.getAssociationConditions().isEmpty())
+            && (queryModel.getSorts() == null || queryModel.getSorts().isEmpty())) {
+            buildDefaultOrderClause(queryStringBuilder);
+        } else {
+            // can't use the default ordering by "ace.id" because of "select distinct..." syntax
+            buildOrderClause(queryStringBuilder, queryModel, criteria, criteriaQueryTranslator);
+        }
+
+        Query query = getCurrentSession().createQuery(queryStringBuilder.toString());
+
+        setParameters(parameters, query, queryModel.getAccessControlContext());
+
+        return query;
+    }
+
+
+    private void buildSelectClause(StringBuilder queryStringBuilder, CriteriaQueryTranslator criteriaQueryTranslator,
+                                   Set<String> associationPaths) {
+        // "distinct" is needed only for association criteria, but it prevents specifying ordering by "ace.id"
+        if (associationPaths.isEmpty()) {
+            queryStringBuilder.append("select ");
+        } else {
+            queryStringBuilder.append("select distinct ");
+        }
+        queryStringBuilder.append(criteriaQueryTranslator.getRootSQLALias());
+        queryStringBuilder.append(" from AccessControlEntry ace, ");
+        queryStringBuilder.append(persistentClass.getSimpleName());
+        queryStringBuilder.append(' ');
+        queryStringBuilder.append(criteriaQueryTranslator.getRootSQLALias());
+
+        for (String associationPath : associationPaths) {
+            queryStringBuilder.append(" join ");
+            queryStringBuilder.append(criteriaQueryTranslator.getRootSQLALias());
+            queryStringBuilder.append('.');
+            queryStringBuilder.append(associationPath);
+            queryStringBuilder.append(" as ");
+            queryStringBuilder.append(criteriaQueryTranslator.getSQLAlias(criteriaQueryTranslator.getCriteria(associationPath)));
+        }
+    }
+
+
+    private List<TypedValue> buildWhereClause(StringBuilder queryStringBuilder, QueryModel queryModel,
+                                              Criteria criteria, CriteriaQueryTranslator criteriaQueryTranslator) {
+        List<TypedValue> parameters = new ArrayList<TypedValue>();
+
+        queryStringBuilder.append(" where ");
+
+        if (queryModel.getConditions() != null) {
+            for (Condition condition : queryModel.getConditions()) {
+                Criterion criterion = (Criterion) condition.getConstraint();
+
+                queryStringBuilder.append(criterion.toSqlString(criteria, criteriaQueryTranslator));
+                queryStringBuilder.append(" and ");
+
+                parameters.addAll(Arrays.asList(criterion.getTypedValues(criteria, criteriaQueryTranslator)));
+            }
+        }
+
+        if (queryModel.getAssociationConditions() != null) {
+            for (Map.Entry<String, List<Condition>> associationCriteriaEntry : queryModel.getAssociationConditions().entrySet()) {
+                CriteriaImpl.Subcriteria associationCriteria
+                        = (CriteriaImpl.Subcriteria) criteriaQueryTranslator.getCriteria(associationCriteriaEntry.getKey());
+
+                for (Condition condition : associationCriteriaEntry.getValue()) {
+                    Criterion criterion = (Criterion) condition.getConstraint();
+
+                    queryStringBuilder.append(criterion.toSqlString(associationCriteria, criteriaQueryTranslator));
+                    queryStringBuilder.append(" and ");
+
+                    parameters.addAll(Arrays.asList(criterion.getTypedValues(associationCriteria, criteriaQueryTranslator)));
+                }
+            }
+        }
+
+        queryStringBuilder.append(" ace.objectType = '");
+        queryStringBuilder.append(persistentClass.getSimpleName());
+        queryStringBuilder.append("' and ace.objectId = ");
+        queryStringBuilder.append(criteriaQueryTranslator.getRootSQLALias());
+        queryStringBuilder.append('.');
+        queryStringBuilder.append(idField);
+        queryStringBuilder.append(" and ace.accessibleBy = ? ");
+
+        return parameters;
+    }
+
+
+    private void buildOrderClause(StringBuilder queryStringBuilder, QueryModel queryModel, Criteria criteria,
+                                  CriteriaQueryTranslator criteriaQueryTranslator) {
+        boolean firstOrderItem = true;
+
+        if (queryModel.getSorts() != null) {
+            for (Sort sort : queryModel.getSorts()) {
+                if (firstOrderItem) {
+                    queryStringBuilder.append(" order by ");
+                } else {
+                    queryStringBuilder.append(',');
+                }
+
+                Order order = sort.getSortDirection() == SortDirection.Ascending ? Order.asc(sort.getField())
+                                                                                 : Order.desc(sort.getField());
+
+                queryStringBuilder.append(order.toSqlString(criteria, criteriaQueryTranslator));
+
+                firstOrderItem = false;
+            }
+        }
+    }
+
+
+    /**
+     * Default ordering by ACE.id field (integer) to ensure older-to-newer entries
+     *
+     * @param queryStringBuilder main query string tbeing built
+     */
+    private void buildDefaultOrderClause(StringBuilder queryStringBuilder) {
+        queryStringBuilder.append(" order by ace.id asc");
+    }
+
+
+    private void setParameters(List<TypedValue> parameters, Query query, AccessControlContext accessControlContext) {
+        int position = 0;
+
+        for (TypedValue parameter : parameters) {
+            query.setParameter(position++, parameter.getValue(), parameter.getType());
+        }
+
+        query.setParameter(position, accessControlContext.getAccessId(), STRING_TYPE);
     }
 }
