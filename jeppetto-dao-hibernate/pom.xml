@@ -2,15 +2,20 @@
     <modelVersion>4.0.0</modelVersion>
 
     <name>Jeppetto DAO for Hibernate</name>
-    <groupId>org.jeppetto</groupId>
     <artifactId>jeppetto-dao-hibernate</artifactId>
     <version>0.5-SNAPSHOT</version>
     <packaging>jar</packaging>
 
+    <parent>
+        <groupId>org.iternine</groupId>
+        <artifactId>jeppetto-parent</artifactId>
+        <version>0.5-SNAPSHOT</version>
+    </parent>
+
     <dependencies>
 
         <dependency>
-            <groupId>org.jeppetto</groupId>
+            <groupId>org.iternine</groupId>
             <artifactId>jeppetto-dao</artifactId>
             <version>0.5-SNAPSHOT</version>
         </dependency>
@@ -92,25 +97,12 @@
         </dependency>
 
         <dependency>
-            <groupId>org.jeppetto</groupId>
+            <groupId>org.iternine</groupId>
             <artifactId>jeppetto-test-support</artifactId>
             <version>0.5-SNAPSHOT</version>
             <scope>test</scope>
         </dependency>
 
     </dependencies>
-
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <configuration>
-                    <source>1.6</source>
-                    <target>1.6</target>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
 
 </project>

@@ -5,17 +5,98 @@
     <modelVersion>4.0.0</modelVersion>
 
     <name>Jeppetto</name>
-    <groupId>org.jeppetto</groupId>
-    <artifactId>jeppetto-root</artifactId>
+    <groupId>org.iternine</groupId>
+    <artifactId>jeppetto-parent</artifactId>
     <version>0.5-SNAPSHOT</version>
     <packaging>pom</packaging>
+    <url>http://iternine.org/jeppetto.html</url>
+
+    <parent>
+        <groupId>org.sonatype.oss</groupId>
+        <artifactId>oss-parent</artifactId>
+        <version>7</version>
+    </parent>
 
     <modules>
         <module>jeppetto-dao</module>
         <module>jeppetto-dao-hibernate</module>
         <module>jeppetto-dao-mongo</module>
         <module>jeppetto-enhance</module>
-        <module>jeppetto-security</module>
         <module>jeppetto-test-support</module>
     </modules>
+
+    <profiles>
+        <profile>
+            <id>release-sign-artifacts</id>
+            <activation>
+                <property>
+                    <name>performRelease</name>
+                    <value>true</value>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>1.4</version>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>1.6</source>
+                    <target>1.6</target>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-release-plugin</artifactId>
+                <configuration>
+                    <preparationGoals>clean verify install</preparationGoals>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <licenses>
+        <license>
+            <name>The Apache Software License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+            <comments>Copyright 2011 (c) Jeppetto and Jonathan Thompson</comments>
+        </license>
+    </licenses>
+
+    <scm>
+        <url>https://github.com/jeppetto/jeppetto</url>
+        <connection>scm:git:git://github.com/jeppetto/jeppetto.git</connection>
+        <developerConnection>scm:git:git://github.com/jeppetto/jeppetto.git</developerConnection>
+    </scm>
+
+    <developers>
+        <developer>
+            <id>jt0</id>
+            <name>Jonathan Thompson</name>
+            <email>jeppetto.project@gmail.com</email>
+        </developer>
+    </developers>
+
 </project>
