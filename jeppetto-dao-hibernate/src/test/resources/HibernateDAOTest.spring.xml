@@ -50,10 +50,10 @@
 
     <!-- =================== Data Access Objects =================== -->
 
-    <bean id="simpleObjectDAO" class="org.jeppetto.dao.DAOBuilder" factory-method="buildDAO">
-        <constructor-arg index="0" value="org.jeppetto.SimpleObject"/>
-        <constructor-arg index="1" value="org.jeppetto.SimpleObjectDAO"/>
-        <constructor-arg index="2" value="org.jeppetto.dao.hibernate.HibernateQueryModelDAO"/>
+    <bean id="simpleObjectDAO" class="org.iternine.jeppetto.dao.DAOBuilder" factory-method="buildDAO">
+        <constructor-arg index="0" value="org.iternine.jeppetto.SimpleObject"/>
+        <constructor-arg index="1" value="org.iternine.jeppetto.SimpleObjectDAO"/>
+        <constructor-arg index="2" value="org.iternine.jeppetto.dao.hibernate.HibernateQueryModelDAO"/>
         <constructor-arg index="3">
             <map>
                 <entry key="sessionFactory" value-ref="sessionFactory"/>
@@ -65,7 +65,7 @@
         <property name="proxyInterfaces">
             <list>
                 <bean class="java.lang.Class" factory-method="forName">
-                    <constructor-arg value="org.jeppetto.SimpleObjectDAO"/>
+                    <constructor-arg value="org.iternine.jeppetto.SimpleObjectDAO"/>
                 </bean>
             </list>
         </property>

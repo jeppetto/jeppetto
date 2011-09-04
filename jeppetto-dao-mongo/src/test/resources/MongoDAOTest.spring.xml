@@ -20,8 +20,8 @@
 
     <!-- =================== Mongo DAOs =================== -->
 
-    <bean id="simpleObjectMongoQueryModelDAO" class="org.jeppetto.dao.mongodb.MongoDBQueryModelDAO">
-        <constructor-arg index="0" value="org.jeppetto.dao.mongodb.SimpleObject"/>
+    <bean id="simpleObjectMongoQueryModelDAO" class="org.iternine.jeppetto.dao.mongodb.MongoDBQueryModelDAO">
+        <constructor-arg index="0" value="org.iternine.jeppetto.dao.mongodb.SimpleObject"/>
         <constructor-arg index="1">
             <map>
                 <entry key="db" value-ref="mongoDb"/>
@@ -36,10 +36,10 @@
         </constructor-arg>
     </bean>
 
-    <bean id="simpleObjectDSLDAO" class="org.jeppetto.dao.DAOBuilder" factory-method="buildDAO">
-        <constructor-arg index="0" value="org.jeppetto.dao.mongodb.SimpleObject"/>
-        <constructor-arg index="1" value="org.jeppetto.dao.mongodb.SimpleObjectDSLDAO"/>
-        <constructor-arg index="2" value="org.jeppetto.dao.mongodb.MongoDBQueryModelDAO"/>
+    <bean id="simpleObjectDSLDAO" class="org.iternine.jeppetto.dao.DAOBuilder" factory-method="buildDAO">
+        <constructor-arg index="0" value="org.iternine.jeppetto.dao.mongodb.SimpleObject"/>
+        <constructor-arg index="1" value="org.iternine.jeppetto.dao.mongodb.SimpleObjectDSLDAO"/>
+        <constructor-arg index="2" value="org.iternine.jeppetto.dao.mongodb.MongoDBQueryModelDAO"/>
         <constructor-arg index="3">
             <map>
                 <entry key="db" value-ref="mongoDb"/>
@@ -54,10 +54,10 @@
         </constructor-arg>
     </bean>
 
-    <bean id="simpleObjectDAO" class="org.jeppetto.dao.DAOBuilder" factory-method="buildDAO">
-        <constructor-arg index="0" value="org.jeppetto.dao.mongodb.SimpleObject"/>
-        <constructor-arg index="1" value="org.jeppetto.dao.mongodb.SimpleObjectDAO"/>
-        <constructor-arg index="2" value="org.jeppetto.dao.mongodb.AbstractSimpleObjectDAO"/>
+    <bean id="simpleObjectDAO" class="org.iternine.jeppetto.dao.DAOBuilder" factory-method="buildDAO">
+        <constructor-arg index="0" value="org.iternine.jeppetto.dao.mongodb.SimpleObject"/>
+        <constructor-arg index="1" value="org.iternine.jeppetto.dao.mongodb.SimpleObjectDAO"/>
+        <constructor-arg index="2" value="org.iternine.jeppetto.dao.mongodb.AbstractSimpleObjectDAO"/>
         <constructor-arg index="3">
             <map>
                 <entry key="db" value-ref="mongoDb"/>

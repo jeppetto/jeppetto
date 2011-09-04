@@ -1,9 +1,9 @@
 #* @vtlvariable name="getters" type="javassist.CtMethod[]" *#
 #* @vtlvariable name="base" type="javassist.CtClass" *#
-#* @vtlvariable name="_" type="org.jeppetto.enhance.TemplateHelper" *#
+#* @vtlvariable name="_" type="org.iternine.jeppetto.enhance.TemplateHelper" *#
 #set( $baseName = $base.getName() )
 #set( $Q = '"')
-public $_.cls("${baseName}Snapshot").ext($base).impl("org.jeppetto.enhance.Snapshot") {
+public $_.cls("${baseName}Snapshot").ext($base).impl("org.iternine.jeppetto.enhance.Snapshot") {
 
     #set( $thisName = $_.clsName() )
 
@@ -63,14 +63,14 @@ public $_.cls("${baseName}Snapshot").ext($base).impl("org.jeppetto.enhance.Snaps
         };
         Object[] current = new Object[] {
         #foreach ( $getter in $getters )
-        org.jeppetto.enhance.ReferenceUtil.asObject(${getter.getName()}())#if( $velocityHasNext ),#end
+        org.iternine.jeppetto.enhance.ReferenceUtil.asObject(${getter.getName()}())#if( $velocityHasNext ),#end
         #end
         };
 
         for (int i = 0; i < current.length; i++) {
             Object o = current[i];
-            if (o instanceof org.jeppetto.enhance.Persistent) {
-                if (((org.jeppetto.enhance.Persistent) o).isDirty()) {
+            if (o instanceof org.iternine.jeppetto.enhance.Persistent) {
+                if (((org.iternine.jeppetto.enhance.Persistent) o).isDirty()) {
                     return true;
                 } else if (cached[i] != null) {
                     current[i] = cached[i]; // do this to avoid needless potentially-deep comparisons
@@ -85,13 +85,13 @@ public $_.cls("${baseName}Snapshot").ext($base).impl("org.jeppetto.enhance.Snaps
         return false;
     }")
 
-    $_.method("public org.jeppetto.enhance.Snapshot snapshot() {
+    $_.method("public org.iternine.jeppetto.enhance.Snapshot snapshot() {
         __snapshotMethodNeverCalled = false;
         #foreach ( $getter in $getters )
         #set( $getterName = $getter.getName() )
-        __${getterName}_cache = org.jeppetto.enhance.ReferenceUtil.asObject(${getterName}());
-        if (__${getterName}_cache instanceof org.jeppetto.enhance.Snapshot) {
-            ((org.jeppetto.enhance.Snapshot) __${getterName}_cache).snapshot();
+        __${getterName}_cache = org.iternine.jeppetto.enhance.ReferenceUtil.asObject(${getterName}());
+        if (__${getterName}_cache instanceof org.iternine.jeppetto.enhance.Snapshot) {
+            ((org.iternine.jeppetto.enhance.Snapshot) __${getterName}_cache).snapshot();
         }
         #end
         return this;

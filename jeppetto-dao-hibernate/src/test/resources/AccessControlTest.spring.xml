@@ -24,11 +24,11 @@
 
     <!-- =================== SessionFactory =================== -->
 
-    <bean id="accessControlHelper" class="org.jeppetto.dao.hibernate.AccessControlEntryHelper">
+    <bean id="accessControlHelper" class="org.iternine.jeppetto.dao.hibernate.AccessControlEntryHelper">
         <property name="sessionFactory" ref="sessionFactory"/>
     </bean>
 
-    <bean id="accessControlContextProvider" class="org.jeppetto.SettableAccessControlContextProvider"/>
+    <bean id="accessControlContextProvider" class="org.iternine.jeppetto.SettableAccessControlContextProvider"/>
 
     <bean id="sessionFactory" class="org.springframework.orm.hibernate3.LocalSessionFactoryBean" depends-on="liquibase">
         <property name="dataSource" ref="dataSource"/>
@@ -49,7 +49,7 @@
             </props>
         </property>
         <property name="entityInterceptor">
-            <bean class="org.jeppetto.dao.hibernate.AccessControlInterceptor" lazy-init="true">
+            <bean class="org.iternine.jeppetto.dao.hibernate.AccessControlInterceptor" lazy-init="true">
                 <property name="accessControlHelper" ref="accessControlHelper"/>
                 <property name="accessControlContextProvider" ref="accessControlContextProvider"/>
             </bean>
@@ -64,10 +64,10 @@
 
     <!-- =================== Data Access Objects =================== -->
 
-    <bean id="accessControllableSimpleObjectDAO" class="org.jeppetto.dao.DAOBuilder" factory-method="buildDAO">
-        <constructor-arg index="0" value="org.jeppetto.SimpleObject"/>
-        <constructor-arg index="1" value="org.jeppetto.AccessControllableSimpleObjectDAO"/>
-        <constructor-arg index="2" value="org.jeppetto.dao.hibernate.HibernateQueryModelDAO"/>
+    <bean id="accessControllableSimpleObjectDAO" class="org.iternine.jeppetto.dao.DAOBuilder" factory-method="buildDAO">
+        <constructor-arg index="0" value="org.iternine.jeppetto.SimpleObject"/>
+        <constructor-arg index="1" value="org.iternine.jeppetto.AccessControllableSimpleObjectDAO"/>
+        <constructor-arg index="2" value="org.iternine.jeppetto.dao.hibernate.HibernateQueryModelDAO"/>
         <constructor-arg index="3">
             <map>
                 <entry key="sessionFactory" value-ref="sessionFactory"/>
@@ -81,7 +81,7 @@
         <property name="proxyInterfaces">
             <list>
                 <bean class="java.lang.Class" factory-method="forName">
-                    <constructor-arg value="org.jeppetto.AccessControllableSimpleObjectDAO"/>
+                    <constructor-arg value="org.iternine.jeppetto.AccessControllableSimpleObjectDAO"/>
                 </bean>
             </list>
         </property>

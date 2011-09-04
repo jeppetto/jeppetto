@@ -20,10 +20,10 @@
 
     <!-- =================== Mongo DAOs =================== -->
 
-    <bean id="accessControllableObjectDAO" class="org.jeppetto.dao.DAOBuilder" factory-method="buildDAO">
-        <constructor-arg index="0" value="org.jeppetto.dao.mongodb.accesscontrol.AccessControllableObject"/>
-        <constructor-arg index="1" value="org.jeppetto.dao.mongodb.accesscontrol.AccessControllableObjectDAO"/>
-        <constructor-arg index="2" value="org.jeppetto.dao.mongodb.MongoDBQueryModelDAO"/>
+    <bean id="accessControllableObjectDAO" class="org.iternine.jeppetto.dao.DAOBuilder" factory-method="buildDAO">
+        <constructor-arg index="0" value="org.iternine.jeppetto.dao.mongodb.accesscontrol.AccessControllableObject"/>
+        <constructor-arg index="1" value="org.iternine.jeppetto.dao.mongodb.accesscontrol.AccessControllableObjectDAO"/>
+        <constructor-arg index="2" value="org.iternine.jeppetto.dao.mongodb.MongoDBQueryModelDAO"/>
         <constructor-arg index="3">
             <map>
                 <entry key="db" value-ref="mongoDb"/>
@@ -32,7 +32,7 @@
             </map>
         </constructor-arg>
         <constructor-arg index="4">
-            <bean class="org.jeppetto.dao.mongodb.accesscontrol.SettableAccessControlContextProvider"/>
+            <bean class="org.iternine.jeppetto.dao.mongodb.accesscontrol.SettableAccessControlContextProvider"/>
         </constructor-arg>
     </bean>
 
