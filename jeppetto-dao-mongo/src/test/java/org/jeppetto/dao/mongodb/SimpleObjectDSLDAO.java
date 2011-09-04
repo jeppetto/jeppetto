@@ -35,7 +35,7 @@ public interface SimpleObjectDSLDAO extends GenericDAO<SimpleObject, String> {
 
     SimpleObject findByIntValueHavingRelatedObjectWithRelatedIntValue(int intValue, int relatedIntValue);
 
-    List<SimpleObject> findByIntValueGreaterThanOrderByIntValueDesc(int intValue);
+    List<SimpleObject> findByOrderByIntValueDesc();
 
     Set<SimpleObject> findByIntValueGreaterThan(int intValue);
 }

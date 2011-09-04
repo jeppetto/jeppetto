@@ -144,6 +144,26 @@ public class SimpleObjectDSLDAOTest {
 
 
     @Test
+    public void verifySort() {
+        SimpleObject simpleObject;
+
+        simpleObject = new SimpleObject();
+        simpleObject.setIntValue(1);
+        simpleObjectDAO.save(simpleObject);
+
+        simpleObject = new SimpleObject();
+        simpleObject.setIntValue(2);
+        simpleObjectDAO.save(simpleObject);
+
+        List<SimpleObject> result = simpleObjectDAO.findByOrderByIntValueDesc();
+
+        Assert.assertEquals(2, result.size());
+        Assert.assertEquals(2, result.get(0).getIntValue());
+        Assert.assertEquals(1, result.get(1).getIntValue());
+    }
+
+
+    @Test
     public void getSet() {
         SimpleObject newOne = new SimpleObject();
 
