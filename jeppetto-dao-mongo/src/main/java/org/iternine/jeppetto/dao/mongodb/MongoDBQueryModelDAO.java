@@ -125,8 +125,8 @@ import java.util.Set;
 //          - understand field-level deltas
 // TODO: support per-call WriteConcerns (keep in mind session semantics)
 // TODO: investigate usage of ClassLoader so new instances are already enhanced
-public class MongoDBQueryModelDAO<T>
-        implements QueryModelDAO<T, String>, AccessControllable<String> {
+public class MongoDBQueryModelDAO<T, ID>
+        implements QueryModelDAO<T, ID>, AccessControllable<ID> {
 
     //-------------------------------------------------------------
     // Constants
@@ -200,7 +200,7 @@ public class MongoDBQueryModelDAO<T>
     //-------------------------------------------------------------
 
     @Override
-    public T findById(String id)
+    public T findById(ID id)
             throws NoSuchItemException {
         try {
             QueryModel queryModel = new QueryModel();
@@ -212,7 +212,7 @@ public class MongoDBQueryModelDAO<T>
 
             return findUniqueUsingQueryModel(queryModel);
         } catch (IllegalArgumentException e) {
-            throw new NoSuchItemException(getCollectionClass().getSimpleName(), id);
+            throw new NoSuchItemException(getCollectionClass().getSimpleName(), id.toString());
         }
     }
 
@@ -234,8 +234,10 @@ public class MongoDBQueryModelDAO<T>
         T enhancedEntity = enhancer.enhance(entity);
         DirtyableDBObject dbo = (DirtyableDBObject) enhancedEntity;
 
-        if (dbo.get(ID_FIELD) == null) {
-            dbo.put(ID_FIELD, findOrCreateIdFor(dbo));
+        if (!dbo.isPersisted()) {
+            if (dbo.get(ID_FIELD) == null) {
+                dbo.put(ID_FIELD, new ObjectId());  // If the id isn't explicitly set, assume intent is for mongo ids
+            }
 
             if (accessControlContextProvider != null) {
                 if (roleAllowsAccess(accessControlContextProvider.getCurrent().getRole())
@@ -247,12 +249,12 @@ public class MongoDBQueryModelDAO<T>
             }
         }
 
-        DBObject identifier = createPrimaryIdentifyingQuery(dbo);
+        DBObject identifyingQuery = buildIdentifyingQuery(dbo);
 
         if (MongoDBSession.isActive()) {
-            MongoDBSession.trackForSave(this, identifier, enhancedEntity, createIdentifyingQueries(dbo));
+            MongoDBSession.trackForSave(this, identifyingQuery, enhancedEntity, createIdentifyingQueries(dbo));
         } else {
-            trueSave(identifier, dbo);
+            trueSave(identifyingQuery, dbo);
         }
     }
 
@@ -263,19 +265,19 @@ public class MongoDBQueryModelDAO<T>
         // we can construct an appropriate identifying query w/ __olv
         DBObject dbo = (DBObject) enhancer.enhance(entity);
 
-        DBObject identifier = createPrimaryIdentifyingQuery(dbo);
+        DBObject identifyingQuery = buildIdentifyingQuery(dbo);
 
         for (String shardKey : shardKeys) {
-            identifier.put(shardKey, dbo.get(shardKey));
+            identifyingQuery.put(shardKey, dbo.get(shardKey));
         }
 
-        deleteByIdentifier(identifier);
+        deleteByIdentifyingQuery(identifyingQuery);
     }
 
 
     @Override
-    public final void deleteById(String id) {
-        deleteByIdentifier(createPrimaryIdentifyingQuery(id));
+    public final void deleteById(ID id) {
+        deleteByIdentifyingQuery(buildIdentifyingQuery(id));
     }
 
 
@@ -293,7 +295,7 @@ public class MongoDBQueryModelDAO<T>
 
     public T findUniqueUsingQueryModel(QueryModel queryModel)
             throws NoSuchItemException {
-        // Need to revisit te way caching works as it will miss some items...focus only on the identifier
+        // Need to revisit te way caching works as it will miss some items...focus only on the identifyingQuery
         // instead of secondary cache keys...
         MongoDBCommand command = buildCommand(queryModel);
 
@@ -302,9 +304,9 @@ public class MongoDBQueryModelDAO<T>
             T cached = (T) MongoDBSession.getObjectFromCache(dbCollection.getName(), command.getQuery());
 
             if (cached != null) {
-                DBObject identifier = createPrimaryIdentifyingQuery((DBObject) cached);
+                DBObject identifyingQuery = buildIdentifyingQuery((DBObject) cached);
 
-                MongoDBSession.trackForSave(this, identifier, cached, createIdentifyingQueries((DBObject) cached));
+                MongoDBSession.trackForSave(this, identifyingQuery, cached, createIdentifyingQueries((DBObject) cached));
 
                 return cached;
             }
@@ -314,8 +316,9 @@ public class MongoDBQueryModelDAO<T>
         T result = (T) command.singleResult(dbCollection);
 
         if (MongoDBSession.isActive()) {
-            DBObject identifier = createPrimaryIdentifyingQuery((DBObject) result);
-            MongoDBSession.trackForSave(this, identifier, result, createIdentifyingQueries((DBObject) result));
+            DBObject identifyingQuery = buildIdentifyingQuery((DBObject) result);
+
+            MongoDBSession.trackForSave(this, identifyingQuery, result, createIdentifyingQueries((DBObject) result));
         }
 
         return result;
@@ -355,11 +358,11 @@ public class MongoDBQueryModelDAO<T>
                     public T next() {
                         DBObject result = finalDbCursor.next();
 
-                        ((DirtyableDBObject) result).markCurrentAsClean();
+                        ((DirtyableDBObject) result).markPersisted();
 
                         if (MongoDBSession.isActive()) {
                             MongoDBSession.trackForSave(MongoDBQueryModelDAO.this,
-                                                        createPrimaryIdentifyingQuery(result),
+                                                        buildIdentifyingQuery(result),
                                                         (T) result,
                                                         createIdentifyingQueries(result));
                         }
@@ -413,7 +416,7 @@ public class MongoDBQueryModelDAO<T>
     //-------------------------------------------------------------
 
     @Override
-    public void grantAccess(String id, String accessId) {
+    public void grantAccess(ID id, String accessId) {
         DBObject dbObject;
 
         try {
@@ -440,7 +443,7 @@ public class MongoDBQueryModelDAO<T>
 
 
     @Override
-    public void revokeAccess(String id, String accessId) {
+    public void revokeAccess(ID id, String accessId) {
         DBObject dbObject;
 
         try {
@@ -467,7 +470,7 @@ public class MongoDBQueryModelDAO<T>
 
 
     @Override
-    public List<String> getAccessIds(String id) {
+    public List<String> getAccessIds(ID id) {
         DBObject dbObject;
 
         try {
@@ -505,16 +508,11 @@ public class MongoDBQueryModelDAO<T>
     }
 
 
-    protected DBObject createPrimaryIdentifyingQuery(DBObject dbObject) {
-        return createPrimaryIdentifyingQuery((ObjectId) dbObject.get("_id"));
-    }
-
-
     protected DBObject[] createIdentifyingQueries(DBObject dbObject) {
         int uniqueIndexCount = uniqueIndexes.size() + 1;
         List<DBObject> queries = new ArrayList<DBObject>(uniqueIndexCount);
 
-        queries.add(createPrimaryIdentifyingQuery(dbObject));
+        queries.add(buildIdentifyingQuery(dbObject));
 
         for (Collection<String> indexFields : uniqueIndexes.values()) {
             DBObject query = new BasicDBObject();
@@ -534,47 +532,48 @@ public class MongoDBQueryModelDAO<T>
     // Methods - Protected - Final
     //-------------------------------------------------------------
 
-    protected final DBObject createPrimaryIdentifyingQuery(String id) {
+    protected final DBObject buildIdentifyingQuery(DBObject dbObject) {
+        //noinspection unchecked
+        return buildIdentifyingQuery((ID) dbObject.get(ID_FIELD));
+    }
+
+
+    protected final DBObject buildIdentifyingQuery(ID id) {
         if (id == null) {
-            throw new IllegalArgumentException("Identifier cannot be null.");
-        } else if (ObjectId.isValid(id)) {
-            return createPrimaryIdentifyingQuery(new ObjectId(id));
+            throw new IllegalArgumentException("Id cannot be null.");
+        } else if (id instanceof String && ObjectId.isValid((String) id)) {
+            return new BasicDBObject("_id", new ObjectId((String) id));
         } else {
             return new BasicDBObject("_id", id);
         }
     }
 
 
-    protected final DBObject createPrimaryIdentifyingQuery(ObjectId id) {
-        return new BasicDBObject("_id", id);
-    }
-
-
-    protected final void deleteByIdentifier(DBObject identifier) {
+    protected final void deleteByIdentifyingQuery(DBObject identifyingQuery) {
         if (MongoDBSession.isActive()) {
-            MongoDBSession.trackForDelete(this, identifier);
+            MongoDBSession.trackForDelete(this, identifyingQuery);
         } else {
-            trueRemove(identifier);
+            trueRemove(identifyingQuery);
         }
     }
 
 
-    protected final void trueSave(final DBObject identifier, final DirtyableDBObject dbo) {
+    protected final void trueSave(final DBObject identifyingQuery, final DirtyableDBObject dbo) {
         if (optimisticLockEnabled) {
             Integer optimisticLockVersion = (Integer) dbo.get(OPTIMISTIC_LOCK_VERSION_FIELD);
 
             if (optimisticLockVersion == null) {
                 dbo.put(OPTIMISTIC_LOCK_VERSION_FIELD, 1);
             } else {
-                // TODO: should this modification of identifier been done earlier (in save())?
-                identifier.put(OPTIMISTIC_LOCK_VERSION_FIELD, optimisticLockVersion);
+                // TODO: should this modification of identifyingQuery been done earlier (in save())?
+                identifyingQuery.put(OPTIMISTIC_LOCK_VERSION_FIELD, optimisticLockVersion);
 
                 dbo.put(OPTIMISTIC_LOCK_VERSION_FIELD, optimisticLockVersion + 1);
             }
         }
 
         for (String shardKey : shardKeys) {
-            identifier.put(shardKey, dbo.get(shardKey));
+            identifyingQuery.put(shardKey, dbo.get(shardKey));
         }
 
         final DBObject optimalDbo = determineOptimalDBObject(dbo);
@@ -582,28 +581,27 @@ public class MongoDBQueryModelDAO<T>
         if (queryLogger != null) {
             queryLogger.debug("Saving {} identified by {} with document {}",
                               new Object[] { getCollectionClass().getSimpleName(),
-                                             identifier.toMap(),
+                                             identifyingQuery.toMap(),
                                              optimalDbo.toMap() } );
         }
 
-        dbCollection.update(identifier, optimalDbo, true, false, getWriteConcern());
+        dbCollection.update(identifyingQuery, optimalDbo, true, false, getWriteConcern());
 
-        dbo.markCurrentAsClean();
+        dbo.markPersisted();
     }
 
 
-    protected final void trueRemove(final DBObject identifier) {
+    protected final void trueRemove(final DBObject identifyingQuery) {
         if (optimisticLockEnabled) {
             // TODO:
         }
 
         if (queryLogger != null) {
             queryLogger.debug("Removing {}s matching {}",
-                              new Object[] { getCollectionClass().getSimpleName(),
-                                             identifier.toMap() } );
+                              new Object[] { getCollectionClass().getSimpleName(), identifyingQuery.toMap() } );
         }
 
-        dbCollection.remove(identifier, getWriteConcern());
+        dbCollection.remove(identifyingQuery, getWriteConcern());
     }
 
 
@@ -634,12 +632,13 @@ public class MongoDBQueryModelDAO<T>
 
     // Special case for 'id' queries as it maps to _id within MongoDB.
      private Condition buildIdCondition(Object argument) {
-         if (String.class.isAssignableFrom(argument.getClass())) {
+         if (argument instanceof String && ObjectId.isValid((String) argument)) {
              return new Condition("_id", new ObjectId((String) argument));
          } else if (Iterable.class.isAssignableFrom(argument.getClass())) {
              List<ObjectId> objectIds = new ArrayList<ObjectId>();
 
-             for (Object argumentItem : (Iterable<?>) argument) {
+             //noinspection ConstantConditions
+             for (Object argumentItem : (Iterable) argument) {
                  if (argumentItem == null) {
                      objectIds.add(null);
                  } else if (argumentItem instanceof ObjectId) {
@@ -653,33 +652,10 @@ public class MongoDBQueryModelDAO<T>
 
              // TODO: create getter for MongoDBOperator.operator() ...?
              return new Condition("_id", new BasicDBObject("$in", objectIds));
-         } else if (argument instanceof ObjectId) {
-             return new Condition("_id", argument);
          } else {
-             throw new IllegalArgumentException("Don't know how to handle class for 'id' mapping: "
-                                                + argument.getClass());
+             return new Condition("_id", argument);
          }
      }
-
-
-     private ObjectId findOrCreateIdFor(DBObject dbo) {
-        if (MongoDBSession.isActive()) {
-            for (DBObject key : createIdentifyingQueries(dbo)) {
-                if (key == null) {
-                    continue;
-                }
-                
-                Object cached = MongoDBSession.getObjectFromCache(getDbCollection().getName(), key);
-                if (cached instanceof DBObject) {
-                    if (((DBObject) cached).get(ID_FIELD) != null) {
-                        return (ObjectId) ((DBObject) cached).get(ID_FIELD);
-                    }
-                }
-            }
-        }
-
-        return new ObjectId();
-    }
 
 
     private Object getFieldValueFrom(DBObject dbo, String field) {

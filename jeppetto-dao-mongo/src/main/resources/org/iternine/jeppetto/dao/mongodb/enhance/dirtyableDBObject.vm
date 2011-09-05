@@ -12,6 +12,7 @@ public $_.cls("${baseName}$DirtyableDBObject").ext($base).impl("org.iternine.jep
     //-------------------------------------------------------------
 
     $_.field("private final $baseName __delegate;")
+    $_.field("private boolean __persisted;")
     $_.field("private final java.util.Map __originalValues = new java.util.HashMap();")
     $_.field("private final java.util.Map __extraValues = new java.util.HashMap();")
     $_.field("private java.util.Set __keys = new java.util.HashSet(java.util.Arrays.asList(new String[] {
@@ -35,11 +36,13 @@ public $_.cls("${baseName}$DirtyableDBObject").ext($base).impl("org.iternine.jep
     $_.ctor("
     public $thisName() {
         __delegate = null;
+        __persisted = true;
     }")
 
     $_.ctor("
     public $thisName($baseName delegate) {
         __delegate = delegate;
+        __persisted = false;
     }")
 
 
@@ -147,7 +150,7 @@ public $_.cls("${baseName}$DirtyableDBObject").ext($base).impl("org.iternine.jep
         #if ( $getter.getName() == 'getId' )
 
         if (${Q}_id${Q}.equals(key)) {
-            this.$setterName(__${key}FromObject((v == null) ? null : ((org.bson.types.ObjectId) v).toString()));
+            this.$setterName(__${key}FromObject(v instanceof org.bson.types.ObjectId ? ((org.bson.types.ObjectId) v).toString() : v));
             return v;
         }
         #else
@@ -173,7 +176,8 @@ public $_.cls("${baseName}$DirtyableDBObject").ext($base).impl("org.iternine.jep
         #if ( $getter.getName() == 'getId' )
 
         if (${Q}_id${Q}.equals(key)) {
-            return this.$getterName() == null ? null : new org.bson.types.ObjectId(this.$getterName());
+            Object o = this.$getterName();
+            return (o instanceof String && org.bson.types.ObjectId.isValid((String) o)) ? new org.bson.types.ObjectId((String) o) : o;
         }
         #else
 
@@ -294,7 +298,7 @@ public $_.cls("${baseName}$DirtyableDBObject").ext($base).impl("org.iternine.jep
     }")
 
     $_.method("
-    public void markCurrentAsClean() {
+    public void markPersisted() {
         __originalValues.clear();
 
         #foreach ( $getter in $getters )
@@ -307,11 +311,17 @@ public $_.cls("${baseName}$DirtyableDBObject").ext($base).impl("org.iternine.jep
         Object __$variableName = $getterName();
 
         if (__$variableName instanceof org.iternine.jeppetto.dao.mongodb.enhance.DirtyableDBObject) {
-            ((org.iternine.jeppetto.dao.mongodb.enhance.DirtyableDBObject) __$variableName).markCurrentAsClean();
+            ((org.iternine.jeppetto.dao.mongodb.enhance.DirtyableDBObject) __$variableName).markPersisted();
         }
         #end
         #end
 
+        __persisted = true;
+    }")
+
+    $_.method("
+    public boolean isPersisted() {
+        return __persisted;
     }")
 
 

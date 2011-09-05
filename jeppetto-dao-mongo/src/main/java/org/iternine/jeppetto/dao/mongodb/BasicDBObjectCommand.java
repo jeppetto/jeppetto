@@ -72,7 +72,7 @@ public class BasicDBObjectCommand extends MongoDBCommand {
             throw new RuntimeException("More than one " + dbCollection.getName() + " matches query: " + query);
         }
 
-        ((DirtyableDBObject) result).markCurrentAsClean();
+        ((DirtyableDBObject) result).markPersisted();
 
         return result;
     }

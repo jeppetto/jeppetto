@@ -31,5 +31,11 @@ public interface DirtyableDBObject extends DBObject {
     /**
      * Consider the current state of the object to be in sync with the persisted state.
      */
-    void markCurrentAsClean();
+    void markPersisted();
+
+
+    /**
+     * @return true if this object has a representation in the underlying store.
+     */
+    boolean isPersisted();
 }

@@ -369,7 +369,7 @@ public class DBObjectUtil {
                 converted.put(keyFunction.apply(entry.getKey()), valueFunction.apply(entry.getValue()));
             }
 
-            converted.markCurrentAsClean();
+            converted.markPersisted();
             
             return converted;
         } else {

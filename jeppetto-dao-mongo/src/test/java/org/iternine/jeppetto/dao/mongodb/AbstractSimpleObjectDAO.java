@@ -22,7 +22,7 @@ import org.iternine.jeppetto.dao.NoSuchItemException;
 import java.util.Map;
 
 
-public abstract class AbstractSimpleObjectDAO extends MongoDBQueryModelDAO<SimpleObject>
+public abstract class AbstractSimpleObjectDAO extends MongoDBQueryModelDAO<SimpleObject, String>
         implements SimpleObjectDAO {
 
     //-------------------------------------------------------------
