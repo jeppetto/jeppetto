@@ -542,9 +542,9 @@ public class MongoDBQueryModelDAO<T, ID>
         if (id == null) {
             throw new IllegalArgumentException("Id cannot be null.");
         } else if (id instanceof String && ObjectId.isValid((String) id)) {
-            return new BasicDBObject("_id", new ObjectId((String) id));
+            return new BasicDBObject(ID_FIELD, new ObjectId((String) id));
         } else {
-            return new BasicDBObject("_id", id);
+            return new BasicDBObject(ID_FIELD, id);
         }
     }
 
@@ -633,7 +633,7 @@ public class MongoDBQueryModelDAO<T, ID>
     // Special case for 'id' queries as it maps to _id within MongoDB.
      private Condition buildIdCondition(Object argument) {
          if (argument instanceof String && ObjectId.isValid((String) argument)) {
-             return new Condition("_id", new ObjectId((String) argument));
+             return new Condition(ID_FIELD, new ObjectId((String) argument));
          } else if (Iterable.class.isAssignableFrom(argument.getClass())) {
              List<ObjectId> objectIds = new ArrayList<ObjectId>();
 
@@ -651,9 +651,9 @@ public class MongoDBQueryModelDAO<T, ID>
              }
 
              // TODO: create getter for MongoDBOperator.operator() ...?
-             return new Condition("_id", new BasicDBObject("$in", objectIds));
+             return new Condition(ID_FIELD, new BasicDBObject("$in", objectIds));
          } else {
-             return new Condition("_id", argument);
+             return new Condition(ID_FIELD, argument);
          }
      }
 
