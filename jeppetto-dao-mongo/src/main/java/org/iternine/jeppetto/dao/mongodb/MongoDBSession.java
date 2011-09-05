@@ -42,8 +42,8 @@ class MongoDBSession {
     //-------------------------------------------------------------
 
     private final Map<String, MongoDBSessionCache> caches = new HashMap<String, MongoDBSessionCache>();
-    private final Map<MongoDBQueryModelDAO<?>, Map<DBObject, Object>> savedPerDAO = new HashMap<MongoDBQueryModelDAO<?>, Map<DBObject, Object>>();
-    private final Map<MongoDBQueryModelDAO<?>, Collection<DBObject>> deletedPerDAO = new HashMap<MongoDBQueryModelDAO<?>, Collection<DBObject>>();
+    private final Map<MongoDBQueryModelDAO<?, ?>, Map<DBObject, Object>> savedPerDAO = new HashMap<MongoDBQueryModelDAO<?, ?>, Map<DBObject, Object>>();
+    private final Map<MongoDBQueryModelDAO<?, ?>, Collection<DBObject>> deletedPerDAO = new HashMap<MongoDBQueryModelDAO<?, ?>, Collection<DBObject>>();
     private final Deque<SessionEntryPoint> creators = new ArrayDeque<SessionEntryPoint>();
 
 
@@ -89,7 +89,7 @@ class MongoDBSession {
     }
 
 
-    static <T> void trackForSave(MongoDBQueryModelDAO<T> mongoDBQueryModelDAO, DBObject identifier, T entity, DBObject... cacheKeys) {
+    static <T, ID> void trackForSave(MongoDBQueryModelDAO<T, ID> mongoDBQueryModelDAO, DBObject identifier, T entity, DBObject... cacheKeys) {
         validateState();
 
         MongoDBSession mongoDBSession = LOCAL.get();
@@ -119,7 +119,7 @@ class MongoDBSession {
     }
 
 
-    static void trackForDelete(MongoDBQueryModelDAO<?> mongoDBQueryModelDAO, DBObject identifier) {
+    static void trackForDelete(MongoDBQueryModelDAO<?, ?> mongoDBQueryModelDAO, DBObject identifier) {
         validateState();
 
         MongoDBSession mongoDBSession = LOCAL.get();
@@ -154,12 +154,12 @@ class MongoDBSession {
         }
 
         try {
-            Set<MongoDBQueryModelDAO<?>> daoSet = new HashSet<MongoDBQueryModelDAO<?>>();
+            Set<MongoDBQueryModelDAO<?, ?>> daoSet = new HashSet<MongoDBQueryModelDAO<?, ?>>();
 
             daoSet.addAll(mongoDBSession.savedPerDAO.keySet());
             daoSet.addAll(mongoDBSession.deletedPerDAO.keySet());
 
-            for (MongoDBQueryModelDAO<?> mongoDBQueryModelDAO : daoSet) {
+            for (MongoDBQueryModelDAO<?, ?> mongoDBQueryModelDAO : daoSet) {
                 mongoDBSession.doFlush(mongoDBQueryModelDAO);
             }
         } finally {
@@ -168,7 +168,7 @@ class MongoDBSession {
     }
 
 
-    static void flush(MongoDBQueryModelDAO<?> mongoDBQueryModelDAO) {
+    static void flush(MongoDBQueryModelDAO<?, ?> mongoDBQueryModelDAO) {
         validateState();
 
         LOCAL.get().doFlush(mongoDBQueryModelDAO);
@@ -240,7 +240,7 @@ class MongoDBSession {
 
                 if (logger.isDebugEnabled()) {
 
-                    for (Map.Entry<MongoDBQueryModelDAO<?>, Map<DBObject, Object>> updatedPerDAOEntry : savedPerDAO.entrySet()) {
+                    for (Map.Entry<MongoDBQueryModelDAO<?, ?>, Map<DBObject, Object>> updatedPerDAOEntry : savedPerDAO.entrySet()) {
                         for (Object entity : updatedPerDAOEntry.getValue().values()) {
                             if (entity instanceof DirtyableDBObject && ((DirtyableDBObject) entity).isDirty()) {
                                 logger.warn("{} is still dirty: {}", updatedPerDAOEntry.getKey().getClass(), entity);
@@ -274,7 +274,7 @@ class MongoDBSession {
     }
 
 
-    private void doFlush(MongoDBQueryModelDAO<?> mongoDBQueryModelDAO) {
+    private void doFlush(MongoDBQueryModelDAO<?, ?> mongoDBQueryModelDAO) {
         String contextName = creators.peek().getName();
         Logger contextLogger = creators.peek().getLogger();
         long dirtyCheckCost = 0L;

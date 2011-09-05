@@ -243,8 +243,14 @@ public class DirtyableDBObjectList
 
 
     @Override
-    public void markCurrentAsClean() {
+    public void markPersisted() {
         dirty = false;
+    }
+
+
+    @Override
+    public boolean isPersisted() {
+        throw new RuntimeException("Can't determine persisted state.");
     }
 
 

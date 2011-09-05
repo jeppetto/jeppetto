@@ -103,7 +103,7 @@ public class MongoEnhancerTest {
         Circular c1 = enhancer.newInstance();
         c1.setParent(enhancer.newInstance());
         Circular c2 = c1.getParent();
-        ((DirtyableDBObject) c2).markCurrentAsClean();
+        ((DirtyableDBObject) c2).markPersisted();
         assertDirty(c1);
         assertNotDirty(c2);
     }
