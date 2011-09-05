@@ -20,6 +20,9 @@ package org.iternine.jeppetto.dao.mongodb;
 import org.iternine.jeppetto.dao.GenericDAO;
 import org.iternine.jeppetto.dao.NoSuchItemException;
 import org.iternine.jeppetto.dao.mongodb.enhance.DirtyableDBObject;
+import org.iternine.jeppetto.test.RelatedObject;
+import org.iternine.jeppetto.test.SimpleEnum;
+import org.iternine.jeppetto.test.SimpleObject;
 import org.iternine.jeppetto.testsupport.MongoDatabaseProvider;
 import org.iternine.jeppetto.testsupport.TestContext;
 
