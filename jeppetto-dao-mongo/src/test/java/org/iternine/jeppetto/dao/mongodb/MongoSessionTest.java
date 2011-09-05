@@ -18,6 +18,8 @@ package org.iternine.jeppetto.dao.mongodb;
 
 
 import org.iternine.jeppetto.dao.NoSuchItemException;
+import org.iternine.jeppetto.test.SimpleObject;
+import org.iternine.jeppetto.test.SimpleObjectDAO;
 import org.iternine.jeppetto.testsupport.MongoDatabaseProvider;
 import org.iternine.jeppetto.testsupport.TestContext;
 

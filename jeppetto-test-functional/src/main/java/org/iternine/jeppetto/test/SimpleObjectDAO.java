@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-package org.iternine.jeppetto;
+package org.iternine.jeppetto.test;
 
 
 import org.iternine.jeppetto.dao.ConditionType;
 import org.iternine.jeppetto.dao.GenericDAO;
+import org.iternine.jeppetto.dao.NoSuchItemException;
 import org.iternine.jeppetto.dao.ProjectionType;
 import org.iternine.jeppetto.dao.SortDirection;
 import org.iternine.jeppetto.dao.annotation.Association;
@@ -32,7 +33,8 @@ import java.util.List;
 
 public interface SimpleObjectDAO extends GenericDAO<SimpleObject, String> {
 
-    SimpleObject findByIntValue(int intValue);
+    SimpleObject findByIntValue(int intValue)
+            throws NoSuchItemException;
 
 
     int countByIntValue(int intValue);
@@ -41,19 +43,33 @@ public interface SimpleObjectDAO extends GenericDAO<SimpleObject, String> {
     int countByIntValueLessThan(int intValue);
 
 
+    @DataAccessMethod( // findByIntValue()
+            conditions = { @Condition(field = "intValue", type = ConditionType.Equal) }
+    )
+    SimpleObject findSimpleObject(int intValue)
+            throws NoSuchItemException;
+
+
     @DataAccessMethod( // findByIntValueWithin()
             conditions = { @Condition(field = "intValue", type = ConditionType.Within) }
     )
     List<SimpleObject> findSomeObjects(List<Integer> someInts);
 
 
+    @DataAccessMethod( // findByHavingRelatedObjectWithRelatedIntValueLessThanOrderByIntValue()
+            associations = { @Association(field = "relatedObjects",
+                                          conditions = { @Condition(field = "relatedIntValue", type = ConditionType.LessThan)})},
+            sorts = { @Sort(field = "intValue", direction = SortDirection.Descending)}
+    )
+    List<SimpleObject> findAndSortRelatedItems(int relatedIntValueMax);
+
 
     @DataAccessMethod( // findByHavingRelatedObjectWithRelatedIntValueLessThanOrderByIntValue()
             associations = { @Association(field = "relatedObjects",
                                           conditions = { @Condition(field = "relatedIntValue", type = ConditionType.LessThan)})},
-            sorts = { @Sort(field = "intValue", direction = SortDirection.Ascending)}
+            sorts = { @Sort(field = "intValue", direction = SortDirection.Descending)}
     )
-    List<SimpleObject> findAndSortRelatedItems(int relatedIntValueMax);
+    Iterable<SimpleObject> findAndSortRelatedItemsIterable(int relatedIntValueMax);
 
 
     @DataAccessMethod( // findByHavingRelatedObjectWithRelatedIntValueLessThanOrderByIntValue()
@@ -84,10 +100,30 @@ public interface SimpleObjectDAO extends GenericDAO<SimpleObject, String> {
 
 
     @DataAccessMethod( // countByIntValueGreaterThan
-            conditions = { @org.iternine.jeppetto.dao.annotation.Condition(field = "intValue", type = ConditionType.GreaterThan) },
+            conditions = { @Condition(field = "intValue", type = ConditionType.GreaterThan) },
             projections = { @Projection(type = ProjectionType.RowCount) }
     )
     int doAnAnnotationBasedCount(int intValue);
+
+    @DataAccessMethod(
+            conditions = { @Condition(field = "intValue", type = ConditionType.GreaterThanEqual) },
+            projections = { @Projection(type = ProjectionType.RowCount) }
+    )
+    int doAnAnnotationBasedCountGreaterThanEquals(int intValue);
+
+    @DataAccessMethod(
+            conditions = { @Condition(field = "intValue", type = ConditionType.LessThanEqual) },
+            projections = { @Projection(type = ProjectionType.RowCount) }
+    )
+    int doAnAnnotationBasedCountLessThanEquals(int intValue);
+
+
+    // DSL-style
+    int countByIntValueGreaterThanEqual(int intValue);
+
+
+    // DSL-style
+    int countByIntValueLessThanEqual(int intValue);
 
 
     @DataAccessMethod(
@@ -124,4 +160,10 @@ public interface SimpleObjectDAO extends GenericDAO<SimpleObject, String> {
             projections = { @Projection(type = ProjectionType.CountDistinct, field = "intValue") }
     )
     int countDistinctIntValue();
+
+
+    @DataAccessMethod(
+            projections = { @Projection(type = ProjectionType.CountDistinct, field = "intValue") }
+    )
+    int countIntValue();
 }

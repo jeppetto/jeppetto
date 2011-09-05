@@ -19,6 +19,8 @@ package org.iternine.jeppetto;
 
 import org.iternine.jeppetto.dao.NoSuchItemException;
 import org.iternine.jeppetto.dao.SimpleAccessControlContext;
+import org.iternine.jeppetto.test.RelatedObject;
+import org.iternine.jeppetto.test.SimpleObject;
 import org.iternine.jeppetto.testsupport.TestContext;
 
 import org.junit.After;
@@ -213,7 +215,7 @@ public class AccessControlTest {
         RelatedObject relatedObject = new RelatedObject();
         relatedObject.setRelatedIntValue(345);
 
-        simpleObject.setRelatedObjects(Collections.singleton(relatedObject));
+        simpleObject.setRelatedObjects(Collections.singletonList(relatedObject));
 
         simpleObjectDAO.save(simpleObject);
 
@@ -232,13 +234,17 @@ public class AccessControlTest {
         accessControlContextProvider.setCurrent(accessControlContext1);
 
         for (int i = 1; i < 10; i++) {
-            simpleObjectDAO.save(new SimpleObject(i));
+            SimpleObject simpleObject = new SimpleObject();
+            simpleObject.setIntValue(i);
+            simpleObjectDAO.save(simpleObject);
         }
 
         accessControlContextProvider.setCurrent(accessControlContext2);
 
         for (int i = 2; i < 10; i++) {
-            simpleObjectDAO.save(new SimpleObject(i));
+            SimpleObject simpleObject = new SimpleObject();
+            simpleObject.setIntValue(i);
+            simpleObjectDAO.save(simpleObject);
         }
 
         accessControlContextProvider.setCurrent(accessControlContext1);
