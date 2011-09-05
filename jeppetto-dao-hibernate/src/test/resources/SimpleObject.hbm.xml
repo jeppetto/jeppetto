@@ -4,20 +4,20 @@
         "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
 <hibernate-mapping package="org.iternine.jeppetto">
 
-    <class name="org.iternine.jeppetto.SimpleObject">
+    <class name="org.iternine.jeppetto.test.SimpleObject">
         <id name="id" length="32">
             <generator class="org.iternine.jeppetto.dao.hibernate.UUIDIdentifierGenerator"/>
         </id>
 
         <property name="intValue"/>
 
-        <set name="relatedObjects" cascade="all">
+        <bag name="relatedObjects" cascade="all">
             <key column="simpleObjectId"/>
-            <one-to-many class="org.iternine.jeppetto.RelatedObject"/>
-        </set>
+            <one-to-many class="org.iternine.jeppetto.test.RelatedObject"/>
+        </bag>
     </class>
 
-    <class name="org.iternine.jeppetto.RelatedObject">
+    <class name="org.iternine.jeppetto.test.RelatedObject">
         <id name="id" length="32">
             <generator class="org.iternine.jeppetto.dao.hibernate.UUIDIdentifierGenerator"/>
         </id>

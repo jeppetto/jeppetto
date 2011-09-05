@@ -37,11 +37,17 @@ public abstract class DAOTestSuite
         implements TestContextProvider {
 
     //-------------------------------------------------------------
+    // Variables - Protected
+    //-------------------------------------------------------------
+
+    protected SimpleObjectDAO simpleObjectDAO;
+
+
+    //-------------------------------------------------------------
     // Variables - Private
     //-------------------------------------------------------------
 
     private TestContext testContext;
-    private SimpleObjectDAO simpleObjectDAO;
 
 
     //-------------------------------------------------------------
@@ -358,7 +364,7 @@ public abstract class DAOTestSuite
         simpleObjectDAO.save(simpleObject);
 
         simpleObject = new SimpleObject();
-        simpleObject.setIntValue(4);
+        simpleObject.setIntValue(3);
         simpleObjectDAO.save(simpleObject);
     }
 }
