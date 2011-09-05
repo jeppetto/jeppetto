@@ -1,0 +1,190 @@
+#* @vtlvariable name="getters" type="javassist.CtMethod[]" *#
+#* @vtlvariable name="base" type="javassist.CtClass" *#
+#* @vtlvariable name="_" type="org.iternine.jeppetto.enhance.TemplateHelper" *#
+#set( $baseName = $base.getName() )
+#set( $Q = '"')
+public $_.cls("${baseName}$JDBCPersistable").ext($base).impl("org.iternine.jeppetto.dao.jdbc.enhance.JDBCPersistable") {
+
+    #set( $thisName = $_.clsName() )
+
+    //-------------------------------------------------------------
+    // Variables - Private
+    //-------------------------------------------------------------
+
+    $_.field("private final $baseName __delegate;")
+    $_.field("private final java.util.Map __originalValues = new java.util.HashMap();")
+
+    $_.field("private static final String SQL_INSERT = ${Q}INSERT INTO $base.getSimpleName() ${Q}
+                + ${Q}(#foreach( $getter in $getters ) $_.keyFor($getter.getName())#if( $velocityHasNext ),#end #end) ${Q}
+                + ${Q}VALUES (#foreach( $getter in $getters ) ?#if( $velocityHasNext ),#end #end) ${Q};")
+    $_.field("private static final String SQL_DELETE = ${Q}DELETE FROM $base.getSimpleName() WHERE id = ?${Q};")
+
+
+    //-------------------------------------------------------------
+    // Constructors
+    //-------------------------------------------------------------
+
+    $_.ctor("
+    public $thisName() {
+        __delegate = null;
+    }")
+
+    $_.ctor("
+    public $thisName($baseName delegate) {
+        __delegate = delegate;
+    }")
+
+
+    //-------------------------------------------------------------
+    // Methods - Delegates and overrides
+    //-------------------------------------------------------------
+
+    #foreach ( $getter in $getters )
+    #set( $getterName = $getter.getName() )
+    #set( $key = $_.keyFor($getterName) )
+    #set( $setterName = $_.asSetter($getter) )
+    #set( $returnType = $getter.getReturnType().getName() )
+
+    $_.method("
+    public $returnType $getterName() {
+        return (__delegate == null) ? super.$getterName() : __delegate.$getterName();
+    }")
+
+    $_.method("
+    public void $setterName($returnType value) {
+        if (!__originalValues.containsKey(${Q}$key${Q})) {
+            __originalValues.put(${Q}$key${Q}, org.iternine.jeppetto.enhance.ReferenceUtil.asObject($getterName()));
+        }
+
+        if (__delegate == null) {
+            super.$setterName(value);
+        } else {
+            __delegate.$setterName(value);
+        }
+    }")
+    #end
+
+    $_.method("
+    public String toString() {
+        return (__delegate == null) ? super.toString() : __delegate.toString();
+    }")
+
+
+    //-------------------------------------------------------------
+    // Implementation - JDBCPersistable
+    //-------------------------------------------------------------
+
+    $_.method("
+    public void populateObject(java.sql.ResultSet resultSet) {
+        #foreach( $getter in $getters )
+        #set( $getterName = $getter.getName() )
+        #set( $key = $_.keyFor($getterName) )
+        #set( $setterName = $_.asSetter($getter) )
+        #set( $returnType = $getter.getReturnType().getName() )
+
+        #if ( $returnType == 'int' )
+        super.$setterName(resultSet.getInt(${Q}$key${Q}));
+        #elseif( $returnType == 'short' )
+        super.$setterName(resultSet.getShort(${Q}$key${Q}));
+        #elseif( $returnType == 'long' )
+        super.$setterName(resultSet.getLong(${Q}$key${Q}));
+        #elseif( $returnType == 'byte' )
+        super.$setterName(resultSet.getByte(${Q}$key${Q}));
+        #elseif( $returnType == 'double' )
+        super.$setterName(resultSet.getDouble(${Q}$key${Q}));
+        #elseif( $returnType == 'float' )
+        super.$setterName(resultSet.getFloat(${Q}$key${Q}));
+        #elseif( $returnType == 'boolean' )
+        super.$setterName(resultSet.getBoolean(${Q}$key${Q}));
+        #elseif( $returnType == 'java.lang.String' )
+        super.$setterName(resultSet.getString(${Q}$key${Q}));
+        #elseif( $returnType == 'java.util.Date' )
+        super.$setterName(new java.util.Date(resultSet.getTimestamp(${Q}$key${Q}).getTime()));
+        #else
+        super.$setterName(resultSet.getObject(${Q}$key${Q}));
+        #end
+        #end
+    }")
+
+    $_.method("
+    public void save(java.sql.Connection connection, org.iternine.jeppetto.dao.id.IdGenerator idGenerator)
+            throws java.sql.SQLException {
+        java.sql.PreparedStatement preparedStatement = null;
+
+        try {
+            if (__delegate == null) {
+                String sqlUpdate = ${Q}UPDATE $base.getSimpleName() SET ${Q};
+
+                preparedStatement = connection.prepareStatement(sqlUpdate);
+
+                
+            } else {    // Not yet persisted
+                preparedStatement = connection.prepareStatement(SQL_INSERT);
+
+                #set( $parameterLocation = 1 )
+                #foreach( $getter in $getters )
+                #set( $getterName = $getter.getName() )
+                #set( $returnType = $getter.getReturnType().getName() )
+
+                #if ( $getterName == 'getId' )
+                __delegate.setId(($returnType) idGenerator.generateId());
+                #end
+
+                #if ( $returnType == 'int' )
+                preparedStatement.setInt($parameterLocation, __delegate.$getterName());
+                #elseif( $returnType == 'short' )
+                preparedStatement.setShort($parameterLocation, __delegate.$getterName());
+                #elseif( $returnType == 'long' )
+                preparedStatement.setLong($parameterLocation, __delegate.$getterName());
+                #elseif( $returnType == 'byte' )
+                preparedStatement.setByte($parameterLocation, __delegate.$getterName());
+                #elseif( $returnType == 'double' )
+                preparedStatement.setDouble($parameterLocation, __delegate.$getterName());
+                #elseif( $returnType == 'float' )
+                preparedStatement.setFloat($parameterLocation, __delegate.$getterName());
+                #elseif( $returnType == 'boolean' )
+                preparedStatement.setBoolean($parameterLocation, __delegate.$getterName());
+                #elseif( $returnType == 'java.lang.String' )
+                preparedStatement.setString($parameterLocation, __delegate.$getterName());
+                #elseif( $returnType == 'java.util.Date' )
+                preparedStatement.setTimestamp($parameterLocation, new java.sql.Timestamp(__delegate.$getterName().getTime()));
+                #else
+                preparedStatement.setObject($parameterLocation, __delegate.$getterName());
+                #end
+                #set( $parameterLocation = $parameterLocation + 1 )
+                #end
+            }
+
+            preparedStatement.execute();
+        } finally {
+            if (preparedStatement != null) { preparedStatement.close(); }
+        }
+    }")
+
+    $_.method("
+    // TODO: support cascading deletes
+    public void delete(java.sql.Connection connection)
+            throws java.sql.SQLException {
+        java.sql.PreparedStatement preparedStatement = null;
+
+        try {
+            preparedStatement = connection.prepareStatement(SQL_DELETE);
+
+            preparedStatement.setObject(1, getId());
+
+            preparedStatement.executeUpdate();
+        } finally {
+            if (preparedStatement != null) { preparedStatement.close(); }
+        }
+    }")
+
+
+    //-------------------------------------------------------------
+    // Methods - Other
+    //-------------------------------------------------------------
+
+    $_.method("
+    public static Class __getPreEnhancedClass() {
+        return ${baseName}.class;
+    }")
+}
