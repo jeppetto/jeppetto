@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.iternine.jeppetto.dao.mongodb;
+package org.iternine.jeppetto.test;
 
 
 import java.util.ArrayList;
@@ -129,6 +129,7 @@ public class SimpleObject {
     public void setRelatedObjectMap(Map<String, RelatedObject> relatedObjectMap) {
         this.relatedObjectMap = relatedObjectMap;
     }
+
 
     public SimpleEnum getSimpleEnum() {
         return simpleEnum;

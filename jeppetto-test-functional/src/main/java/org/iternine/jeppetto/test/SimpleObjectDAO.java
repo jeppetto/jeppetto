@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.iternine.jeppetto.dao.mongodb;
+package org.iternine.jeppetto.test;
 
 
 import org.iternine.jeppetto.dao.ConditionType;
@@ -135,7 +135,7 @@ public interface SimpleObjectDAO extends GenericDAO<SimpleObject, String> {
     @DataAccessMethod(
             projections = { @Projection(type = ProjectionType.Sum, field = "intValue") }
     )
-    double sumIntValues();
+    int sumIntValues();
 
 
     @DataAccessMethod(
@@ -147,13 +147,13 @@ public interface SimpleObjectDAO extends GenericDAO<SimpleObject, String> {
     @DataAccessMethod(
             projections = { @Projection(type = ProjectionType.Minimum, field = "intValue") }
     )
-    double minIntValue();
+    int minIntValue();
 
 
     @DataAccessMethod(
             projections = { @Projection(type = ProjectionType.Maximum, field = "intValue") }
     )
-    double maxIntValue();
+    int maxIntValue();
 
 
     @DataAccessMethod(
