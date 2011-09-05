@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd">
+
+    <!-- =================== DataSource =================== -->
+
+    <bean id="dataSource" class="org.springframework.jdbc.datasource.SingleConnectionDataSource" destroy-method="closeConnection">
+        <property name="driverClassName" value="${jdbcDAOTest.jdbc.driverClass}"/>
+        <property name="url" value="${jdbcDAOTest.jdbc.url}"/>
+        <property name="username" value="${jdbcDAOTest.jdbc.user}"/>
+        <property name="password" value="${jdbcDAOTest.jdbc.password}"/>
+        <property name="suppressClose" value="true"/>
+    </bean>
+
+
+    <!-- =================== LiquiBase =================== -->
+
+    <bean id="liquibase" class="liquibase.integration.spring.SpringLiquibase">
+        <property name="dataSource" ref="dataSource"/>
+        <property name="changeLog" value="classpath:migrations/test.changelog.xml"/>
+    </bean>
+
+
+    <!-- =================== Data Access Objects =================== -->
+
+    <bean id="simpleObjectDAO" class="org.iternine.jeppetto.dao.DAOBuilder" factory-method="buildDAO" depends-on="liquibase">
+        <constructor-arg index="0" value="org.iternine.jeppetto.dao.jdbc.SimpleObject"/>
+        <constructor-arg index="1" value="org.iternine.jeppetto.dao.jdbc.SimpleObjectDAO"/>
+        <constructor-arg index="2" value="org.iternine.jeppetto.dao.jdbc.JDBCQueryModelDAO"/>
+        <constructor-arg index="3">
+            <map>
+                <entry key="dataSource" value-ref="dataSource"/>
+                <entry key="idGenerator">
+                    <bean class="org.iternine.jeppetto.dao.id.UUIDGenerator"/>
+                </entry>
+            </map>
+        </constructor-arg>
+    </bean>
+
+</beans>
