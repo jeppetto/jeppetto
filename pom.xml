@@ -22,8 +22,8 @@
         <module>jeppetto-dao-mongo</module>
         <module>jeppetto-enhance</module>
         <module>jeppetto-test-support</module>
-    <module>jeppetto-test-functional</module>
-  </modules>
+        <module>jeppetto-test-functional</module>
+    </modules>
 
     <profiles>
         <profile>
