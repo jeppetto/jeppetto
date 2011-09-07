@@ -33,8 +33,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 
-public abstract class DAOTestSuite
-        implements TestContextProvider {
+public abstract class DAOTestSuite {
 
     //-------------------------------------------------------------
     // Variables - Protected
