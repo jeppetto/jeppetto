@@ -28,7 +28,7 @@ import org.junit.Test;
 public class MongoSimpleObjectDAOTest extends SimpleObjectDAOTest {
 
     //-------------------------------------------------------------
-    // Variables - SimpleObjectDAOTest Implementation
+    // Implementation - SimpleObjectDAOTest
     //-------------------------------------------------------------
 
     @Override
@@ -47,6 +47,11 @@ public class MongoSimpleObjectDAOTest extends SimpleObjectDAOTest {
         super.createData();
         super.createData();
     }
+
+
+    //-------------------------------------------------------------
+    // Methods - Overrides
+    //-------------------------------------------------------------
 
     @Test
     @Override

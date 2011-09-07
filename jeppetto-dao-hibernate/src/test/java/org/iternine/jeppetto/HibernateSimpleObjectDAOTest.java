@@ -24,7 +24,7 @@ import org.iternine.jeppetto.testsupport.TestContext;
 public class HibernateSimpleObjectDAOTest extends SimpleObjectDAOTest {
 
     //-------------------------------------------------------------
-    // Methods - SimpleObjectDAOTest Implementation
+    // Implementation - SimpleObjectDAOTest
     //-------------------------------------------------------------
 
     @Override

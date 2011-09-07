@@ -50,7 +50,7 @@ public abstract class SimpleObjectDAOTest {
 
 
     //-------------------------------------------------------------
-    // Methods - TestContextProvider
+    // Methods - Abstract
     //-------------------------------------------------------------
 
     public abstract TestContext getTestContext();
@@ -62,12 +62,13 @@ public abstract class SimpleObjectDAOTest {
 
     @Before
     public void before() {
-        this.testContext = getTestContext();
-        if (this.testContext.getBean("simpleObjectDAO") == null) {
+        testContext = getTestContext();
+
+        if (testContext.getBean("simpleObjectDAO") == null) {
             throw new IllegalStateException("A bean of with ID of simpleObjectDAO must be defined in the context");
         }
 
-        this.simpleObjectDAO = ((SimpleObjectDAO) testContext.getBean("simpleObjectDAO"));
+        simpleObjectDAO = ((SimpleObjectDAO) testContext.getBean("simpleObjectDAO"));
     }
 
 
@@ -144,6 +145,7 @@ public abstract class SimpleObjectDAOTest {
         assertEquals(1, simpleObjectDAO.countByIntValue(3));
     }
 
+
     @Test
     public void countSomeObjectsUsingAnnotation() {
         createData();
@@ -178,6 +180,7 @@ public abstract class SimpleObjectDAOTest {
         assertEquals(0L, simpleObjectDAO.countByIntValueGreaterThanEqual(4));
     }
 
+
     @Test
     public void countSomeObjectsUsingAnnotationLessThanEquals() {
         createData();
@@ -188,6 +191,7 @@ public abstract class SimpleObjectDAOTest {
         assertEquals(1L, simpleObjectDAO.doAnAnnotationBasedCountLessThanEquals(1));
         assertEquals(0L, simpleObjectDAO.doAnAnnotationBasedCountLessThanEquals(0));
     }
+
 
     @Test
     public void countSomeObjectsUsingDslStyleLessThanEquals() {
@@ -350,7 +354,6 @@ public abstract class SimpleObjectDAOTest {
         simpleObject.addRelatedObject(relatedObject);
         simpleObjectDAO.save(simpleObject);
     }
-
 
 
     protected void createExtraData() {
