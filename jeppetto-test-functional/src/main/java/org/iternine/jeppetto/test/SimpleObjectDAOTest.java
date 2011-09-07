@@ -33,7 +33,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 
-public abstract class DAOTestSuite {
+public abstract class SimpleObjectDAOTest {
 
     //-------------------------------------------------------------
     // Variables - Protected

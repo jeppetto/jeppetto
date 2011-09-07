@@ -17,17 +17,14 @@
 package org.iternine.jeppetto;
 
 
-import org.iternine.jeppetto.test.DAOTestSuite;
+import org.iternine.jeppetto.test.SimpleObjectDAOTest;
 import org.iternine.jeppetto.testsupport.TestContext;
 
-import org.iternine.jeppetto.dao.NoSuchItemException;
-import org.junit.Test;
 
-
-public class HibernateDAOTest extends DAOTestSuite {
+public class HibernateSimpleObjectDAOTest extends SimpleObjectDAOTest {
 
     //-------------------------------------------------------------
-    // Methods - DAOTestSuite Implementation
+    // Methods - SimpleObjectDAOTest Implementation
     //-------------------------------------------------------------
 
     @Override

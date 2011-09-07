@@ -18,17 +18,17 @@ package org.iternine.jeppetto.dao.mongodb;
 
 
 import com.mongodb.MongoException;
-import org.iternine.jeppetto.test.DAOTestSuite;
+import org.iternine.jeppetto.test.SimpleObjectDAOTest;
 import org.iternine.jeppetto.testsupport.MongoDatabaseProvider;
 import org.iternine.jeppetto.testsupport.TestContext;
 import org.junit.Ignore;
 import org.junit.Test;
 
 
-public class DynamicMongoDAOTest extends DAOTestSuite {
+public class MongoSimpleObjectDAOTest extends SimpleObjectDAOTest {
 
     //-------------------------------------------------------------
-    // Variables - DAOTestSuite Implementation
+    // Variables - SimpleObjectDAOTest Implementation
     //-------------------------------------------------------------
 
     @Override
