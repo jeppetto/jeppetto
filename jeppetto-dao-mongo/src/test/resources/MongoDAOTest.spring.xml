@@ -57,7 +57,7 @@
     <bean id="simpleObjectDAO" class="org.iternine.jeppetto.dao.DAOBuilder" factory-method="buildDAO">
         <constructor-arg index="0" value="org.iternine.jeppetto.test.SimpleObject"/>
         <constructor-arg index="1" value="org.iternine.jeppetto.test.SimpleObjectDAO"/>
-        <constructor-arg index="2" value="org.iternine.jeppetto.dao.mongodb.AbstractSimpleObjectDAO"/>
+        <constructor-arg index="2" value="org.iternine.jeppetto.dao.mongodb.MongoDBQueryModelDAO"/>
         <constructor-arg index="3">
             <map>
                 <entry key="db" value-ref="mongoDb"/>

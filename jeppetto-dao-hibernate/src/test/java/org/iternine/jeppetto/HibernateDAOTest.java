@@ -36,15 +36,4 @@ public class HibernateDAOTest extends DAOTestSuite {
                                "HibernateDAOTest.test.properties",
                                "hibernateDAOTest.jdbc.driverClass");
     }
-
-    //-------------------------------------------------------------
-    // Methods - Test Cases
-    //-------------------------------------------------------------
-
-    @Test(expected = NoSuchItemException.class)
-    @Override
-    public void findByBogusId()
-            throws NoSuchItemException {
-        simpleObjectDAO.findById("bogusId");
-    }
 }

@@ -95,10 +95,10 @@ public abstract class DAOTestSuite {
     }
 
 
-    @Test
+    @Test(expected = NoSuchItemException.class)
     public void findByBogusId()
             throws NoSuchItemException {
-        assertNull(simpleObjectDAO.findById("bogusId"));
+        simpleObjectDAO.findById("bogusId");
     }
 
 
