@@ -30,6 +30,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -46,6 +47,12 @@ public class MongoDBCallback extends DBCallback {
     private DBCollection dbCollection;
 
     private static Logger logger = LoggerFactory.getLogger(MongoDBCallback.class);
+
+    // List of nested documents that come back from an "explain()" call.  This callback is used
+    // to construct the result object, but these fields do not have a corresponding sub-object.
+    private static final List<String> EXPLAIN_PATHS_TO_IGNORE = Arrays.asList("allPlans",
+                                                                              "indexBounds",
+                                                                              "shards");
 
 
     //-------------------------------------------------------------
@@ -195,19 +202,23 @@ public class MongoDBCallback extends DBCallback {
             }
         }
 
+        // If we don't have a container class at this point, we are in a part of the result document that
+        // does not correspond to the object model.  Return a basic MongoDB object.
+        if (containerClass == null) {
+            return array ? BasicDBList.class : BasicDBObject.class;
+        }
+
         Method getter;
 
         try {
             // noinspection ConstantConditions
             getter = containerClass.getMethod("get" + Character.toUpperCase(lastPathPart.charAt(0)) + lastPathPart.substring(1));
-        } catch (Exception e) {
-            logger.warn("No getter for: {} ({})", lastPathPart, e.getMessage());
-
-            if (array) {
-                return BasicDBList.class;
-            } else {
-                return BasicDBObject.class;
+        } catch (NoSuchMethodException e) {
+            if (!EXPLAIN_PATHS_TO_IGNORE.contains(lastPathPart)) {
+                logger.warn("No getter for: {} ({})", lastPathPart, e.getMessage());
             }
+
+            return array ? BasicDBList.class : BasicDBObject.class;
         }
 
         Type returnType = getter.getGenericReturnType();
