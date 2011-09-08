@@ -17,6 +17,7 @@
 package org.iternine.jeppetto;
 
 
+import org.iternine.jeppetto.test.SimpleObjectDAO;
 import org.iternine.jeppetto.test.SimpleObjectDAOTest;
 import org.iternine.jeppetto.testsupport.TestContext;
 
@@ -24,13 +25,34 @@ import org.iternine.jeppetto.testsupport.TestContext;
 public class HibernateSimpleObjectDAOTest extends SimpleObjectDAOTest {
 
     //-------------------------------------------------------------
+    // Variables - Private
+    //-------------------------------------------------------------
+
+    private TestContext testContext;
+
+
+    //-------------------------------------------------------------
     // Implementation - SimpleObjectDAOTest
     //-------------------------------------------------------------
 
     @Override
-    public TestContext getTestContext() {
-        return new TestContext("HibernateDAOTest.spring.xml",
-                               "HibernateDAOTest.test.properties",
-                               "hibernateDAOTest.jdbc.driverClass");
+    protected SimpleObjectDAO getSimpleObjectDAO() {
+        if (testContext == null) {
+            testContext = new TestContext("HibernateDAOTest.spring.xml",
+                                          "HibernateDAOTest.test.properties",
+                                          "hibernateDAOTest.jdbc.driverClass");
+
+        }
+
+        return (SimpleObjectDAO) testContext.getBean("simpleObjectDAO");
+    }
+
+
+    @Override
+    protected void reset() {
+        if (testContext != null) {
+            testContext.close();
+            testContext = null;
+        }
     }
 }

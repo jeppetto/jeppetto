@@ -18,7 +18,6 @@ package org.iternine.jeppetto.test;
 
 
 import org.iternine.jeppetto.dao.NoSuchItemException;
-import org.iternine.jeppetto.testsupport.TestContext;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -29,7 +28,6 @@ import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 
@@ -42,18 +40,14 @@ public abstract class SimpleObjectDAOTest {
     protected SimpleObjectDAO simpleObjectDAO;
 
 
-    //-------------------------------------------------------------
-    // Variables - Private
-    //-------------------------------------------------------------
-
-    private TestContext testContext;
-
 
     //-------------------------------------------------------------
     // Methods - Abstract
     //-------------------------------------------------------------
 
-    public abstract TestContext getTestContext();
+    protected abstract SimpleObjectDAO getSimpleObjectDAO();
+
+    protected abstract void reset();
 
 
     //-------------------------------------------------------------
@@ -62,21 +56,15 @@ public abstract class SimpleObjectDAOTest {
 
     @Before
     public void before() {
-        testContext = getTestContext();
-
-        if (testContext.getBean("simpleObjectDAO") == null) {
-            throw new IllegalStateException("A bean of with ID of simpleObjectDAO must be defined in the context");
-        }
-
-        simpleObjectDAO = ((SimpleObjectDAO) testContext.getBean("simpleObjectDAO"));
+        simpleObjectDAO = getSimpleObjectDAO();
     }
 
 
     @After
     public void after() {
-        if (testContext != null) {
-            testContext.close();
-        }
+        reset();
+
+        simpleObjectDAO = null;
     }
 
 

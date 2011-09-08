@@ -18,6 +18,7 @@ package org.iternine.jeppetto.dao.mongodb;
 
 
 import com.mongodb.MongoException;
+import org.iternine.jeppetto.test.SimpleObjectDAO;
 import org.iternine.jeppetto.test.SimpleObjectDAOTest;
 import org.iternine.jeppetto.testsupport.MongoDatabaseProvider;
 import org.iternine.jeppetto.testsupport.TestContext;
@@ -28,12 +29,34 @@ import org.junit.Test;
 public class MongoSimpleObjectDAOTest extends SimpleObjectDAOTest {
 
     //-------------------------------------------------------------
+    // Variables - Private
+    //-------------------------------------------------------------
+
+    private TestContext testContext;
+
+
+    //-------------------------------------------------------------
     // Implementation - SimpleObjectDAOTest
     //-------------------------------------------------------------
 
     @Override
-    public TestContext getTestContext() {
-        return new TestContext("MongoDAOTest.spring.xml", "MongoDAOTest.properties", new MongoDatabaseProvider());
+    protected SimpleObjectDAO getSimpleObjectDAO() {
+        if (testContext == null) {
+            testContext = new TestContext("MongoDAOTest.spring.xml",
+                                          "MongoDAOTest.properties",
+                                          new MongoDatabaseProvider());
+        }
+
+        return (SimpleObjectDAO) testContext.getBean("simpleObjectDAO");
+    }
+
+
+    @Override
+    protected void reset() {
+        if (testContext != null) {
+            testContext.close();
+            testContext = null;
+        }
     }
 
 
