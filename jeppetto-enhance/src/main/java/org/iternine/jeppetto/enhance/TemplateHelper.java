@@ -26,6 +26,8 @@ import javassist.CtMethod;
 import javassist.CtNewConstructor;
 import javassist.CtNewMethod;
 import javassist.NotFoundException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
@@ -51,6 +53,8 @@ public class TemplateHelper {
     private List<String> interfaceNames = new ArrayList<String>();
     private CtClass thisClass;
     private ClassPool pool;
+
+    private static Logger logger = LoggerFactory.getLogger(TemplateHelper.class);
 
 
     //-------------------------------------------------------------
@@ -115,7 +119,15 @@ public class TemplateHelper {
 
     public String field(String code)
             throws CannotCompileException {
-        CtField field = CtField.make(code, thisClass);
+        CtField field;
+
+        try {
+            field = CtField.make(code, thisClass);
+        } catch (CannotCompileException e) {
+            logger.error("Unable to compile this code:\n" + code);
+
+            throw e;
+        }
 
         thisClass.addField(field);
 
@@ -125,7 +137,15 @@ public class TemplateHelper {
 
     public String ctor(String code)
             throws CannotCompileException {
-        CtConstructor constructor = CtNewConstructor.make(code, thisClass);
+        CtConstructor constructor;
+
+        try {
+            constructor = CtNewConstructor.make(code, thisClass);
+        } catch (CannotCompileException e) {
+            logger.error("Unable to compile this code:\n" + code);
+
+            throw e;
+        }
 
         thisClass.addConstructor(constructor);
 
@@ -135,7 +155,15 @@ public class TemplateHelper {
 
     public String method(String code)
             throws CannotCompileException {
-        CtMethod m = CtNewMethod.make(code, thisClass);
+        CtMethod m;
+
+        try {
+            m = CtNewMethod.make(code, thisClass);
+        } catch (CannotCompileException e) {
+            logger.error("Unable to compile this code:\n" + code);
+
+            throw e;
+        }
 
         thisClass.addMethod(m);
 
