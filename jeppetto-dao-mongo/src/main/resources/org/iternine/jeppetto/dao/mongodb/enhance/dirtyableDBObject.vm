@@ -148,10 +148,16 @@ public $_.cls("${baseName}$DirtyableDBObject").ext($base).impl("org.iternine.jep
         #set ( $key = $_.keyFor($getter.getName()) )
         #set ( $setterName = $_.asSetter($getter) )
         #if ( $getter.getName() == 'getId' )
+        #set ( $returnType = $_.returnTypeOf($getter) )
 
         if (${Q}_id${Q}.equals(key)) {
+            #if ( $returnType.getName() == 'java.lang.String')
             this.$setterName(__${key}FromObject(v instanceof org.bson.types.ObjectId ? ((org.bson.types.ObjectId) v).toString() : v));
             return v;
+            #else
+            this.$setterName(__${key}FromObject(v));
+            return v;
+            #end
         }
         #else
 
@@ -174,10 +180,15 @@ public $_.cls("${baseName}$DirtyableDBObject").ext($base).impl("org.iternine.jep
         #set ( $getterName = $getter.getName() )
         #set ( $key = $_.keyFor($getterName) )
         #if ( $getter.getName() == 'getId' )
+        #set ( $returnType = $_.returnTypeOf($getter) )
 
         if (${Q}_id${Q}.equals(key)) {
-            Object o = this.$getterName();
-            return (o instanceof String && org.bson.types.ObjectId.isValid((String) o)) ? new org.bson.types.ObjectId((String) o) : o;
+            #if ( $returnType.getName() == 'java.lang.String')
+            String s = this.$getterName();
+            return org.bson.types.ObjectId.isValid(s) ? new org.bson.types.ObjectId(s) : this.__${key}ToDBObject(s);
+            #else
+            return this.__${key}ToDBObject(this.$getterName());
+            #end
         }
         #else
 
