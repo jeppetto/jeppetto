@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.iternine.jeppetto;
+package org.iternine.jeppetto.test;
 
 
 public class RelatedObject {
@@ -34,7 +34,6 @@ public class RelatedObject {
     public String getId() {
         return id;
     }
-
 
     public void setId(String id) {
         this.id = id;

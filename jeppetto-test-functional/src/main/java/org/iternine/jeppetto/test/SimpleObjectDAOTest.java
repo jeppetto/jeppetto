@@ -14,18 +14,13 @@
  * limitations under the License.
  */
 
-package org.iternine.jeppetto.dao.mongodb;
+package org.iternine.jeppetto.test;
 
 
 import org.iternine.jeppetto.dao.NoSuchItemException;
-import org.iternine.jeppetto.testsupport.MongoDatabaseProvider;
 import org.iternine.jeppetto.testsupport.TestContext;
-
-import com.mongodb.MongoException;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -38,14 +33,27 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 
-public class DynamicMongoDAOTest {
+public abstract class SimpleObjectDAOTest {
 
     //-------------------------------------------------------------
-    // Variables - Private - Static
+    // Variables - Protected
+    //-------------------------------------------------------------
+
+    protected SimpleObjectDAO simpleObjectDAO;
+
+
+    //-------------------------------------------------------------
+    // Variables - Private
     //-------------------------------------------------------------
 
     private TestContext testContext;
-    private SimpleObjectDAO simpleObjectDAO;
+
+
+    //-------------------------------------------------------------
+    // Methods - Abstract
+    //-------------------------------------------------------------
+
+    public abstract TestContext getTestContext();
 
 
     //-------------------------------------------------------------
@@ -53,17 +61,19 @@ public class DynamicMongoDAOTest {
     //-------------------------------------------------------------
 
     @Before
-    public void setUp() {
-        this.testContext = new TestContext("MongoDAOTest.spring.xml",
-                                           "MongoDAOTest.properties",
-                                           new MongoDatabaseProvider());
+    public void before() {
+        testContext = getTestContext();
 
-        this.simpleObjectDAO = ((SimpleObjectDAO) testContext.getBean("simpleObjectDAO"));
+        if (testContext.getBean("simpleObjectDAO") == null) {
+            throw new IllegalStateException("A bean of with ID of simpleObjectDAO must be defined in the context");
+        }
+
+        simpleObjectDAO = ((SimpleObjectDAO) testContext.getBean("simpleObjectDAO"));
     }
 
 
     @After
-    public void tearDown() throws InterruptedException {
+    public void after() {
         if (testContext != null) {
             testContext.close();
         }
@@ -75,8 +85,7 @@ public class DynamicMongoDAOTest {
     //-------------------------------------------------------------
 
     @Test
-    public void findById()
-            throws NoSuchItemException {
+    public void findById() throws NoSuchItemException {
         SimpleObject simpleObject = new SimpleObject();
 
         simpleObjectDAO.save(simpleObject);
@@ -87,9 +96,10 @@ public class DynamicMongoDAOTest {
     }
 
 
-    @Test
-    public void findByBogusId() throws NoSuchItemException {
-        assertNull(simpleObjectDAO.findById("bogusId"));
+    @Test(expected = NoSuchItemException.class)
+    public void findByBogusId()
+            throws NoSuchItemException {
+        simpleObjectDAO.findById("bogusId");
     }
 
 
@@ -121,9 +131,9 @@ public class DynamicMongoDAOTest {
 
 
     @Test
-    @Ignore
     public void countSomeObjects() {
         createData();
+
         assertEquals(3, simpleObjectDAO.countByIntValueLessThan(100));
         assertEquals(2, simpleObjectDAO.countByIntValueLessThan(3));
         assertEquals(1, simpleObjectDAO.countByIntValueLessThan(2));
@@ -139,6 +149,7 @@ public class DynamicMongoDAOTest {
     @Test
     public void countSomeObjectsUsingAnnotation() {
         createData();
+
         assertEquals(3L, simpleObjectDAO.doAnAnnotationBasedCount(0));
         assertEquals(2L, simpleObjectDAO.doAnAnnotationBasedCount(1));
         assertEquals(1L, simpleObjectDAO.doAnAnnotationBasedCount(2));
@@ -149,6 +160,7 @@ public class DynamicMongoDAOTest {
     @Test
     public void countSomeObjectsUsingAnnotationGreaterThanEquals() {
         createData();
+
         assertEquals(3L, simpleObjectDAO.doAnAnnotationBasedCountGreaterThanEquals(0));
         assertEquals(3L, simpleObjectDAO.doAnAnnotationBasedCountGreaterThanEquals(1));
         assertEquals(2L, simpleObjectDAO.doAnAnnotationBasedCountGreaterThanEquals(2));
@@ -156,9 +168,11 @@ public class DynamicMongoDAOTest {
         assertEquals(0L, simpleObjectDAO.doAnAnnotationBasedCountGreaterThanEquals(4));
     }
 
+
     @Test
     public void countSomeObjectsUsingDslStyleGreaterThanEquals() {
         createData();
+
         assertEquals(3L, simpleObjectDAO.countByIntValueGreaterThanEqual(0));
         assertEquals(3L, simpleObjectDAO.countByIntValueGreaterThanEqual(1));
         assertEquals(2L, simpleObjectDAO.countByIntValueGreaterThanEqual(2));
@@ -166,9 +180,11 @@ public class DynamicMongoDAOTest {
         assertEquals(0L, simpleObjectDAO.countByIntValueGreaterThanEqual(4));
     }
 
+
     @Test
     public void countSomeObjectsUsingAnnotationLessThanEquals() {
         createData();
+
         assertEquals(3L, simpleObjectDAO.doAnAnnotationBasedCountLessThanEquals(4));
         assertEquals(3L, simpleObjectDAO.doAnAnnotationBasedCountLessThanEquals(3));
         assertEquals(2L, simpleObjectDAO.doAnAnnotationBasedCountLessThanEquals(2));
@@ -176,9 +192,11 @@ public class DynamicMongoDAOTest {
         assertEquals(0L, simpleObjectDAO.doAnAnnotationBasedCountLessThanEquals(0));
     }
 
+
     @Test
     public void countSomeObjectsUsingDslStyleLessThanEquals() {
         createData();
+
         assertEquals(3L, simpleObjectDAO.countByIntValueLessThanEqual(4));
         assertEquals(3L, simpleObjectDAO.countByIntValueLessThanEqual(3));
         assertEquals(2L, simpleObjectDAO.countByIntValueLessThanEqual(2));
@@ -190,56 +208,51 @@ public class DynamicMongoDAOTest {
     @Test
     public void countAll() {
         createData();
+
         assertEquals(3L, simpleObjectDAO.countAll());
     }
 
 
     @Test
-    @Ignore("currently a bug in mongod is causing an orphaned db")
     public void sumIntValues() {
         createData();
-        assertEquals(6.0, 0.0, simpleObjectDAO.sumIntValues());
+
+        assertEquals(6, simpleObjectDAO.sumIntValues(), 0.0);
     }
 
 
     @Test
-    @Ignore("currently a bug in mongod is causing an orphaned db")
     public void averageIntValues() {
         createData();
+
         assertEquals(2.0, simpleObjectDAO.averageIntValues(), 0.0);
     }
 
 
     @Test
-    @Ignore("currently a bug in mongod is causing an orphaned db")
     public void minIntValue() {
         createData();
-        assertEquals(1.0, 0.0, simpleObjectDAO.minIntValue());
+
+        assertEquals(1, simpleObjectDAO.minIntValue(), 0.0);
     }
 
 
     @Test
-    @Ignore("currently a bug in mongod is causing an orphaned db")
     public void maxIntValue() {
         createData();
-        assertEquals(3.0, 0.0, simpleObjectDAO.maxIntValue());
+
+        assertEquals(3, simpleObjectDAO.maxIntValue(), 0.0);
     }
 
 
     @Test
-    @Ignore("currently a bug in mongod is causing an orphaned db")
     public void countDistinctIntValue() {
         createExtraData();
 
-        // this test has changed since intValue got a unique index
-        assertEquals(5, simpleObjectDAO.countIntValue());
-        assertEquals(5, simpleObjectDAO.countDistinctIntValue());
+        assertEquals(5, simpleObjectDAO.countAll());
+        assertEquals(4, simpleObjectDAO.countDistinctIntValue());
     }
 
-    @Test(expected = MongoException.DuplicateKey.class)
-    public void createDuplicateOnUniquenessConstraintCausesException() {
-        createDuplicateData();
-    }
 
     @Test
     public void findSomeObjects() {
@@ -248,8 +261,8 @@ public class DynamicMongoDAOTest {
         List<SimpleObject> results = simpleObjectDAO.findSomeObjects(Arrays.asList(1, 3, 4));
 
         assertEquals(2, results.size());
-        Assert.assertTrue(results.get(0).getIntValue() == 1 || results.get(0).getIntValue() == 3);
-        Assert.assertTrue(results.get(0).getIntValue() != results.get(1).getIntValue());
+        assertTrue(results.get(0).getIntValue() == 1 || results.get(0).getIntValue() == 3);
+        assertTrue(results.get(0).getIntValue() != results.get(1).getIntValue());
     }
 
 
@@ -282,6 +295,7 @@ public class DynamicMongoDAOTest {
     @Test
     public void countRelatedItems() {
         createData();
+
         assertEquals(3, simpleObjectDAO.countRelatedItems(21));
         assertEquals(2, simpleObjectDAO.countRelatedItems(20));
         assertEquals(1, simpleObjectDAO.countRelatedItems(15));
@@ -312,10 +326,10 @@ public class DynamicMongoDAOTest {
 
 
     //-------------------------------------------------------------
-    // Methods - Private
+    // Methods - Protected
     //-------------------------------------------------------------
 
-    private void createData() {
+    protected void createData() {
         SimpleObject simpleObject;
         RelatedObject relatedObject;
 
@@ -341,13 +355,8 @@ public class DynamicMongoDAOTest {
         simpleObjectDAO.save(simpleObject);
     }
 
-    private void createDuplicateData() {
-        createData();
-        createData();
-    }
 
-
-    private void createExtraData() {
+    protected void createExtraData() {
         createData();
 
         SimpleObject simpleObject;
@@ -357,7 +366,7 @@ public class DynamicMongoDAOTest {
         simpleObjectDAO.save(simpleObject);
 
         simpleObject = new SimpleObject();
-        simpleObject.setIntValue(4);
+        simpleObject.setIntValue(3);
         simpleObjectDAO.save(simpleObject);
     }
 }

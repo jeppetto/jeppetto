@@ -14,28 +14,23 @@
  * limitations under the License.
  */
 
-package org.iternine.jeppetto.dao.mongodb;
+package org.iternine.jeppetto;
 
 
-public class RelatedObject {
+import org.iternine.jeppetto.test.SimpleObjectDAOTest;
+import org.iternine.jeppetto.testsupport.TestContext;
 
-    //-------------------------------------------------------------
-    // Variables - Private
-    //-------------------------------------------------------------
 
-    private int relatedIntValue;
-
+public class HibernateSimpleObjectDAOTest extends SimpleObjectDAOTest {
 
     //-------------------------------------------------------------
-    // Methods - Getter/Setter
+    // Implementation - SimpleObjectDAOTest
     //-------------------------------------------------------------
 
-    public int getRelatedIntValue() {
-        return relatedIntValue;
-    }
-
-
-    public void setRelatedIntValue(int relatedIntValue) {
-        this.relatedIntValue = relatedIntValue;
+    @Override
+    public TestContext getTestContext() {
+        return new TestContext("HibernateDAOTest.spring.xml",
+                               "HibernateDAOTest.test.properties",
+                               "hibernateDAOTest.jdbc.driverClass");
     }
 }

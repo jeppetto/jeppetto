@@ -98,6 +98,13 @@
 
         <dependency>
             <groupId>org.iternine</groupId>
+            <artifactId>jeppetto-test-functional</artifactId>
+            <version>0.5-SNAPSHOT</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.iternine</groupId>
             <artifactId>jeppetto-test-support</artifactId>
             <version>0.5-SNAPSHOT</version>
             <scope>test</scope>
