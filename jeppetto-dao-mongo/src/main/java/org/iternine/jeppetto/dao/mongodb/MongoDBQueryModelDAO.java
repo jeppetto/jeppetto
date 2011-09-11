@@ -34,15 +34,16 @@ import org.iternine.jeppetto.dao.annotation.AccessControlType;
 import org.iternine.jeppetto.dao.mongodb.enhance.DBObjectUtil;
 import org.iternine.jeppetto.dao.mongodb.enhance.DirtyableDBObject;
 import org.iternine.jeppetto.dao.mongodb.enhance.EnhancerHelper;
-import org.iternine.jeppetto.dao.mongodb.enhance.MongoDBCallback;
+import org.iternine.jeppetto.dao.mongodb.enhance.MongoDBDecoder;
 import org.iternine.jeppetto.dao.mongodb.projections.ProjectionCommands;
 import org.iternine.jeppetto.enhance.Enhancer;
 
 import com.mongodb.BasicDBObject;
 import com.mongodb.DB;
-import com.mongodb.DBCallback;
 import com.mongodb.DBCollection;
 import com.mongodb.DBCursor;
+import com.mongodb.DBDecoder;
+import com.mongodb.DBDecoderFactory;
 import com.mongodb.DBObject;
 import com.mongodb.WriteConcern;
 import org.bson.types.ObjectId;
@@ -168,13 +169,12 @@ public class MongoDBQueryModelDAO<T, ID>
         this.enhancer = EnhancerHelper.getDirtyableDBObjectEnhancer(entityClass);
 
         dbCollection.setObjectClass(enhancer.getEnhancedClass());
-
-        DBCallback.FACTORY = new DBCallback.Factory() {
+        dbCollection.setDBDecoderFactory(new DBDecoderFactory() {
             @Override
-            public DBCallback create(DBCollection dbCollection) {
-                return new MongoDBCallback(dbCollection);
+            public DBDecoder create() {
+                return new MongoDBDecoder();
             }
-        };
+        });
 
         this.accessControlContextProvider = accessControlContextProvider;
         this.uniqueIndexes = ensureIndexes((List<String>) daoProperties.get("uniqueIndexes"), true);

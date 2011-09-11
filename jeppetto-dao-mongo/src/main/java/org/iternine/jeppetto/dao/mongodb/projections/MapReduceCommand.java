@@ -17,14 +17,14 @@
 package org.iternine.jeppetto.dao.mongodb.projections;
 
 
-import org.iternine.jeppetto.dao.mongodb.enhance.DBObjectUtil;
 import org.iternine.jeppetto.dao.mongodb.MongoDBCommand;
+import org.iternine.jeppetto.dao.mongodb.enhance.DBObjectUtil;
 
 import com.mongodb.DBCollection;
-import com.mongodb.DBCursor;
 import com.mongodb.DBObject;
 import com.mongodb.MapReduceOutput;
 
+import java.util.Iterator;
 import java.util.Map;
 
 
@@ -57,10 +57,10 @@ abstract class MapReduceCommand
     @Override
     public final Object singleResult(DBCollection dbCollection) {
         MapReduceOutput output = dbCollection.mapReduce(createMapFunction(), createReduceFunction(), null, query);
-        DBCursor cursor = output.results();
+        Iterable<DBObject> results = output.results();
 
         try {
-            return transformToValue(cursor);
+            return transformToValue(results);
         } finally {
             output.drop();
         }
@@ -82,9 +82,11 @@ abstract class MapReduceCommand
     }
 
 
-    protected Object transformToValue(DBCursor dbCursor) {
-        if (dbCursor.hasNext()) {
-            return transformToValue(dbCursor.next());
+    protected Object transformToValue(Iterable<DBObject> results) {
+        Iterator<DBObject> resultsIterator = results.iterator();
+
+        if (resultsIterator.hasNext()) {
+            return transformToValue(resultsIterator.next());
         } else {
             return defaultValue();
         }

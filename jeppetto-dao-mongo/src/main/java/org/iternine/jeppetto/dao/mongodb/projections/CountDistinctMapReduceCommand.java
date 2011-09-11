@@ -17,7 +17,6 @@
 package org.iternine.jeppetto.dao.mongodb.projections;
 
 
-import com.mongodb.DBCursor;
 import com.mongodb.DBObject;
 
 
@@ -74,8 +73,14 @@ class CountDistinctMapReduceCommand
 
 
     @Override
-    protected Integer transformToValue(DBCursor dbCursor) {
-        return dbCursor.count();
+    protected Integer transformToValue(Iterable<DBObject> results) {
+        int i = 0;
+
+        for (DBObject dbObject : results) {
+            i++;
+        }
+
+        return i;
     }
 
 

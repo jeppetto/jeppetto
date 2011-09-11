@@ -19,9 +19,9 @@ package org.iternine.jeppetto.dao.mongodb.enhance;
 
 import com.mongodb.BasicDBList;
 import com.mongodb.BasicDBObject;
-import com.mongodb.DBCallback;
 import com.mongodb.DBCollection;
 import com.mongodb.DBObject;
+import com.mongodb.DefaultDBCallback;
 import org.bson.BSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,7 +37,7 @@ import java.util.Map;
 import java.util.Set;
 
 
-public class MongoDBCallback extends DBCallback {
+public class MongoDBCallback extends DefaultDBCallback {
 
     //-------------------------------------------------------------
     // Variables - Private
