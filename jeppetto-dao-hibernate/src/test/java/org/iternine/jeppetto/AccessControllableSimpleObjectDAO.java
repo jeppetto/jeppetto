@@ -23,6 +23,7 @@ import org.iternine.jeppetto.dao.ConditionType;
 import org.iternine.jeppetto.dao.GenericDAO;
 import org.iternine.jeppetto.dao.annotation.Condition;
 import org.iternine.jeppetto.dao.annotation.DataAccessMethod;
+import org.iternine.jeppetto.test.SimpleObject;
 
 import java.util.List;
 

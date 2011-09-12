@@ -17,36 +17,42 @@
 package org.iternine.jeppetto;
 
 
-public class RelatedObject {
+import org.iternine.jeppetto.test.SimpleObjectDAO;
+import org.iternine.jeppetto.test.SimpleObjectDAOTest;
+import org.iternine.jeppetto.testsupport.TestContext;
+
+
+public class HibernateSimpleObjectDAOTest extends SimpleObjectDAOTest {
 
     //-------------------------------------------------------------
     // Variables - Private
     //-------------------------------------------------------------
 
-    private String id;
-    private int relatedIntValue;
+    private TestContext testContext;
 
 
     //-------------------------------------------------------------
-    // Methods - Getter/Setter
+    // Implementation - SimpleObjectDAOTest
     //-------------------------------------------------------------
 
-    public String getId() {
-        return id;
+    @Override
+    protected SimpleObjectDAO getSimpleObjectDAO() {
+        if (testContext == null) {
+            testContext = new TestContext("HibernateDAOTest.spring.xml",
+                                          "HibernateDAOTest.test.properties",
+                                          "hibernateDAOTest.jdbc.driverClass");
+
+        }
+
+        return (SimpleObjectDAO) testContext.getBean("simpleObjectDAO");
     }
 
 
-    public void setId(String id) {
-        this.id = id;
-    }
-
-
-    public int getRelatedIntValue() {
-        return relatedIntValue;
-    }
-
-
-    public void setRelatedIntValue(int relatedIntValue) {
-        this.relatedIntValue = relatedIntValue;
+    @Override
+    protected void reset() {
+        if (testContext != null) {
+            testContext.close();
+            testContext = null;
+        }
     }
 }

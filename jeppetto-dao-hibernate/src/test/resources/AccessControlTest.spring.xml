@@ -65,7 +65,7 @@
     <!-- =================== Data Access Objects =================== -->
 
     <bean id="accessControllableSimpleObjectDAO" class="org.iternine.jeppetto.dao.DAOBuilder" factory-method="buildDAO">
-        <constructor-arg index="0" value="org.iternine.jeppetto.SimpleObject"/>
+        <constructor-arg index="0" value="org.iternine.jeppetto.test.SimpleObject"/>
         <constructor-arg index="1" value="org.iternine.jeppetto.AccessControllableSimpleObjectDAO"/>
         <constructor-arg index="2" value="org.iternine.jeppetto.dao.hibernate.HibernateQueryModelDAO"/>
         <constructor-arg index="3">

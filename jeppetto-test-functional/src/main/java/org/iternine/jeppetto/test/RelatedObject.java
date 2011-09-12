@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.iternine.jeppetto.dao.mongodb;
+package org.iternine.jeppetto.test;
 
 
 public class RelatedObject {
@@ -23,12 +23,22 @@ public class RelatedObject {
     // Variables - Private
     //-------------------------------------------------------------
 
+    private String id;
     private int relatedIntValue;
 
 
     //-------------------------------------------------------------
     // Methods - Getter/Setter
     //-------------------------------------------------------------
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
 
     public int getRelatedIntValue() {
         return relatedIntValue;
