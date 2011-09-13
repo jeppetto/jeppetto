@@ -24,17 +24,17 @@
 
     <!-- =================== SessionFactory =================== -->
 
-    <bean id="accessControlHelper" class="org.iternine.jeppetto.dao.hibernate.AccessControlEntryHelper">
+    <bean id="accessControlEntryHelper" class="org.iternine.jeppetto.dao.hibernate.AccessControlEntryHelper">
         <property name="sessionFactory" ref="sessionFactory"/>
     </bean>
 
-    <bean id="accessControlContextProvider" class="org.iternine.jeppetto.SettableAccessControlContextProvider"/>
+    <bean id="accessControlContextProvider" class="org.iternine.jeppetto.test.SettableAccessControlContextProvider"/>
 
     <bean id="sessionFactory" class="org.springframework.orm.hibernate3.LocalSessionFactoryBean" depends-on="liquibase">
         <property name="dataSource" ref="dataSource"/>
         <property name="mappingResources">
             <list>
-                <value>SimpleObject.hbm.xml</value>
+                <value>AccessControllableObject.hbm.xml</value>
                 <value>AccessControlEntry.hbm.xml</value>
             </list>
         </property>
@@ -50,7 +50,7 @@
         </property>
         <property name="entityInterceptor">
             <bean class="org.iternine.jeppetto.dao.hibernate.AccessControlInterceptor" lazy-init="true">
-                <property name="accessControlHelper" ref="accessControlHelper"/>
+                <property name="accessControlHelper" ref="accessControlEntryHelper"/>
                 <property name="accessControlContextProvider" ref="accessControlContextProvider"/>
             </bean>
         </property>
@@ -64,28 +64,28 @@
 
     <!-- =================== Data Access Objects =================== -->
 
-    <bean id="accessControllableSimpleObjectDAO" class="org.iternine.jeppetto.dao.DAOBuilder" factory-method="buildDAO">
-        <constructor-arg index="0" value="org.iternine.jeppetto.test.SimpleObject"/>
-        <constructor-arg index="1" value="org.iternine.jeppetto.AccessControllableSimpleObjectDAO"/>
-        <constructor-arg index="2" value="org.iternine.jeppetto.dao.hibernate.HibernateQueryModelDAO"/>
-        <constructor-arg index="3">
-            <map>
-                <entry key="sessionFactory" value-ref="sessionFactory"/>
-                <entry key="accessControlHelper" value-ref="accessControlHelper"/>
-            </map>
-        </constructor-arg>
-        <constructor-arg index="4" ref="accessControlContextProvider"/>
-    </bean>
-
-    <bean id="transactionalAccessControllableSimpleObjectDAO" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+    <bean id="accessControllableObjectDAO" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
         <property name="proxyInterfaces">
             <list>
                 <bean class="java.lang.Class" factory-method="forName">
-                    <constructor-arg value="org.iternine.jeppetto.AccessControllableSimpleObjectDAO"/>
+                    <constructor-arg value="org.iternine.jeppetto.test.AccessControllableObjectDAO"/>
                 </bean>
             </list>
         </property>
-        <property name="target" ref="accessControllableSimpleObjectDAO"/>
+        <property name="target">
+            <bean class="org.iternine.jeppetto.dao.DAOBuilder" factory-method="buildDAO">
+                <constructor-arg index="0" value="org.iternine.jeppetto.test.AccessControllableObject"/>
+                <constructor-arg index="1" value="org.iternine.jeppetto.test.AccessControllableObjectDAO"/>
+                <constructor-arg index="2" value="org.iternine.jeppetto.dao.hibernate.HibernateQueryModelDAO"/>
+                <constructor-arg index="3">
+                    <map>
+                        <entry key="sessionFactory" value-ref="sessionFactory"/>
+                        <entry key="accessControlEntryHelper" value-ref="accessControlEntryHelper"/>
+                    </map>
+                </constructor-arg>
+                <constructor-arg index="4" ref="accessControlContextProvider"/>
+            </bean>
+        </property>
         <property name="transactionManager" ref="transactionManager"/>
         <property name="transactionAttributes">
             <props>

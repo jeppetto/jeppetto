@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.iternine.jeppetto;
+package org.iternine.jeppetto.test;
 
 
 import org.iternine.jeppetto.dao.AccessControlContext;
@@ -23,43 +23,41 @@ import org.iternine.jeppetto.dao.ConditionType;
 import org.iternine.jeppetto.dao.GenericDAO;
 import org.iternine.jeppetto.dao.annotation.Condition;
 import org.iternine.jeppetto.dao.annotation.DataAccessMethod;
-import org.iternine.jeppetto.test.SimpleObject;
 
 import java.util.List;
 
 
-public interface AccessControllableSimpleObjectDAO extends GenericDAO<SimpleObject, String>, AccessControllable<String> {
+public interface AccessControllableObjectDAO extends GenericDAO<AccessControllableObject, String>, AccessControllable<String> {
 
-    List<SimpleObject> findByOrderById();
+    List<AccessControllableObject> findByOrderById();
 
 
-    List<SimpleObject> findByHavingRelatedObjectsWithRelatedIntValue(int relatedIntValue);
+    List<AccessControllableObject> findByHavingRelatedObjectsWithRelatedStringValue(String value);
 
 
     @DataAccessMethod(
             conditions = { @Condition(field = "intValue", type = ConditionType.LessThan) }
     )
-    List<SimpleObject> getByIntValueLessThan(int intValue);
+    List<AccessControllableObject> getByIntValueLessThan(int intValue);
 
 
     @DataAccessMethod (
             conditions = { @Condition(field = "intValue", type = ConditionType.LessThan) },
             useAccessControlContextArgument = true
     )
-    List<SimpleObject> getByIntValueLessThanSpecifyingContext(int intValue,
-                                                              AccessControlContext accessControlContext);
+    List<AccessControllableObject> getByIntValueLessThanSpecifyingContext(int intValue, AccessControlContext accessControlContext);
 
 
     @DataAccessMethod (
             conditions = { @Condition(field = "intValue", type = ConditionType.LessThan) },
             invokeWithRole = "Administrator"
     )
-    List<SimpleObject> getByIntValueLessThanUsingAdministratorRole(int intValue);
+    List<AccessControllableObject> getByIntValueLessThanUsingAdministratorRole(int intValue);
 
 
     @DataAccessMethod (
             conditions = { @Condition(field = "intValue", type = ConditionType.LessThan) },
             invokeWithRole = "BogusRole"
     )
-    List<SimpleObject> getByIntValueLessThanUsingBogusRole(int intValue);
+    List<AccessControllableObject> getByIntValueLessThanUsingBogusRole(int intValue);
 }

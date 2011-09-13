@@ -18,8 +18,8 @@ package org.iternine.jeppetto.test;
 
 
 import org.iternine.jeppetto.dao.NoSuchItemException;
+
 import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -34,14 +34,6 @@ import static org.junit.Assert.assertTrue;
 public abstract class SimpleObjectDAOTest {
 
     //-------------------------------------------------------------
-    // Variables - Protected
-    //-------------------------------------------------------------
-
-    protected SimpleObjectDAO simpleObjectDAO;
-
-
-
-    //-------------------------------------------------------------
     // Methods - Abstract
     //-------------------------------------------------------------
 
@@ -51,20 +43,12 @@ public abstract class SimpleObjectDAOTest {
 
 
     //-------------------------------------------------------------
-    // Methods - Set-Up / Tear-Down
+    // Methods - Test Lifecycle
     //-------------------------------------------------------------
-
-    @Before
-    public void before() {
-        simpleObjectDAO = getSimpleObjectDAO();
-    }
-
 
     @After
     public void after() {
         reset();
-
-        simpleObjectDAO = null;
     }
 
 
@@ -76,9 +60,9 @@ public abstract class SimpleObjectDAOTest {
     public void findById() throws NoSuchItemException {
         SimpleObject simpleObject = new SimpleObject();
 
-        simpleObjectDAO.save(simpleObject);
+        getSimpleObjectDAO().save(simpleObject);
 
-        SimpleObject resultObject = simpleObjectDAO.findById(simpleObject.getId());
+        SimpleObject resultObject = getSimpleObjectDAO().findById(simpleObject.getId());
 
         assertEquals(resultObject.getId(), simpleObject.getId());
     }
@@ -87,7 +71,7 @@ public abstract class SimpleObjectDAOTest {
     @Test(expected = NoSuchItemException.class)
     public void findByBogusId()
             throws NoSuchItemException {
-        simpleObjectDAO.findById("bogusId");
+        getSimpleObjectDAO().findById("bogusId");
     }
 
 
@@ -96,9 +80,9 @@ public abstract class SimpleObjectDAOTest {
             throws NoSuchItemException {
         SimpleObject simpleObject = new SimpleObject();
         simpleObject.setIntValue(20);
-        simpleObjectDAO.save(simpleObject);
+        getSimpleObjectDAO().save(simpleObject);
 
-        SimpleObject resultObject = simpleObjectDAO.findByIntValue(20);
+        SimpleObject resultObject = getSimpleObjectDAO().findByIntValue(20);
 
         assertEquals(resultObject.getId(), simpleObject.getId());
     }
@@ -110,9 +94,9 @@ public abstract class SimpleObjectDAOTest {
         SimpleObject simpleObject = new SimpleObject();
         simpleObject.setIntValue(21);
         simpleObject.setSimpleEnum(SimpleEnum.EnumValue);
-        simpleObjectDAO.save(simpleObject);
+        getSimpleObjectDAO().save(simpleObject);
 
-        SimpleObject resultObject = simpleObjectDAO.findSimpleObject(21);
+        SimpleObject resultObject = getSimpleObjectDAO().findSimpleObject(21);
 
         assertEquals(resultObject.getId(), simpleObject.getId());
     }
@@ -122,15 +106,15 @@ public abstract class SimpleObjectDAOTest {
     public void countSomeObjects() {
         createData();
 
-        assertEquals(3, simpleObjectDAO.countByIntValueLessThan(100));
-        assertEquals(2, simpleObjectDAO.countByIntValueLessThan(3));
-        assertEquals(1, simpleObjectDAO.countByIntValueLessThan(2));
-        assertEquals(0, simpleObjectDAO.countByIntValueLessThan(1));
+        assertEquals(3, getSimpleObjectDAO().countByIntValueLessThan(100));
+        assertEquals(2, getSimpleObjectDAO().countByIntValueLessThan(3));
+        assertEquals(1, getSimpleObjectDAO().countByIntValueLessThan(2));
+        assertEquals(0, getSimpleObjectDAO().countByIntValueLessThan(1));
 
-        assertEquals(0, simpleObjectDAO.countByIntValue(0));
-        assertEquals(1, simpleObjectDAO.countByIntValue(1));
-        assertEquals(1, simpleObjectDAO.countByIntValue(2));
-        assertEquals(1, simpleObjectDAO.countByIntValue(3));
+        assertEquals(0, getSimpleObjectDAO().countByIntValue(0));
+        assertEquals(1, getSimpleObjectDAO().countByIntValue(1));
+        assertEquals(1, getSimpleObjectDAO().countByIntValue(2));
+        assertEquals(1, getSimpleObjectDAO().countByIntValue(3));
     }
 
 
@@ -138,10 +122,10 @@ public abstract class SimpleObjectDAOTest {
     public void countSomeObjectsUsingAnnotation() {
         createData();
 
-        assertEquals(3L, simpleObjectDAO.doAnAnnotationBasedCount(0));
-        assertEquals(2L, simpleObjectDAO.doAnAnnotationBasedCount(1));
-        assertEquals(1L, simpleObjectDAO.doAnAnnotationBasedCount(2));
-        assertEquals(0L, simpleObjectDAO.doAnAnnotationBasedCount(3));
+        assertEquals(3L, getSimpleObjectDAO().doAnAnnotationBasedCount(0));
+        assertEquals(2L, getSimpleObjectDAO().doAnAnnotationBasedCount(1));
+        assertEquals(1L, getSimpleObjectDAO().doAnAnnotationBasedCount(2));
+        assertEquals(0L, getSimpleObjectDAO().doAnAnnotationBasedCount(3));
     }
 
 
@@ -149,11 +133,11 @@ public abstract class SimpleObjectDAOTest {
     public void countSomeObjectsUsingAnnotationGreaterThanEquals() {
         createData();
 
-        assertEquals(3L, simpleObjectDAO.doAnAnnotationBasedCountGreaterThanEquals(0));
-        assertEquals(3L, simpleObjectDAO.doAnAnnotationBasedCountGreaterThanEquals(1));
-        assertEquals(2L, simpleObjectDAO.doAnAnnotationBasedCountGreaterThanEquals(2));
-        assertEquals(1L, simpleObjectDAO.doAnAnnotationBasedCountGreaterThanEquals(3));
-        assertEquals(0L, simpleObjectDAO.doAnAnnotationBasedCountGreaterThanEquals(4));
+        assertEquals(3L, getSimpleObjectDAO().doAnAnnotationBasedCountGreaterThanEquals(0));
+        assertEquals(3L, getSimpleObjectDAO().doAnAnnotationBasedCountGreaterThanEquals(1));
+        assertEquals(2L, getSimpleObjectDAO().doAnAnnotationBasedCountGreaterThanEquals(2));
+        assertEquals(1L, getSimpleObjectDAO().doAnAnnotationBasedCountGreaterThanEquals(3));
+        assertEquals(0L, getSimpleObjectDAO().doAnAnnotationBasedCountGreaterThanEquals(4));
     }
 
 
@@ -161,11 +145,11 @@ public abstract class SimpleObjectDAOTest {
     public void countSomeObjectsUsingDslStyleGreaterThanEquals() {
         createData();
 
-        assertEquals(3L, simpleObjectDAO.countByIntValueGreaterThanEqual(0));
-        assertEquals(3L, simpleObjectDAO.countByIntValueGreaterThanEqual(1));
-        assertEquals(2L, simpleObjectDAO.countByIntValueGreaterThanEqual(2));
-        assertEquals(1L, simpleObjectDAO.countByIntValueGreaterThanEqual(3));
-        assertEquals(0L, simpleObjectDAO.countByIntValueGreaterThanEqual(4));
+        assertEquals(3L, getSimpleObjectDAO().countByIntValueGreaterThanEqual(0));
+        assertEquals(3L, getSimpleObjectDAO().countByIntValueGreaterThanEqual(1));
+        assertEquals(2L, getSimpleObjectDAO().countByIntValueGreaterThanEqual(2));
+        assertEquals(1L, getSimpleObjectDAO().countByIntValueGreaterThanEqual(3));
+        assertEquals(0L, getSimpleObjectDAO().countByIntValueGreaterThanEqual(4));
     }
 
 
@@ -173,11 +157,11 @@ public abstract class SimpleObjectDAOTest {
     public void countSomeObjectsUsingAnnotationLessThanEquals() {
         createData();
 
-        assertEquals(3L, simpleObjectDAO.doAnAnnotationBasedCountLessThanEquals(4));
-        assertEquals(3L, simpleObjectDAO.doAnAnnotationBasedCountLessThanEquals(3));
-        assertEquals(2L, simpleObjectDAO.doAnAnnotationBasedCountLessThanEquals(2));
-        assertEquals(1L, simpleObjectDAO.doAnAnnotationBasedCountLessThanEquals(1));
-        assertEquals(0L, simpleObjectDAO.doAnAnnotationBasedCountLessThanEquals(0));
+        assertEquals(3L, getSimpleObjectDAO().doAnAnnotationBasedCountLessThanEquals(4));
+        assertEquals(3L, getSimpleObjectDAO().doAnAnnotationBasedCountLessThanEquals(3));
+        assertEquals(2L, getSimpleObjectDAO().doAnAnnotationBasedCountLessThanEquals(2));
+        assertEquals(1L, getSimpleObjectDAO().doAnAnnotationBasedCountLessThanEquals(1));
+        assertEquals(0L, getSimpleObjectDAO().doAnAnnotationBasedCountLessThanEquals(0));
     }
 
 
@@ -185,11 +169,11 @@ public abstract class SimpleObjectDAOTest {
     public void countSomeObjectsUsingDslStyleLessThanEquals() {
         createData();
 
-        assertEquals(3L, simpleObjectDAO.countByIntValueLessThanEqual(4));
-        assertEquals(3L, simpleObjectDAO.countByIntValueLessThanEqual(3));
-        assertEquals(2L, simpleObjectDAO.countByIntValueLessThanEqual(2));
-        assertEquals(1L, simpleObjectDAO.countByIntValueLessThanEqual(1));
-        assertEquals(0L, simpleObjectDAO.countByIntValueLessThanEqual(0));
+        assertEquals(3L, getSimpleObjectDAO().countByIntValueLessThanEqual(4));
+        assertEquals(3L, getSimpleObjectDAO().countByIntValueLessThanEqual(3));
+        assertEquals(2L, getSimpleObjectDAO().countByIntValueLessThanEqual(2));
+        assertEquals(1L, getSimpleObjectDAO().countByIntValueLessThanEqual(1));
+        assertEquals(0L, getSimpleObjectDAO().countByIntValueLessThanEqual(0));
     }
 
 
@@ -197,7 +181,7 @@ public abstract class SimpleObjectDAOTest {
     public void countAll() {
         createData();
 
-        assertEquals(3L, simpleObjectDAO.countAll());
+        assertEquals(3L, getSimpleObjectDAO().countAll());
     }
 
 
@@ -205,7 +189,7 @@ public abstract class SimpleObjectDAOTest {
     public void sumIntValues() {
         createData();
 
-        assertEquals(6, simpleObjectDAO.sumIntValues(), 0.0);
+        assertEquals(6, getSimpleObjectDAO().sumIntValues(), 0.0);
     }
 
 
@@ -213,7 +197,7 @@ public abstract class SimpleObjectDAOTest {
     public void averageIntValues() {
         createData();
 
-        assertEquals(2.0, simpleObjectDAO.averageIntValues(), 0.0);
+        assertEquals(2.0, getSimpleObjectDAO().averageIntValues(), 0.0);
     }
 
 
@@ -221,7 +205,7 @@ public abstract class SimpleObjectDAOTest {
     public void minIntValue() {
         createData();
 
-        assertEquals(1, simpleObjectDAO.minIntValue(), 0.0);
+        assertEquals(1, getSimpleObjectDAO().minIntValue(), 0.0);
     }
 
 
@@ -229,7 +213,7 @@ public abstract class SimpleObjectDAOTest {
     public void maxIntValue() {
         createData();
 
-        assertEquals(3, simpleObjectDAO.maxIntValue(), 0.0);
+        assertEquals(3, getSimpleObjectDAO().maxIntValue(), 0.0);
     }
 
 
@@ -237,8 +221,8 @@ public abstract class SimpleObjectDAOTest {
     public void countDistinctIntValue() {
         createExtraData();
 
-        assertEquals(5, simpleObjectDAO.countAll());
-        assertEquals(4, simpleObjectDAO.countDistinctIntValue());
+        assertEquals(5, getSimpleObjectDAO().countAll());
+        assertEquals(4, getSimpleObjectDAO().countDistinctIntValue());
     }
 
 
@@ -246,7 +230,7 @@ public abstract class SimpleObjectDAOTest {
     public void findSomeObjects() {
         createData();
 
-        List<SimpleObject> results = simpleObjectDAO.findSomeObjects(Arrays.asList(1, 3, 4));
+        List<SimpleObject> results = getSimpleObjectDAO().findSomeObjects(Arrays.asList(1, 3, 4));
 
         assertEquals(2, results.size());
         assertTrue(results.get(0).getIntValue() == 1 || results.get(0).getIntValue() == 3);
@@ -258,7 +242,7 @@ public abstract class SimpleObjectDAOTest {
     public void findAndSort() {
         createData();
 
-        List<SimpleObject> results = simpleObjectDAO.findAndSortRelatedItems(19);
+        List<SimpleObject> results = getSimpleObjectDAO().findAndSortRelatedItems(19);
 
         assertEquals(2, results.size());
         assertEquals(3, results.get(0).getIntValue());
@@ -269,7 +253,7 @@ public abstract class SimpleObjectDAOTest {
     public void findAndSortReturnIterable() {
         createData();
 
-        Iterable<SimpleObject> results = simpleObjectDAO.findAndSortRelatedItemsIterable(19);
+        Iterable<SimpleObject> results = getSimpleObjectDAO().findAndSortRelatedItemsIterable(19);
         Iterator<SimpleObject> i = results.iterator();
 
         assertTrue(i.hasNext());
@@ -284,10 +268,10 @@ public abstract class SimpleObjectDAOTest {
     public void countRelatedItems() {
         createData();
 
-        assertEquals(3, simpleObjectDAO.countRelatedItems(21));
-        assertEquals(2, simpleObjectDAO.countRelatedItems(20));
-        assertEquals(1, simpleObjectDAO.countRelatedItems(15));
-        assertEquals(0, simpleObjectDAO.countRelatedItems(10));
+        assertEquals(3, getSimpleObjectDAO().countRelatedItems(21));
+        assertEquals(2, getSimpleObjectDAO().countRelatedItems(20));
+        assertEquals(1, getSimpleObjectDAO().countRelatedItems(15));
+        assertEquals(0, getSimpleObjectDAO().countRelatedItems(10));
     }
 
 
@@ -295,7 +279,7 @@ public abstract class SimpleObjectDAOTest {
     public void limit() {
         createData();
 
-        List<SimpleObject> results = simpleObjectDAO.limitRelatedItems(19, 1);
+        List<SimpleObject> results = getSimpleObjectDAO().limitRelatedItems(19, 1);
 
         assertEquals(1, results.size());
         assertEquals(2, results.get(0).getIntValue());
@@ -306,7 +290,7 @@ public abstract class SimpleObjectDAOTest {
     public void limitAndSkip() {
         createData();
 
-        List<SimpleObject> results = simpleObjectDAO.limitAndSkipRelatedItems(19, 1, 1);
+        List<SimpleObject> results = getSimpleObjectDAO().limitAndSkipRelatedItems(19, 1, 1);
 
         assertEquals(1, results.size());
         assertEquals(3, results.get(0).getIntValue());
@@ -326,21 +310,21 @@ public abstract class SimpleObjectDAOTest {
         relatedObject = new RelatedObject();
         relatedObject.setRelatedIntValue(20);
         simpleObject.addRelatedObject(relatedObject);
-        simpleObjectDAO.save(simpleObject);
+        getSimpleObjectDAO().save(simpleObject);
 
         simpleObject = new SimpleObject();
         simpleObject.setIntValue(2);
         relatedObject = new RelatedObject();
         relatedObject.setRelatedIntValue(15);
         simpleObject.addRelatedObject(relatedObject);
-        simpleObjectDAO.save(simpleObject);
+        getSimpleObjectDAO().save(simpleObject);
 
         simpleObject = new SimpleObject();
         simpleObject.setIntValue(3);
         relatedObject = new RelatedObject();
         relatedObject.setRelatedIntValue(10);
         simpleObject.addRelatedObject(relatedObject);
-        simpleObjectDAO.save(simpleObject);
+        getSimpleObjectDAO().save(simpleObject);
     }
 
 
@@ -351,10 +335,10 @@ public abstract class SimpleObjectDAOTest {
 
         simpleObject = new SimpleObject();
         simpleObject.setIntValue(-1);
-        simpleObjectDAO.save(simpleObject);
+        getSimpleObjectDAO().save(simpleObject);
 
         simpleObject = new SimpleObject();
         simpleObject.setIntValue(3);
-        simpleObjectDAO.save(simpleObject);
+        getSimpleObjectDAO().save(simpleObject);
     }
 }

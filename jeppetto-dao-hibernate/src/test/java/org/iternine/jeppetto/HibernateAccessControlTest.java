@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *    http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,15 +17,15 @@
 package org.iternine.jeppetto;
 
 
-import org.iternine.jeppetto.test.SimpleObjectDAO;
-import org.iternine.jeppetto.test.SimpleObjectDAOTest;
+import org.iternine.jeppetto.test.AccessControlTest;
+import org.iternine.jeppetto.test.AccessControllableObjectDAO;
 import org.iternine.jeppetto.testsupport.TestContext;
 
 
-public class HibernateSimpleObjectDAOTest extends SimpleObjectDAOTest {
+public class HibernateAccessControlTest extends AccessControlTest {
 
     //-------------------------------------------------------------
-    // Variables - Private
+    // Variables - Private - Static
     //-------------------------------------------------------------
 
     private TestContext testContext;
@@ -36,15 +36,15 @@ public class HibernateSimpleObjectDAOTest extends SimpleObjectDAOTest {
     //-------------------------------------------------------------
 
     @Override
-    protected SimpleObjectDAO getSimpleObjectDAO() {
+    protected AccessControllableObjectDAO getAccessControllableObjectDAO() {
         if (testContext == null) {
-            testContext = new TestContext("HibernateDAOTest.spring.xml",
+            testContext = new TestContext("AccessControlTest.spring.xml",
                                           "HibernateDAOTest.test.properties",
                                           "hibernateDAOTest.jdbc.driverClass");
 
         }
 
-        return (SimpleObjectDAO) testContext.getBean("simpleObjectDAO");
+        return (AccessControllableObjectDAO) testContext.getBean("accessControllableObjectDAO");
     }
 
 

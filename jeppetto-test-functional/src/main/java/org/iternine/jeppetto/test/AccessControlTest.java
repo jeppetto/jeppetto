@@ -14,13 +14,11 @@
  * limitations under the License.
  */
 
-package org.iternine.jeppetto.dao.mongodb.accesscontrol;
+package org.iternine.jeppetto.test;
 
 
 import org.iternine.jeppetto.dao.NoSuchItemException;
 import org.iternine.jeppetto.dao.SimpleAccessControlContext;
-import org.iternine.jeppetto.testsupport.MongoDatabaseProvider;
-import org.iternine.jeppetto.testsupport.TestContext;
 
 import org.junit.After;
 import org.junit.Assert;
@@ -31,34 +29,25 @@ import java.util.Collections;
 import java.util.List;
 
 
-public class AccessControlTest {
+public abstract class AccessControlTest {
 
     //-------------------------------------------------------------
-    // Variables - Private - Static
+    // Variables - Private
     //-------------------------------------------------------------
 
-    private TestContext testContext;
-    private AccessControllableObjectDAO accessControllableObjectDAO;
     private SettableAccessControlContextProvider accessControlContextProvider;
-    private SimpleAccessControlContext accessControlContext1;
-    private SimpleAccessControlContext accessControlContext2;
-    private SimpleAccessControlContext accessControlContext3;
-    private SimpleAccessControlContext accessControlContext4;
+
+    private static SimpleAccessControlContext accessControlContext1;
+    private static SimpleAccessControlContext accessControlContext2;
+    private static SimpleAccessControlContext accessControlContext3;
+    private static SimpleAccessControlContext accessControlContext4;
 
 
     //-------------------------------------------------------------
-    // Methods - Set-Up / Tear-Down
+    // Constructors
     //-------------------------------------------------------------
 
-    @Before
-    public void setUp() {
-        testContext = new TestContext("AccessControlTest.spring.xml",
-                                      "MongoDAOTest.properties",
-                                      new MongoDatabaseProvider());
-
-        accessControllableObjectDAO = (AccessControllableObjectDAO) testContext.getBean("accessControllableObjectDAO");
-        accessControlContextProvider = (SettableAccessControlContextProvider) accessControllableObjectDAO.getAccessControlContextProvider();
-
+    static {
         accessControlContext1 = new SimpleAccessControlContext();
         accessControlContext1.setAccessId("001");
         accessControlContext1.setRole("User");
@@ -75,11 +64,30 @@ public class AccessControlTest {
     }
 
 
+    //-------------------------------------------------------------
+    // Methods - Abstract
+    //-------------------------------------------------------------
+
+    protected abstract AccessControllableObjectDAO getAccessControllableObjectDAO();
+
+    protected abstract void reset();
+
+
+    //-------------------------------------------------------------
+    // Methods - Test Lifecycle
+    //-------------------------------------------------------------
+
+    @Before
+    public void before() {
+        accessControlContextProvider = (SettableAccessControlContextProvider) getAccessControllableObjectDAO().getAccessControlContextProvider();
+    }
+
+
     @After
-    public void tearDown() {
-        if (testContext != null) {
-            testContext.close();
-        }
+    public void after() {
+        reset();
+
+        accessControlContextProvider = null;
     }
 
 
@@ -94,9 +102,10 @@ public class AccessControlTest {
 
         AccessControllableObject accessControllableObject = new AccessControllableObject();
 
-        accessControllableObjectDAO.save(accessControllableObject);
+        getAccessControllableObjectDAO().save(accessControllableObject);
 
-        AccessControllableObject resultObject = accessControllableObjectDAO.findById(accessControllableObject.getId());
+        AccessControllableObject resultObject = getAccessControllableObjectDAO().findById(
+                accessControllableObject.getId());
 
         Assert.assertEquals(resultObject.getId(), accessControllableObject.getId());
     }
@@ -109,11 +118,11 @@ public class AccessControlTest {
 
         AccessControllableObject accessControllableObject = new AccessControllableObject();
 
-        accessControllableObjectDAO.save(accessControllableObject);
+        getAccessControllableObjectDAO().save(accessControllableObject);
 
         accessControlContextProvider.setCurrent(accessControlContext2);
 
-        accessControllableObjectDAO.findById(accessControllableObject.getId());
+        getAccessControllableObjectDAO().findById(accessControllableObject.getId());
     }
 
 
@@ -124,11 +133,11 @@ public class AccessControlTest {
 
         AccessControllableObject accessControllableObject = new AccessControllableObject();
 
-        accessControllableObjectDAO.save(accessControllableObject);
+        getAccessControllableObjectDAO().save(accessControllableObject);
 
         accessControlContextProvider.setCurrent(accessControlContext4);
 
-        accessControllableObjectDAO.findById(accessControllableObject.getId());
+        getAccessControllableObjectDAO().findById(accessControllableObject.getId());
     }
 
 
@@ -139,12 +148,13 @@ public class AccessControlTest {
 
         AccessControllableObject accessControllableObject = new AccessControllableObject();
 
-        accessControllableObjectDAO.save(accessControllableObject);
-        accessControllableObjectDAO.revokeAccess(accessControllableObject.getId(), accessControlContext1.getAccessId());
+        getAccessControllableObjectDAO().save(accessControllableObject);
+        getAccessControllableObjectDAO().revokeAccess(accessControllableObject.getId(),
+                                                      accessControlContext1.getAccessId());
 
         accessControlContextProvider.setCurrent(accessControlContext4);
 
-        accessControllableObjectDAO.findById(accessControllableObject.getId());
+        getAccessControllableObjectDAO().findById(accessControllableObject.getId());
     }
 
 
@@ -155,9 +165,9 @@ public class AccessControlTest {
 
         AccessControllableObject accessControllableObject = new AccessControllableObject();
 
-        accessControllableObjectDAO.save(accessControllableObject);
+        getAccessControllableObjectDAO().save(accessControllableObject);
 
-        accessControllableObjectDAO.findById(accessControllableObject.getId());
+        getAccessControllableObjectDAO().findById(accessControllableObject.getId());
     }
 
 
@@ -168,16 +178,18 @@ public class AccessControlTest {
 
         AccessControllableObject accessControllableObject = new AccessControllableObject();
 
-        accessControllableObjectDAO.save(accessControllableObject);
+        getAccessControllableObjectDAO().save(accessControllableObject);
 
-        accessControllableObjectDAO.grantAccess(accessControllableObject.getId(), accessControlContext2.getAccessId());
+        getAccessControllableObjectDAO().grantAccess(accessControllableObject.getId(),
+                                                     accessControlContext2.getAccessId());
 
         accessControlContextProvider.setCurrent(accessControlContext2);
 
-        AccessControllableObject resultObject = accessControllableObjectDAO.findById(accessControllableObject.getId());
+        AccessControllableObject resultObject = getAccessControllableObjectDAO().findById(
+                accessControllableObject.getId());
 
         Assert.assertEquals(resultObject.getId(), accessControllableObject.getId());
-        Assert.assertEquals(2, accessControllableObjectDAO.getAccessIds(resultObject.getId()).size());
+        Assert.assertEquals(2, getAccessControllableObjectDAO().getAccessIds(resultObject.getId()).size());
     }
 
 
@@ -186,18 +198,18 @@ public class AccessControlTest {
         accessControlContextProvider.setCurrent(accessControlContext1);
 
         for (int i = 0; i < 10; i++) {
-            accessControllableObjectDAO.save(new AccessControllableObject());
+            getAccessControllableObjectDAO().save(new AccessControllableObject());
         }
 
         accessControlContextProvider.setCurrent(accessControlContext2);
 
         for (int i = 0; i < 5; i++) {
-            accessControllableObjectDAO.save(new AccessControllableObject());
+            getAccessControllableObjectDAO().save(new AccessControllableObject());
         }
 
         accessControlContextProvider.setCurrent(accessControlContext1);
 
-        Iterable<AccessControllableObject> simpleObjectsAvailableToUser1 = accessControllableObjectDAO.findAll();
+        Iterable<AccessControllableObject> simpleObjectsAvailableToUser1 = getAccessControllableObjectDAO().findAll();
 
         String randomSimpleObjectId = null;
         int count = 0;
@@ -213,7 +225,7 @@ public class AccessControlTest {
 
         accessControlContextProvider.setCurrent(accessControlContext2);
 
-        Iterable<AccessControllableObject> simpleObjectsAvailableToUser2 = accessControllableObjectDAO.findAll();
+        Iterable<AccessControllableObject> simpleObjectsAvailableToUser2 = getAccessControllableObjectDAO().findAll();
 
         int count2 = 0;
         //noinspection UnusedDeclaration
@@ -235,11 +247,12 @@ public class AccessControlTest {
 
         AccessControllableObject accessControllableObject = new AccessControllableObject();
 
-        accessControllableObjectDAO.save(accessControllableObject);
+        getAccessControllableObjectDAO().save(accessControllableObject);
 
         accessControlContextProvider.setCurrent(accessControlContext3);
 
-        AccessControllableObject resultObject = accessControllableObjectDAO.findById(accessControllableObject.getId());
+        AccessControllableObject resultObject = getAccessControllableObjectDAO().findById(
+                accessControllableObject.getId());
 
         Assert.assertEquals(resultObject.getId(), accessControllableObject.getId());
     }
@@ -250,10 +263,10 @@ public class AccessControlTest {
         accessControlContextProvider.setCurrent(accessControlContext1);
 
         for (int i = 0; i < 10; i++) {
-            accessControllableObjectDAO.save(new AccessControllableObject());
+            getAccessControllableObjectDAO().save(new AccessControllableObject());
         }
 
-        List<AccessControllableObject> orderedItems = accessControllableObjectDAO.findByOrderById();
+        List<AccessControllableObject> orderedItems = getAccessControllableObjectDAO().findByOrderById();
 
         Assert.assertEquals(10, orderedItems.size());
 
@@ -277,17 +290,18 @@ public class AccessControlTest {
         AccessControllableObject accessControllableObject = new AccessControllableObject();
 
         RelatedObject relatedObject = new RelatedObject();
-        relatedObject.setValue("foo");
+        relatedObject.setRelatedStringValue("foo");
 
         accessControllableObject.setRelatedObjects(Collections.singleton(relatedObject));
 
-        accessControllableObjectDAO.save(accessControllableObject);
+        getAccessControllableObjectDAO().save(accessControllableObject);
 
         accessControllableObject = new AccessControllableObject();
 
-        accessControllableObjectDAO.save(accessControllableObject);
+        getAccessControllableObjectDAO().save(accessControllableObject);
 
-        List<AccessControllableObject> resultObjects = accessControllableObjectDAO.findByHavingRelatedObjectsWithValue("foo");
+        List<AccessControllableObject> resultObjects
+                = getAccessControllableObjectDAO().findByHavingRelatedObjectsWithRelatedStringValue("foo");
 
         Assert.assertEquals(1, resultObjects.size());
     }
@@ -298,20 +312,20 @@ public class AccessControlTest {
         accessControlContextProvider.setCurrent(accessControlContext1);
 
         for (int i = 1; i < 10; i++) {
-            accessControllableObjectDAO.save(new AccessControllableObject(i));
+            getAccessControllableObjectDAO().save(new AccessControllableObject(i));
         }
 
         accessControlContextProvider.setCurrent(accessControlContext2);
 
         for (int i = 2; i < 10; i++) {
-            accessControllableObjectDAO.save(new AccessControllableObject(i));
+            getAccessControllableObjectDAO().save(new AccessControllableObject(i));
         }
 
         accessControlContextProvider.setCurrent(accessControlContext1);
 
-        Assert.assertEquals(3, accessControllableObjectDAO.getByIntValueLessThan(4).size());
-        Assert.assertEquals(2, accessControllableObjectDAO.getByIntValueLessThanSpecifyingContext(4, accessControlContext2).size());
-        Assert.assertEquals(5, accessControllableObjectDAO.getByIntValueLessThanUsingAdministratorRole(4).size());
-        Assert.assertEquals(0, accessControllableObjectDAO.getByIntValueLessThanUsingBogusRole(4).size());
+        Assert.assertEquals(3, getAccessControllableObjectDAO().getByIntValueLessThan(4).size());
+        Assert.assertEquals(2, getAccessControllableObjectDAO().getByIntValueLessThanSpecifyingContext(4, accessControlContext2).size());
+        Assert.assertEquals(5, getAccessControllableObjectDAO().getByIntValueLessThanUsingAdministratorRole(4).size());
+        Assert.assertEquals(0, getAccessControllableObjectDAO().getByIntValueLessThanUsingBogusRole(4).size());
     }
 }

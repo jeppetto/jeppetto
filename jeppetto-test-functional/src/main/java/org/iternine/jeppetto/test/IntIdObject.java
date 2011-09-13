@@ -14,38 +14,39 @@
  * limitations under the License.
  */
 
-package org.iternine.jeppetto;
+package org.iternine.jeppetto.test;
 
 
-import org.iternine.jeppetto.dao.AccessControlContext;
-import org.iternine.jeppetto.dao.AccessControlContextProvider;
-
-
-public class SettableAccessControlContextProvider
-        implements AccessControlContextProvider {
+public class IntIdObject {
 
     //-------------------------------------------------------------
     // Variables - Private
     //-------------------------------------------------------------
 
-    private AccessControlContext current;
+    private int id;
+    private String value;
 
 
     //-------------------------------------------------------------
-    // Implementation - AccessControlContextProvider
+    // Methods - Getter/Setter
     //-------------------------------------------------------------
 
-    @Override
-    public AccessControlContext getCurrent() {
-        return current;
+    public int getId() {
+        return id;
     }
 
 
-    //-------------------------------------------------------------
-    // Methods - Setter
-    //-------------------------------------------------------------
+    public void setId(int id) {
+        this.id = id;
+    }
 
-    public void setCurrent(AccessControlContext current) {
-        this.current = current;
+
+    public String getValue() {
+        return value;
+    }
+
+
+    public void setValue(String value) {
+        this.value = value;
     }
 }

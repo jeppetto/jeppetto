@@ -17,69 +17,52 @@
 package org.iternine.jeppetto.dao.mongodb;
 
 
-import org.iternine.jeppetto.dao.GenericDAO;
-import org.iternine.jeppetto.dao.NoSuchItemException;
+import org.iternine.jeppetto.test.AccessControlTest;
+import org.iternine.jeppetto.test.AccessControllableObjectDAO;
 import org.iternine.jeppetto.testsupport.MongoDatabaseProvider;
 import org.iternine.jeppetto.testsupport.TestContext;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-
-
-public class IntIdObjectDAOTest {
+public class MongoAccessControlTest extends AccessControlTest {
 
     //-------------------------------------------------------------
-    // Variables - Private - Static
+    // Variables - Private
     //-------------------------------------------------------------
 
     private TestContext testContext;
-    private GenericDAO<IntIdObject, Integer> intIdObjectDAO;
 
 
     //-------------------------------------------------------------
-    // Methods - Set-Up / Tear-Down
+    // Implementation - SimpleObjectDAOTest
     //-------------------------------------------------------------
 
-    @Before
-    public void setUp() {
-        testContext = new TestContext("IntIdObjectDAOTest.spring.xml",
-                                      "MongoDAOTest.properties",
-                                      new MongoDatabaseProvider());
+    @Override
+    protected AccessControllableObjectDAO getAccessControllableObjectDAO() {
+        ensureTestContextExists();
 
-        //noinspection unchecked
-        intIdObjectDAO = (GenericDAO<IntIdObject, Integer>) testContext.getBean("intIdObjectDAO");
+        return (AccessControllableObjectDAO) testContext.getBean("accessControllableObjectDAO");
     }
 
 
-    @After
-    public void tearDown() {
+    @Override
+    protected void reset() {
         if (testContext != null) {
             testContext.close();
+
+            testContext = null;
         }
     }
 
 
     //-------------------------------------------------------------
-    // Methods - Test Cases
+    // Methods - Private
     //-------------------------------------------------------------
 
-    @Test
-    public void manuallyManageId()
-            throws NoSuchItemException {
-        IntIdObject intIdObject = new IntIdObject();
-        intIdObject.setId(1);
-        intIdObject.setValue("value1");
-
-        intIdObjectDAO.save(intIdObject);
-
-        assertNotNull(intIdObject.getId());
-
-        IntIdObject resultObject = intIdObjectDAO.findById(1);
-
-        assertEquals(resultObject.getId(), intIdObject.getId());
+    private void ensureTestContextExists() {
+        if (testContext == null) {
+            testContext = new TestContext("AccessControlTest.spring.xml",
+                                          "MongoDAOTest.properties",
+                                          new MongoDatabaseProvider());
+        }
     }
 }

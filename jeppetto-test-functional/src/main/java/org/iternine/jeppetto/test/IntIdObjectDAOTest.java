@@ -14,36 +14,56 @@
  * limitations under the License.
  */
 
-package org.iternine.jeppetto.dao.mongodb.accesscontrol;
+package org.iternine.jeppetto.test;
 
 
-public class RelatedObject {
+import org.iternine.jeppetto.dao.NoSuchItemException;
+
+import org.junit.After;
+import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+
+
+public abstract class IntIdObjectDAOTest {
 
     //-------------------------------------------------------------
-    // Variables - Private
+    // Methods - Abstract
     //-------------------------------------------------------------
 
-    private String value;
+    protected abstract IntIdObjectDAO getIntIdObjectDAO();
+
+    protected abstract void reset();
 
 
     //-------------------------------------------------------------
-    // Constructors
+    // Methods - Test Lifecycle
     //-------------------------------------------------------------
 
-    public RelatedObject() {
+    @After
+    public void after() {
+        reset();
     }
 
 
     //-------------------------------------------------------------
-    // Methods - Public
+    // Methods - Test Cases
     //-------------------------------------------------------------
 
-    public String getValue() {
-        return value;
-    }
+    @Test
+    public void manuallyManageId()
+            throws NoSuchItemException {
+        IntIdObject intIdObject = new IntIdObject();
+        intIdObject.setId(1);
+        intIdObject.setValue("value1");
 
+        getIntIdObjectDAO().save(intIdObject);
 
-    public void setValue(String value) {
-        this.value = value;
+        assertNotNull(intIdObject.getId());
+
+        IntIdObject resultObject = getIntIdObjectDAO().findById(1);
+
+        assertEquals(resultObject.getId(), intIdObject.getId());
     }
 }

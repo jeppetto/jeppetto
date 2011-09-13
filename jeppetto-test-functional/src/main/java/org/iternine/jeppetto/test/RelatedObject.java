@@ -24,6 +24,7 @@ public class RelatedObject {
     //-------------------------------------------------------------
 
     private String id;
+    private String relatedStringValue;
     private int relatedIntValue;
 
 
@@ -37,6 +38,16 @@ public class RelatedObject {
 
     public void setId(String id) {
         this.id = id;
+    }
+
+
+    public String getRelatedStringValue() {
+        return relatedStringValue;
+    }
+
+
+    public void setRelatedStringValue(String relatedStringValue) {
+        this.relatedStringValue = relatedStringValue;
     }
 
 

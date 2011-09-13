@@ -14,38 +14,55 @@
  * limitations under the License.
  */
 
-package org.iternine.jeppetto.dao.mongodb.accesscontrol;
+package org.iternine.jeppetto.dao.mongodb;
 
 
-import org.iternine.jeppetto.dao.AccessControlContext;
-import org.iternine.jeppetto.dao.AccessControlContextProvider;
+import org.iternine.jeppetto.test.IntIdObjectDAO;
+import org.iternine.jeppetto.test.IntIdObjectDAOTest;
+import org.iternine.jeppetto.testsupport.MongoDatabaseProvider;
+import org.iternine.jeppetto.testsupport.TestContext;
 
 
-public class SettableAccessControlContextProvider
-        implements AccessControlContextProvider {
+public class MongoIntIdObjectDAOTest extends IntIdObjectDAOTest {
 
     //-------------------------------------------------------------
     // Variables - Private
     //-------------------------------------------------------------
 
-    private AccessControlContext current;
+    private TestContext testContext;
 
 
     //-------------------------------------------------------------
-    // Implementation - AccessControlContextProvider
+    // Methods - Implementation
     //-------------------------------------------------------------
 
     @Override
-    public AccessControlContext getCurrent() {
-        return current;
+    protected IntIdObjectDAO getIntIdObjectDAO() {
+        ensureTestContextExists();
+
+        return (IntIdObjectDAO) testContext.getBean("intIdObjectDAO");
+    }
+
+
+    @Override
+    protected void reset() {
+        if (testContext != null) {
+            testContext.close();
+            
+            testContext = null;
+        }
     }
 
 
     //-------------------------------------------------------------
-    // Methods - Setter
+    // Methods - Private
     //-------------------------------------------------------------
 
-    public void setCurrent(AccessControlContext current) {
-        this.current = current;
+    private void ensureTestContextExists() {
+        if (testContext == null) {
+            testContext = new TestContext("IntIdObjectDAOTest.spring.xml",
+                                          "MongoDAOTest.properties",
+                                          new MongoDatabaseProvider());
+        }
     }
 }

@@ -41,7 +41,8 @@ public class AccessControlInterceptor extends EmptyInterceptor {
 
     @Override
     public boolean onSave(Object entity, Serializable id, Object[] state, String[] propertyNames, Type[] types) {
-        if (!entity.getClass().isAssignableFrom(AccessControlEntry.class)) {
+        if (!entity.getClass().isAssignableFrom(AccessControlEntry.class)
+            && accessControlContextProvider.getCurrent().getAccessId() != null) {
             accessControlEntryHelper.createEntry(entity.getClass(), id, accessControlContextProvider.getCurrent().getAccessId());
         }
 

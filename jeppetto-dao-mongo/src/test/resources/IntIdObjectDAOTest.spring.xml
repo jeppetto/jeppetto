@@ -20,9 +20,11 @@
 
     <!-- =================== Mongo DAOs =================== -->
 
-    <bean id="intIdObjectDAO" class="org.iternine.jeppetto.dao.mongodb.MongoDBQueryModelDAO">
-        <constructor-arg index="0" value="org.iternine.jeppetto.dao.mongodb.IntIdObject"/>
-        <constructor-arg index="1">
+    <bean id="intIdObjectDAO" class="org.iternine.jeppetto.dao.DAOBuilder" factory-method="buildDAO">
+        <constructor-arg index="0" value="org.iternine.jeppetto.test.IntIdObject"/>
+        <constructor-arg index="1" value="org.iternine.jeppetto.test.IntIdObjectDAO"/>
+        <constructor-arg index="2" value="org.iternine.jeppetto.dao.mongodb.MongoDBQueryModelDAO"/>
+        <constructor-arg index="3">
             <map>
                 <entry key="db" value-ref="mongoDb"/>
                 <entry key="optimisticLockEnabled" value="true"/>

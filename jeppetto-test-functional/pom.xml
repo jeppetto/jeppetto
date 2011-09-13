@@ -4,21 +4,16 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     <modelVersion>4.0.0</modelVersion>
 
+    <name>Jeppetto Tests: Functional</name>
+    <artifactId>jeppetto-test-functional</artifactId>
+    <version>0.5-SNAPSHOT</version>
+    <packaging>jar</packaging>
+
     <parent>
         <artifactId>jeppetto-parent</artifactId>
         <groupId>org.iternine</groupId>
         <version>0.5-SNAPSHOT</version>
     </parent>
-
-    <groupId>org.iternine</groupId>
-    <artifactId>jeppetto-test-functional</artifactId>
-    <version>0.5-SNAPSHOT</version>
-    <name>jeppetto-test-functional</name>
-    <url>http://maven.apache.org</url>
-
-    <properties>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    </properties>
 
     <dependencies>
 

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.iternine.jeppetto.dao.mongodb.accesscontrol;
+package org.iternine.jeppetto.test;
 
 
 import org.iternine.jeppetto.dao.annotation.AccessControl;
