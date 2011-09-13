@@ -15,6 +15,11 @@
             <key column="simpleObjectId"/>
             <one-to-many class="org.iternine.jeppetto.test.RelatedObject"/>
         </bag>
+
+        <set name="relatedObjectSet" cascade="all">
+            <key column="simpleObjectId"/>
+            <one-to-many class="org.iternine.jeppetto.test.RelatedObject"/>
+        </set>
     </class>
 
     <class name="org.iternine.jeppetto.test.RelatedObject">
@@ -22,6 +27,7 @@
             <generator class="org.iternine.jeppetto.dao.hibernate.UUIDIdentifierGenerator"/>
         </id>
 
+        <property name="relatedStringValue"/>
         <property name="relatedIntValue"/>
     </class>
 

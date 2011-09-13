@@ -17,6 +17,10 @@
 package org.iternine.jeppetto.test;
 
 
+import org.iternine.jeppetto.dao.annotation.AccessControl;
+import org.iternine.jeppetto.dao.annotation.AccessControlRule;
+import org.iternine.jeppetto.dao.annotation.AccessControlType;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -25,6 +29,9 @@ import java.util.Map;
 import java.util.Set;
 
 
+@AccessControl(rules = {
+    @AccessControlRule(type = AccessControlType.Role,  value = "Administrator")
+} )
 public class SimpleObject {
 
     //-------------------------------------------------------------
@@ -43,6 +50,19 @@ public class SimpleObject {
 
 
     //-------------------------------------------------------------
+    // Constructors
+    //-------------------------------------------------------------
+
+    public SimpleObject() {
+    }
+
+
+    public SimpleObject(int intValue) {
+        this.intValue = intValue;
+    }
+
+
+    //-------------------------------------------------------------
     // Methods - Getter/Setter
     //-------------------------------------------------------------
 
@@ -50,9 +70,11 @@ public class SimpleObject {
         return true;
     }
 
+
     public void setTestBoolean(boolean testBoolean) {
         // ignore, this is just in here for testing
     }
+
 
     public String getId() {
         return id;
@@ -92,6 +114,7 @@ public class SimpleObject {
     public void setRelatedObject(RelatedObject relatedObject) {
         this.relatedObject = relatedObject;
     }
+
 
     public void addRelatedObject(RelatedObject relatedObject) {
         if (relatedObjects == null) {
@@ -140,9 +163,11 @@ public class SimpleObject {
         this.simpleEnum = simpleEnum;
     }
 
+
     public Map<String, String> getStringMap() {
         return stringMap;
     }
+
 
     public void setStringMap(Map<String, String> stringMap) {
         this.stringMap = stringMap;

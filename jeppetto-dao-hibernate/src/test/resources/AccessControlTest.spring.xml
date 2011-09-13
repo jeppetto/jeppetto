@@ -34,7 +34,7 @@
         <property name="dataSource" ref="dataSource"/>
         <property name="mappingResources">
             <list>
-                <value>AccessControllableObject.hbm.xml</value>
+                <value>SimpleObject.hbm.xml</value>
                 <value>AccessControlEntry.hbm.xml</value>
             </list>
         </property>
@@ -64,18 +64,18 @@
 
     <!-- =================== Data Access Objects =================== -->
 
-    <bean id="accessControllableObjectDAO" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+    <bean id="accessControlTestDAO" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
         <property name="proxyInterfaces">
             <list>
                 <bean class="java.lang.Class" factory-method="forName">
-                    <constructor-arg value="org.iternine.jeppetto.test.AccessControllableObjectDAO"/>
+                    <constructor-arg value="org.iternine.jeppetto.test.AccessControlTestDAO"/>
                 </bean>
             </list>
         </property>
         <property name="target">
             <bean class="org.iternine.jeppetto.dao.DAOBuilder" factory-method="buildDAO">
-                <constructor-arg index="0" value="org.iternine.jeppetto.test.AccessControllableObject"/>
-                <constructor-arg index="1" value="org.iternine.jeppetto.test.AccessControllableObjectDAO"/>
+                <constructor-arg index="0" value="org.iternine.jeppetto.test.SimpleObject"/>
+                <constructor-arg index="1" value="org.iternine.jeppetto.test.AccessControlTestDAO"/>
                 <constructor-arg index="2" value="org.iternine.jeppetto.dao.hibernate.HibernateQueryModelDAO"/>
                 <constructor-arg index="3">
                     <map>

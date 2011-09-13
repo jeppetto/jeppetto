@@ -16,6 +16,7 @@
                 <constraints nullable="false" primaryKey="true"/>
             </column>
 
+            <column name="relatedStringValue" type="VARCHAR(255)"/>
             <column name="relatedIntValue" type="INT"/>
             <column name="simpleObjectId" type="VARCHAR(32)"/>
         </createTable>

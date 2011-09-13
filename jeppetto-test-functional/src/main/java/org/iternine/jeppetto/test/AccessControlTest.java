@@ -68,7 +68,7 @@ public abstract class AccessControlTest {
     // Methods - Abstract
     //-------------------------------------------------------------
 
-    protected abstract AccessControllableObjectDAO getAccessControllableObjectDAO();
+    protected abstract AccessControlTestDAO getAccessControlTestDAO();
 
     protected abstract void reset();
 
@@ -79,7 +79,7 @@ public abstract class AccessControlTest {
 
     @Before
     public void before() {
-        accessControlContextProvider = (SettableAccessControlContextProvider) getAccessControllableObjectDAO().getAccessControlContextProvider();
+        accessControlContextProvider = (SettableAccessControlContextProvider) getAccessControlTestDAO().getAccessControlContextProvider();
     }
 
 
@@ -100,14 +100,13 @@ public abstract class AccessControlTest {
             throws NoSuchItemException {
         accessControlContextProvider.setCurrent(accessControlContext1);
 
-        AccessControllableObject accessControllableObject = new AccessControllableObject();
+        SimpleObject simpleObject = new SimpleObject();
 
-        getAccessControllableObjectDAO().save(accessControllableObject);
+        getAccessControlTestDAO().save(simpleObject);
 
-        AccessControllableObject resultObject = getAccessControllableObjectDAO().findById(
-                accessControllableObject.getId());
+        SimpleObject resultObject = getAccessControlTestDAO().findById(simpleObject.getId());
 
-        Assert.assertEquals(resultObject.getId(), accessControllableObject.getId());
+        Assert.assertEquals(resultObject.getId(), simpleObject.getId());
     }
 
 
@@ -116,13 +115,13 @@ public abstract class AccessControlTest {
             throws NoSuchItemException {
         accessControlContextProvider.setCurrent(accessControlContext1);
 
-        AccessControllableObject accessControllableObject = new AccessControllableObject();
+        SimpleObject simpleObject = new SimpleObject();
 
-        getAccessControllableObjectDAO().save(accessControllableObject);
+        getAccessControlTestDAO().save(simpleObject);
 
         accessControlContextProvider.setCurrent(accessControlContext2);
 
-        getAccessControllableObjectDAO().findById(accessControllableObject.getId());
+        getAccessControlTestDAO().findById(simpleObject.getId());
     }
 
 
@@ -131,13 +130,13 @@ public abstract class AccessControlTest {
             throws NoSuchItemException {
         accessControlContextProvider.setCurrent(accessControlContext1);
 
-        AccessControllableObject accessControllableObject = new AccessControllableObject();
+        SimpleObject simpleObject = new SimpleObject();
 
-        getAccessControllableObjectDAO().save(accessControllableObject);
+        getAccessControlTestDAO().save(simpleObject);
 
         accessControlContextProvider.setCurrent(accessControlContext4);
 
-        getAccessControllableObjectDAO().findById(accessControllableObject.getId());
+        getAccessControlTestDAO().findById(simpleObject.getId());
     }
 
 
@@ -146,15 +145,15 @@ public abstract class AccessControlTest {
             throws NoSuchItemException {
         accessControlContextProvider.setCurrent(accessControlContext1);
 
-        AccessControllableObject accessControllableObject = new AccessControllableObject();
+        SimpleObject simpleObject = new SimpleObject();
 
-        getAccessControllableObjectDAO().save(accessControllableObject);
-        getAccessControllableObjectDAO().revokeAccess(accessControllableObject.getId(),
+        getAccessControlTestDAO().save(simpleObject);
+        getAccessControlTestDAO().revokeAccess(simpleObject.getId(),
                                                       accessControlContext1.getAccessId());
 
         accessControlContextProvider.setCurrent(accessControlContext4);
 
-        getAccessControllableObjectDAO().findById(accessControllableObject.getId());
+        getAccessControlTestDAO().findById(simpleObject.getId());
     }
 
 
@@ -163,11 +162,11 @@ public abstract class AccessControlTest {
             throws NoSuchItemException {
         accessControlContextProvider.setCurrent(accessControlContext4);
 
-        AccessControllableObject accessControllableObject = new AccessControllableObject();
+        SimpleObject simpleObject = new SimpleObject();
 
-        getAccessControllableObjectDAO().save(accessControllableObject);
+        getAccessControlTestDAO().save(simpleObject);
 
-        getAccessControllableObjectDAO().findById(accessControllableObject.getId());
+        getAccessControlTestDAO().findById(simpleObject.getId());
     }
 
 
@@ -176,20 +175,20 @@ public abstract class AccessControlTest {
             throws NoSuchItemException {
         accessControlContextProvider.setCurrent(accessControlContext1);
 
-        AccessControllableObject accessControllableObject = new AccessControllableObject();
+        SimpleObject simpleObject = new SimpleObject();
 
-        getAccessControllableObjectDAO().save(accessControllableObject);
+        getAccessControlTestDAO().save(simpleObject);
 
-        getAccessControllableObjectDAO().grantAccess(accessControllableObject.getId(),
+        getAccessControlTestDAO().grantAccess(simpleObject.getId(),
                                                      accessControlContext2.getAccessId());
 
         accessControlContextProvider.setCurrent(accessControlContext2);
 
-        AccessControllableObject resultObject = getAccessControllableObjectDAO().findById(
-                accessControllableObject.getId());
+        SimpleObject resultObject = getAccessControlTestDAO().findById(
+                simpleObject.getId());
 
-        Assert.assertEquals(resultObject.getId(), accessControllableObject.getId());
-        Assert.assertEquals(2, getAccessControllableObjectDAO().getAccessIds(resultObject.getId()).size());
+        Assert.assertEquals(resultObject.getId(), simpleObject.getId());
+        Assert.assertEquals(2, getAccessControlTestDAO().getAccessIds(resultObject.getId()).size());
     }
 
 
@@ -198,25 +197,25 @@ public abstract class AccessControlTest {
         accessControlContextProvider.setCurrent(accessControlContext1);
 
         for (int i = 0; i < 10; i++) {
-            getAccessControllableObjectDAO().save(new AccessControllableObject());
+            getAccessControlTestDAO().save(new SimpleObject());
         }
 
         accessControlContextProvider.setCurrent(accessControlContext2);
 
         for (int i = 0; i < 5; i++) {
-            getAccessControllableObjectDAO().save(new AccessControllableObject());
+            getAccessControlTestDAO().save(new SimpleObject());
         }
 
         accessControlContextProvider.setCurrent(accessControlContext1);
 
-        Iterable<AccessControllableObject> simpleObjectsAvailableToUser1 = getAccessControllableObjectDAO().findAll();
+        Iterable<SimpleObject> simpleObjectsAvailableToUser1 = getAccessControlTestDAO().findAll();
 
         String randomSimpleObjectId = null;
         int count = 0;
 
-        for (AccessControllableObject accessControllableObject : simpleObjectsAvailableToUser1) {
+        for (SimpleObject simpleObject : simpleObjectsAvailableToUser1) {
             if (randomSimpleObjectId == null) {
-                randomSimpleObjectId = accessControllableObject.getId();
+                randomSimpleObjectId = simpleObject.getId();
             }
             count++;
         }
@@ -225,17 +224,17 @@ public abstract class AccessControlTest {
 
         accessControlContextProvider.setCurrent(accessControlContext2);
 
-        Iterable<AccessControllableObject> simpleObjectsAvailableToUser2 = getAccessControllableObjectDAO().findAll();
+        Iterable<SimpleObject> simpleObjectsAvailableToUser2 = getAccessControlTestDAO().findAll();
 
         int count2 = 0;
         //noinspection UnusedDeclaration
-        for (AccessControllableObject accessControllableObject : simpleObjectsAvailableToUser2) {
+        for (SimpleObject simpleObject : simpleObjectsAvailableToUser2) {
             count2++;
         }
 
         Assert.assertEquals(5, count2);
-        for (AccessControllableObject accessControllableObject : simpleObjectsAvailableToUser2) {
-            Assert.assertNotSame(randomSimpleObjectId, accessControllableObject.getId());
+        for (SimpleObject simpleObject : simpleObjectsAvailableToUser2) {
+            Assert.assertNotSame(randomSimpleObjectId, simpleObject.getId());
         }
     }
 
@@ -245,16 +244,16 @@ public abstract class AccessControlTest {
             throws NoSuchItemException {
         accessControlContextProvider.setCurrent(accessControlContext1);
 
-        AccessControllableObject accessControllableObject = new AccessControllableObject();
+        SimpleObject simpleObject = new SimpleObject();
 
-        getAccessControllableObjectDAO().save(accessControllableObject);
+        getAccessControlTestDAO().save(simpleObject);
 
         accessControlContextProvider.setCurrent(accessControlContext3);
 
-        AccessControllableObject resultObject = getAccessControllableObjectDAO().findById(
-                accessControllableObject.getId());
+        SimpleObject resultObject = getAccessControlTestDAO().findById(
+                simpleObject.getId());
 
-        Assert.assertEquals(resultObject.getId(), accessControllableObject.getId());
+        Assert.assertEquals(resultObject.getId(), simpleObject.getId());
     }
 
 
@@ -263,15 +262,15 @@ public abstract class AccessControlTest {
         accessControlContextProvider.setCurrent(accessControlContext1);
 
         for (int i = 0; i < 10; i++) {
-            getAccessControllableObjectDAO().save(new AccessControllableObject());
+            getAccessControlTestDAO().save(new SimpleObject());
         }
 
-        List<AccessControllableObject> orderedItems = getAccessControllableObjectDAO().findByOrderById();
+        List<SimpleObject> orderedItems = getAccessControlTestDAO().findByOrderById();
 
         Assert.assertEquals(10, orderedItems.size());
 
         String lastId = null;
-        for (AccessControllableObject orderedItem : orderedItems) {
+        for (SimpleObject orderedItem : orderedItems) {
             if (lastId != null) {
                 Assert.assertTrue("lastId is not less than thisId: " + lastId + " !< " + orderedItem.getId(),
                                   lastId.compareTo(orderedItem.getId()) < 0);
@@ -287,21 +286,21 @@ public abstract class AccessControlTest {
             throws NoSuchItemException {
         accessControlContextProvider.setCurrent(accessControlContext1);
 
-        AccessControllableObject accessControllableObject = new AccessControllableObject();
+        SimpleObject simpleObject = new SimpleObject();
 
         RelatedObject relatedObject = new RelatedObject();
         relatedObject.setRelatedStringValue("foo");
 
-        accessControllableObject.setRelatedObjects(Collections.singleton(relatedObject));
+        simpleObject.setRelatedObjectSet(Collections.singleton(relatedObject));
 
-        getAccessControllableObjectDAO().save(accessControllableObject);
+        getAccessControlTestDAO().save(simpleObject);
 
-        accessControllableObject = new AccessControllableObject();
+        simpleObject = new SimpleObject();
 
-        getAccessControllableObjectDAO().save(accessControllableObject);
+        getAccessControlTestDAO().save(simpleObject);
 
-        List<AccessControllableObject> resultObjects
-                = getAccessControllableObjectDAO().findByHavingRelatedObjectsWithRelatedStringValue("foo");
+        List<SimpleObject> resultObjects
+                = getAccessControlTestDAO().findByHavingRelatedObjectSetWithRelatedStringValue("foo");
 
         Assert.assertEquals(1, resultObjects.size());
     }
@@ -312,20 +311,20 @@ public abstract class AccessControlTest {
         accessControlContextProvider.setCurrent(accessControlContext1);
 
         for (int i = 1; i < 10; i++) {
-            getAccessControllableObjectDAO().save(new AccessControllableObject(i));
+            getAccessControlTestDAO().save(new SimpleObject(i));
         }
 
         accessControlContextProvider.setCurrent(accessControlContext2);
 
         for (int i = 2; i < 10; i++) {
-            getAccessControllableObjectDAO().save(new AccessControllableObject(i));
+            getAccessControlTestDAO().save(new SimpleObject(i));
         }
 
         accessControlContextProvider.setCurrent(accessControlContext1);
 
-        Assert.assertEquals(3, getAccessControllableObjectDAO().getByIntValueLessThan(4).size());
-        Assert.assertEquals(2, getAccessControllableObjectDAO().getByIntValueLessThanSpecifyingContext(4, accessControlContext2).size());
-        Assert.assertEquals(5, getAccessControllableObjectDAO().getByIntValueLessThanUsingAdministratorRole(4).size());
-        Assert.assertEquals(0, getAccessControllableObjectDAO().getByIntValueLessThanUsingBogusRole(4).size());
+        Assert.assertEquals(3, getAccessControlTestDAO().getByIntValueLessThan(4).size());
+        Assert.assertEquals(2, getAccessControlTestDAO().getByIntValueLessThanSpecifyingContext(4, accessControlContext2).size());
+        Assert.assertEquals(5, getAccessControlTestDAO().getByIntValueLessThanUsingAdministratorRole(4).size());
+        Assert.assertEquals(0, getAccessControlTestDAO().getByIntValueLessThanUsingBogusRole(4).size());
     }
 }

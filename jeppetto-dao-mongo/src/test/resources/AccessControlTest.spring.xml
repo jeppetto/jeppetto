@@ -20,9 +20,9 @@
 
     <!-- =================== Mongo DAOs =================== -->
 
-    <bean id="accessControllableObjectDAO" class="org.iternine.jeppetto.dao.DAOBuilder" factory-method="buildDAO">
-        <constructor-arg index="0" value="org.iternine.jeppetto.test.AccessControllableObject"/>
-        <constructor-arg index="1" value="org.iternine.jeppetto.test.AccessControllableObjectDAO"/>
+    <bean id="accessControlTestDAO" class="org.iternine.jeppetto.dao.DAOBuilder" factory-method="buildDAO">
+        <constructor-arg index="0" value="org.iternine.jeppetto.test.SimpleObject"/>
+        <constructor-arg index="1" value="org.iternine.jeppetto.test.AccessControlTestDAO"/>
         <constructor-arg index="2" value="org.iternine.jeppetto.dao.mongodb.MongoDBQueryModelDAO"/>
         <constructor-arg index="3">
             <map>

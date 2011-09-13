@@ -18,7 +18,7 @@ package org.iternine.jeppetto.dao.mongodb;
 
 
 import org.iternine.jeppetto.test.AccessControlTest;
-import org.iternine.jeppetto.test.AccessControllableObjectDAO;
+import org.iternine.jeppetto.test.AccessControlTestDAO;
 import org.iternine.jeppetto.testsupport.MongoDatabaseProvider;
 import org.iternine.jeppetto.testsupport.TestContext;
 
@@ -37,10 +37,10 @@ public class MongoAccessControlTest extends AccessControlTest {
     //-------------------------------------------------------------
 
     @Override
-    protected AccessControllableObjectDAO getAccessControllableObjectDAO() {
+    protected AccessControlTestDAO getAccessControlTestDAO() {
         ensureTestContextExists();
 
-        return (AccessControllableObjectDAO) testContext.getBean("accessControllableObjectDAO");
+        return (AccessControlTestDAO) testContext.getBean("accessControlTestDAO");
     }
 
 

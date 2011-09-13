@@ -18,7 +18,7 @@ package org.iternine.jeppetto;
 
 
 import org.iternine.jeppetto.test.AccessControlTest;
-import org.iternine.jeppetto.test.AccessControllableObjectDAO;
+import org.iternine.jeppetto.test.AccessControlTestDAO;
 import org.iternine.jeppetto.testsupport.TestContext;
 
 
@@ -36,7 +36,7 @@ public class HibernateAccessControlTest extends AccessControlTest {
     //-------------------------------------------------------------
 
     @Override
-    protected AccessControllableObjectDAO getAccessControllableObjectDAO() {
+    protected AccessControlTestDAO getAccessControlTestDAO() {
         if (testContext == null) {
             testContext = new TestContext("AccessControlTest.spring.xml",
                                           "HibernateDAOTest.test.properties",
@@ -44,7 +44,7 @@ public class HibernateAccessControlTest extends AccessControlTest {
 
         }
 
-        return (AccessControllableObjectDAO) testContext.getBean("accessControllableObjectDAO");
+        return (AccessControlTestDAO) testContext.getBean("accessControlTestDAO");
     }
 
 

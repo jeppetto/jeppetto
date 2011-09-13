@@ -27,37 +27,37 @@ import org.iternine.jeppetto.dao.annotation.DataAccessMethod;
 import java.util.List;
 
 
-public interface AccessControllableObjectDAO extends GenericDAO<AccessControllableObject, String>, AccessControllable<String> {
+public interface AccessControlTestDAO extends GenericDAO<SimpleObject, String>, AccessControllable<String> {
 
-    List<AccessControllableObject> findByOrderById();
+    List<SimpleObject> findByOrderById();
 
 
-    List<AccessControllableObject> findByHavingRelatedObjectsWithRelatedStringValue(String value);
+    List<SimpleObject> findByHavingRelatedObjectSetWithRelatedStringValue(String value);
 
 
     @DataAccessMethod(
             conditions = { @Condition(field = "intValue", type = ConditionType.LessThan) }
     )
-    List<AccessControllableObject> getByIntValueLessThan(int intValue);
+    List<SimpleObject> getByIntValueLessThan(int intValue);
 
 
     @DataAccessMethod (
             conditions = { @Condition(field = "intValue", type = ConditionType.LessThan) },
             useAccessControlContextArgument = true
     )
-    List<AccessControllableObject> getByIntValueLessThanSpecifyingContext(int intValue, AccessControlContext accessControlContext);
+    List<SimpleObject> getByIntValueLessThanSpecifyingContext(int intValue, AccessControlContext accessControlContext);
 
 
     @DataAccessMethod (
             conditions = { @Condition(field = "intValue", type = ConditionType.LessThan) },
             invokeWithRole = "Administrator"
     )
-    List<AccessControllableObject> getByIntValueLessThanUsingAdministratorRole(int intValue);
+    List<SimpleObject> getByIntValueLessThanUsingAdministratorRole(int intValue);
 
 
     @DataAccessMethod (
             conditions = { @Condition(field = "intValue", type = ConditionType.LessThan) },
             invokeWithRole = "BogusRole"
     )
-    List<AccessControllableObject> getByIntValueLessThanUsingBogusRole(int intValue);
+    List<SimpleObject> getByIntValueLessThanUsingBogusRole(int intValue);
 }
