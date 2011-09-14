@@ -68,7 +68,7 @@ public final class QueryLoggingCommand extends MongoDBCommand {
             StringBuilder sb = new StringBuilder();
             DBObject plan = dbCursor.explain();
 
-            sb.append("MongoDB query plan ").append(plan).append('\n');
+            sb.append("MongoDB query plan:\n");
             sb.append("\tcursor = \"").append(plan.get("cursor")).append("\"\n");
             sb.append("\tnscanned = \"").append(plan.get("nscanned")).append("\"\n");
             sb.append("\tn = \"").append(plan.get("n")).append("\"\n");
