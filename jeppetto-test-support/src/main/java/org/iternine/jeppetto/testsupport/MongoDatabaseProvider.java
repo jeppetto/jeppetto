@@ -32,32 +32,56 @@ public class MongoDatabaseProvider
         implements DatabaseProvider, Closeable {
 
     //-------------------------------------------------------------
+    // Constants
+    //-------------------------------------------------------------
+
+    private static final String MONGODB_PORT_PROPERTY = "mongodb.left.port";
+    private static final String BACKUP_MONGODB_PORT_PROPERTY = "mongodb.port";
+    private static final String MONGODB_NAME_PROPERTY = "mongodb.dbname";
+
+
+    //-------------------------------------------------------------
     // Variables - Private
     //-------------------------------------------------------------
 
     private MongoDatabase db;
-    private String mongoPortProperty = "mongodb.left.port";
-    private String altMongoPortProperty = "mongodb.port";
-    private String mongoDbNameProperty = "mongodb.dbname";
+    private String mongoPortProperty;
+    private String mongoDbNameProperty;
+    private boolean uniquifyName;
 
 
     //-------------------------------------------------------------
     // Constructors
     //-------------------------------------------------------------
 
+    /**
+     * Construct a default MongoDatabaseProvider that will uniquify mongodb database names.
+     */
     public MongoDatabaseProvider() {
-        this(null, null);
+        this(true);
     }
 
 
-    public MongoDatabaseProvider(String mongoPortProperty, String mongoDbNameProperty) {
-        if (mongoPortProperty != null) {
-            this.mongoPortProperty = mongoPortProperty;
-        }
+    /**
+     * Uses the default mongodb port properties (either "mongodb.left.port" or "mongodb.port").
+     * Uses the default mongodb name property ("mongodb.dbname")
+     *
+     * @param uniquifyName true if the mongodb database name should be modified to avoid collisions with concurrent tests
+     */
+    public MongoDatabaseProvider(boolean uniquifyName) {
+        this(MONGODB_PORT_PROPERTY, MONGODB_NAME_PROPERTY, uniquifyName);
+    }
 
-        if (mongoDbNameProperty != null) {
-            this.mongoDbNameProperty = mongoDbNameProperty;
-        }
+
+    /**
+     * @param mongoPortProperty name of the property that specifies the mongodb port
+     * @param mongoDbNameProperty name of the property that specifies the mongodb database name
+     * @param uniquifyName true if the mongodb database name should be modified to avoid collisions with concurrent tests
+     */
+    public MongoDatabaseProvider(String mongoPortProperty, String mongoDbNameProperty, boolean uniquifyName) {
+        this.mongoPortProperty = mongoPortProperty;
+        this.mongoDbNameProperty = mongoDbNameProperty;
+        this.uniquifyName = uniquifyName;
     }
 
 
@@ -67,29 +91,29 @@ public class MongoDatabaseProvider
 
     @Override
     public Properties modifyProperties(Properties properties) {
-        /*
-        mongodb.host=127.0.0.1
-        mongodb.port=27017
-        mongodb.dbname=unittest
-         */
+        int mongoDbPort;
+        String mongoDbName;
 
-        String baseName = properties.getProperty(mongoDbNameProperty);
-        String uniqueName = String.format("%s_%s",
-                                          UUID.randomUUID().toString().substring(0, 3),
-                                          baseName);
-
-        int port;
         try {
-            port = Integer.parseInt(properties.getProperty(mongoPortProperty));
+            mongoDbPort = Integer.parseInt(properties.getProperty(mongoPortProperty));
         } catch (NumberFormatException nfe) {
-            port = Integer.parseInt(properties.getProperty(altMongoPortProperty));
+            mongoDbPort = Integer.parseInt(properties.getProperty(BACKUP_MONGODB_PORT_PROPERTY));
         }
 
-        properties.setProperty(mongoDbNameProperty, uniqueName);
+        if (uniquifyName) {
+            String baseName = properties.getProperty(mongoDbNameProperty);
+
+            mongoDbName = String.format("%s_%s", baseName,
+                                        UUID.randomUUID().toString().substring(0, 3));
+
+            properties.setProperty(mongoDbNameProperty, mongoDbName);
+        } else {
+            mongoDbName = properties.getProperty(mongoDbNameProperty);
+        }
 
         // eager-initialization of db ahead of rest of spring config
-        db = MongoDatabase.forPlatform(port);
-        db.setMongoDbName(uniqueName);
+        db = MongoDatabase.forPlatform(mongoDbPort);
+        db.setMongoDbName(mongoDbName);
 
         return properties;
     }
