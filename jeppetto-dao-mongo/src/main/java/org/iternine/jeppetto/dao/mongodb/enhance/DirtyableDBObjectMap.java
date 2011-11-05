@@ -168,6 +168,12 @@ public class DirtyableDBObjectMap
     }
 
 
+    @Override
+    public Set<String> getDirtyKeys() {
+        return null; // TODO
+    }
+
+
     //-------------------------------------------------------------
     // Implementation - DBObject
     //-------------------------------------------------------------

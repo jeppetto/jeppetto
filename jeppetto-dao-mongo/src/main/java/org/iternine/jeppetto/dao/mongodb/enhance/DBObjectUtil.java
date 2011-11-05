@@ -20,9 +20,6 @@ package org.iternine.jeppetto.dao.mongodb.enhance;
 import org.iternine.jeppetto.enhance.Enhancer;
 
 import com.google.common.base.Function;
-import com.google.common.collect.ForwardingList;
-import com.google.common.collect.ForwardingMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -36,12 +33,10 @@ import org.bson.types.ObjectId;
 import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.AbstractMap;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -154,61 +149,33 @@ public class DBObjectUtil {
     }
 
 
-    public static Object toDBObject(Class<?> cls, Object obj, Type... optionalValueTypes) {
-        return prepareObjectForMongo(new TypeDefinition(cls, optionalValueTypes), obj);
-    }
+    public static Object toDBObject(Object object) {
+        // TODO: handle arrays.
+        if (object == null
+            || NO_CONVERSION_CLASSES.contains(object.getClass())
+            || DirtyableDBObject.class.isAssignableFrom(object.getClass())) {
+            return object;
+        } else if (Map.class.isAssignableFrom(object.getClass())) {
+            return new DirtyableDBObjectMap((Map) object);
+        } else if (List.class.isAssignableFrom(object.getClass())) {
+            return new DirtyableDBObjectList((List) object, true);
+        } else if (Set.class.isAssignableFrom(object.getClass())) {
+            return new DirtyableDBObjectSet((Set) object);
+        } else if (Iterable.class.isAssignableFrom(object.getClass())) {
+            throw new RuntimeException("oops...");
+//            return new DirtyableDBObjectList((Iterable) object);
+        } else if (DBObject.class.isInstance(object)) {
+            BasicDBObject dbo = new BasicDBObject();
+            DBObject src = (DBObject) object;
 
+            for (String key : src.keySet()) {
+                Object rawObject = src.get(key);
+                Object dboValue = (rawObject == null) ? null : toDBObject(rawObject);
 
-    public static Object toDBObject(Class<?> cls, boolean obj, Type... optionalValueTypes) {
-        return obj;
-    }
-
-
-    public static Object toDBObject(Class<?> cls, byte obj, Type... optionalValueTypes) {
-        return obj;
-    }
-
-
-    public static Object toDBObject(Class<?> cls, short obj, Type... optionalValueTypes) {
-        return obj;
-    }
-
-
-    public static Object toDBObject(Class<?> cls, int obj, Type... optionalValueTypes) {
-        return obj;
-    }
-
-
-    public static Object toDBObject(Class<?> cls, long obj, Type... optionalValueTypes) {
-        return obj;
-    }
-
-
-    public static Object toDBObject(Class<?> cls, float obj, Type... optionalValueTypes) {
-        return obj;
-    }
-
-
-    public static Object toDBObject(Class<?> cls, double obj, Type... optionalValueTypes) {
-        return obj;
-    }
-
-
-    //-------------------------------------------------------------
-    // Methods - Private - Static
-    //-------------------------------------------------------------
-
-    private static Object prepareObjectForMongo(TypeDefinition typeDef, Object object) {
-        if (object == null) {
-            return null;
-        } else if (needsNoConversion(typeDef.getClazz(), object)
-                   || Map.class.isInstance(object)
-                   || Iterable.class.isInstance(object)) {
-            if (mayHaveMembersThatNeedConversion(object)) {
-                return prepareObjectMembersForMongo(typeDef, object);
-            } else {
-                return object;
+                dbo.put(key, dboValue);
             }
+
+            return dbo;
         } else if (Enum.class.isInstance(object)) {
             return ((Enum) object).name();
         } else {
@@ -220,41 +187,9 @@ public class DBObjectUtil {
     }
 
 
-    private static boolean mayHaveMembersThatNeedConversion(Object obj) {
-        return DBObject.class.isInstance(obj) || Map.class.isInstance(obj) || Iterable.class.isInstance(obj);
-    }
-
-
-    @SuppressWarnings({"unchecked"})
-    private static Object prepareObjectMembersForMongo(TypeDefinition typeDef, Object object) {
-        Class<?> cls = typeDef.getClazz();
-        Class<?>[] optionalValueTypes = typeDef.getTypeParameters();
-
-        if (DBObject.class.isAssignableFrom(cls)) {
-            BasicDBObject dbo = new BasicDBObject();
-            DBObject src = (DBObject) object;
-
-            for (String key : src.keySet()) {
-                Object rawObject = src.get(key);
-                Object dboValue = (rawObject == null) ? null : toDBObject(rawObject.getClass(), rawObject);
-
-                dbo.put(key, dboValue);
-            }
-
-            return dbo;
-        } else if (Map.class.isAssignableFrom(cls)) {
-            return wrapMap(coalesceTypeParam(optionalValueTypes, 1), (Map) object);
-        } else if (List.class.isAssignableFrom(cls)) {
-            return wrapList(coalesceTypeParam(optionalValueTypes, 0), (List) object);
-        } else if (Set.class.isAssignableFrom(cls)) {
-            return wrapSet(coalesceTypeParam(optionalValueTypes, 0), (Set) object);
-        } else if (Iterable.class.isAssignableFrom(cls)) {
-            return wrapList(coalesceTypeParam(optionalValueTypes, 0), (Iterable) object);
-        } else {
-            throw new IllegalStateException("Unanticipated object " + object + " and type " + cls);
-        }
-    }
-
+    //-------------------------------------------------------------
+    // Methods - Private - Static
+    //-------------------------------------------------------------
 
     private static Class<?> coalesceTypeParam(Type[] classes, int index) {
         return (Class<?>) (classes == null || index >= classes.length ? Object.class : classes[index]);
@@ -268,88 +203,6 @@ public class DBObjectUtil {
                 return fromObject(type, from, typeParams);
             }
         };
-    }
-
-
-    private static Map<Object, Object> wrapMap(final Type valueType, final Map<Object, Object> delegate) {
-        return new ForwardingMap<Object, Object>() {
-
-            @Override
-            protected Map<Object, Object> delegate() {
-                return delegate;
-            }
-
-            @Override
-            public Object get(Object key) {
-                return toDBObject((Class<?>) valueType, super.get(key));
-            }
-
-            @Override
-            public Set<Entry<Object, Object>> entrySet() {
-                return ImmutableSet.copyOf(Iterables.transform(super.entrySet(), new Function<Entry<Object, Object>, Entry<Object, Object>>() {
-                    @Override
-                    public Entry<Object, Object> apply(Entry<Object, Object> from) {
-                       return new AbstractMap.SimpleEntry<Object, Object>(from.getKey(), toDBObject((Class<?>) valueType, from.getValue()));
-                    }
-                }));
-            }
-        };
-    }
-
-
-    private static List<Object> wrapList(final Type valueType, final Iterable<Object> delegate) {
-        final List<Object> delegateList = Lists.newArrayList(delegate);
-
-        return new ForwardingList<Object>() {
-            @Override
-            protected List<Object> delegate() {
-                return delegateList;
-            }
-
-            @Override
-            public Object get(int index) {
-                return toDBObject((Class<?>) valueType, super.get(index));
-            }
-
-
-            @Override
-            public Iterator<Object> iterator() {
-                final Iterator<Object> delegateIterator = delegateList.iterator();
-
-                return new Iterator<Object>() {
-                    @Override
-                    public boolean hasNext() {
-                        return delegateIterator.hasNext();
-                    }
-
-
-                    @Override
-                    public Object next() {
-                        return toDBObject((Class<?>) valueType, delegateIterator.next());
-                    }
-
-
-                    @Override
-                    public void remove() {
-                        delegateIterator.remove();
-                    }
-                };
-            }
-        };
-    }
-
-
-    private static List<Object> wrapSet(final Type valueType, final Set<Object> delegate) {
-        return wrapList(valueType, Lists.newArrayList(delegate));
-    }
-
-
-    private static boolean needsNoConversion(Class<?> cls, Object obj) {
-        return obj == null
-               || cls.isArray()
-               || NO_CONVERSION_CLASSES.contains(cls)
-               || NO_CONVERSION_CLASSES.contains(obj.getClass())
-               || (DBObject.class.isAssignableFrom(cls) && cls.isInstance(obj));
     }
 
 
@@ -396,48 +249,6 @@ public class DBObjectUtil {
 
         Function<Object, Object> valueFunction = fromObjectFunction(coalesceTypeParam(typeParameters, 0));
 
-        return new DirtyableDBObjectList(Lists.transform((List<?>) source, valueFunction));
-    }
-
-
-    //-------------------------------------------------------------
-    // Inner Classes
-    //-------------------------------------------------------------
-
-    private static final class TypeDefinition {
-
-        //-------------------------------------------------------------
-        // Variables - Private
-        //-------------------------------------------------------------
-
-        private final Class<?> clazz;
-        private final Class<?>[] typeParameters;
-
-
-        //-------------------------------------------------------------
-        // Variables - Private
-        //-------------------------------------------------------------
-
-        public TypeDefinition(Class<?> clazz, Type... typeParametersAsType) {
-            this.clazz = clazz;
-            this.typeParameters = new Class<?>[typeParametersAsType.length];
-            for (int i = 0; i < this.typeParameters.length; i++) {
-                this.typeParameters[i] = (Class<?>) typeParametersAsType[i];
-            }
-        }
-
-
-        //-------------------------------------------------------------
-        // Variables - Private
-        //-------------------------------------------------------------
-
-        public Class<?> getClazz() {
-            return clazz;
-        }
-
-
-        public Class<?>[] getTypeParameters() {
-            return typeParameters;
-        }
+        return new DirtyableDBObjectList(Lists.transform((List<?>) source, valueFunction), true);
     }
 }

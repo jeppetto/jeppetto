@@ -33,6 +33,9 @@ import org.iternine.jeppetto.dao.annotation.AccessControlRule;
 import org.iternine.jeppetto.dao.annotation.AccessControlType;
 import org.iternine.jeppetto.dao.mongodb.enhance.DBObjectUtil;
 import org.iternine.jeppetto.dao.mongodb.enhance.DirtyableDBObject;
+import org.iternine.jeppetto.dao.mongodb.enhance.DirtyableDBObjectList;
+import org.iternine.jeppetto.dao.mongodb.enhance.DirtyableDBObjectMap;
+import org.iternine.jeppetto.dao.mongodb.enhance.DirtyableDBObjectSet;
 import org.iternine.jeppetto.dao.mongodb.enhance.EnhancerHelper;
 import org.iternine.jeppetto.dao.mongodb.enhance.MongoDBDecoder;
 import org.iternine.jeppetto.dao.mongodb.projections.ProjectionCommands;
@@ -781,7 +784,7 @@ public class MongoDBQueryModelDAO<T, ID>
             // examples of "unsafe" things are: Sets, Enum, POJOs.
             Object rawConstraint = condition.getConstraint();
             Object constraint = (rawConstraint == null) ? null
-                                                        : DBObjectUtil.toDBObject(rawConstraint.getClass(), rawConstraint);
+                                                        : DBObjectUtil.toDBObject(rawConstraint);
 
             // XXX : if annotation specifies multiple conditions on single field the
             // first condition will be overwritten here
@@ -799,16 +802,68 @@ public class MongoDBQueryModelDAO<T, ID>
     }
 
 
-    private DBObject determineOptimalDBObject(DBObject dbo) {
-        // TODO: handle saveNulls...
+    // TODO: deal w/ extra values.. (e.g. olv, acl, user-modified)
+    private DBObject determineOptimalDBObject(DirtyableDBObject dirtyableDBObject) {
+        if (!dirtyableDBObject.isPersisted()) {
+//            dirtyableDBObject.includeNullValuedKeys(saveNulls);
 
-        return dbo;
+            return dirtyableDBObject;
+        }
+
+        DBObject settableItems = new BasicDBObject();
+        DBObject pushableItems = new BasicDBObject();
+
+        walkDirtyableDBObject("", dirtyableDBObject, settableItems, pushableItems);
+
+        DBObject optimalDBObject = new BasicDBObject();
+
+        if (settableItems.keySet().size() > 0) {
+            optimalDBObject.put("$set", settableItems);
+        }
+
+        if (pushableItems.keySet().size() > 0) {
+            optimalDBObject.put("$pushAll", pushableItems);
+        }
+
+        return optimalDBObject;
+    }
+
+
+    private void walkDirtyableDBObject(String prefix, DirtyableDBObject dirtyableDBObject,
+                                       DBObject settableItems, DBObject pushableItems) {
+        for (String dirtyKey : dirtyableDBObject.getDirtyKeys()) {
+            Object value = dirtyableDBObject.get(dirtyKey);
+
+            if (value instanceof DirtyableDBObjectList) {
+                DirtyableDBObjectList list = (DirtyableDBObjectList) value;
+
+                if (list.isRewrite()) {
+                    settableItems.put(prefix + dirtyKey, value);
+                } else if (list.getAppendedItems().size() > 0) {
+                    pushableItems.put(prefix + dirtyKey, list.getAppendedItems());
+                } else {
+                    walkDirtyableDBObject(prefix + dirtyKey + ".", list, settableItems, pushableItems);
+                }
+            } else if (value instanceof DirtyableDBObjectSet) {
+                throw new RuntimeException("Implement");
+            } else if (value instanceof DirtyableDBObjectMap) {
+                throw new RuntimeException("Implement");
+            } else if (value instanceof DirtyableDBObject) {
+                if (!((DirtyableDBObject) value).isPersisted()) {
+                    settableItems.put(prefix + dirtyKey, value);
+                } else {
+                    walkDirtyableDBObject(prefix + dirtyKey + ".", (DirtyableDBObject) value, settableItems, pushableItems);
+                }
+            } else {
+                settableItems.put(prefix + dirtyKey, value);
+            }
+        }
     }
 
 
     private WriteConcern getWriteConcern() {
         // TODO: Add ability to swap a concern out on a per-call basis...if nothing overwrites/changes, then
-        // return the default.
+        // return the default.  Keep in mind session semantics (e.g. delayed saves).
 
         return defaultWriteConcern;
     }

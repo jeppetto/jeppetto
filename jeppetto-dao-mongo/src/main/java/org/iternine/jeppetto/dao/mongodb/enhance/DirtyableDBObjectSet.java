@@ -182,6 +182,12 @@ public class DirtyableDBObjectSet
     }
 
 
+    @Override
+    public Set<String> getDirtyKeys() {
+        return null; // TODO
+    }
+
+
     //-------------------------------------------------------------
     // Implementation - DBObject
     //-------------------------------------------------------------

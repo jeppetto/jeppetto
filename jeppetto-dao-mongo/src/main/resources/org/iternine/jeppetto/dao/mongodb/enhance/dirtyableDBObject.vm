@@ -13,7 +13,7 @@ public $_.cls("${baseName}$DirtyableDBObject").ext($base).impl("org.iternine.jep
 
     $_.field("private final $baseName __delegate;")
     $_.field("private boolean __persisted;")
-    $_.field("private final java.util.Map __originalValues = new java.util.HashMap();")
+    $_.field("private final java.util.Set __dirtyKeys = new java.util.HashSet();")
     $_.field("private final java.util.Map __extraValues = new java.util.HashMap();")
     $_.field("private java.util.Set __keys = new java.util.HashSet(java.util.Arrays.asList(new String[] {
         #foreach ( $getter in $getters )
@@ -23,7 +23,7 @@ public $_.cls("${baseName}$DirtyableDBObject").ext($base).impl("org.iternine.jep
             #else
                 ${Q}$_.keyFor($getter.getName())${Q}#if( $velocityHasNext ),#end
             #end
-            
+
         #end
     }));")
     $_.field("private boolean __isPartial = false;")
@@ -47,7 +47,7 @@ public $_.cls("${baseName}$DirtyableDBObject").ext($base).impl("org.iternine.jep
 
 
     //-------------------------------------------------------------
-    // Methods - Delegates and overrides
+    // Methods - Overrides
     //-------------------------------------------------------------
 
     #foreach ( $getter in $getters )
@@ -63,9 +63,7 @@ public $_.cls("${baseName}$DirtyableDBObject").ext($base).impl("org.iternine.jep
 
     $_.method("
     public void $setterName($returnType value) {
-        if (!__originalValues.containsKey(${Q}$key${Q})) {
-            __originalValues.put(${Q}$key${Q}, org.iternine.jeppetto.enhance.ReferenceUtil.asObject($getterName()));
-        }
+        __dirtyKeys.add(${Q}$key${Q});
 
         if (__delegate == null) {
             super.$setterName(value);
@@ -85,61 +83,6 @@ public $_.cls("${baseName}$DirtyableDBObject").ext($base).impl("org.iternine.jep
     // Implementation - DBObject
     //-------------------------------------------------------------
 
-    #foreach ( $getter in $getters )
-    #set ( $getterName = $getter.getName() )
-    #set ( $key = $_.keyFor($getterName) )
-    #set ( $returnType = $_.returnTypeOf($getter) )
-    #set ( $returnTypeName = $returnType.getName() )
-    #set ( $returnTypeParams = $_.returnTypeParamsOf($getter) )
-
-    $_.method("
-    private Object __${key}ToDBObject($returnTypeName o) {
-        #if ( $returnTypeParams.size() == 0 )
-        Class[] typeParams = new Class[0];
-        #else
-        Class[] typeParams = new Class[] {
-        #foreach ( $returnTypeParam in $returnTypeParams )
-
-            ${returnTypeParam.getName()}.class#if( $velocityHasNext ),#end
-        #end
-        };
-        #end
-        return org.iternine.jeppetto.dao.mongodb.enhance.DBObjectUtil.toDBObject(${returnTypeName}.class, o, typeParams);
-    }")
-
-    #if ( $returnType.isPrimitive() )
-    $_.method("
-    private $returnTypeName __${key}FromObject(Object o) {
-        if (o instanceof $_.wrapperNameFor($returnType)) {
-            return (($_.wrapperNameFor($returnType)) o).${returnTypeName}Value();
-        } else {
-            $_.createConversionMethodBody($returnType)
-        }
-    }")
-    #elseif ( $returnType.isEnum() )
-    $_.method("
-    private $returnTypeName __${key}FromObject(Object o) {
-        return (o == null) ? null : (${returnTypeName}) java.lang.Enum.valueOf(${returnTypeName}.class, String.valueOf(o));
-    }")
-    #else
-    $_.method("
-    private $returnTypeName __${key}FromObject(Object o) {
-        #if ( $returnTypeParams.size() == 0 )
-        Class[] typeParams = new Class[0];
-        #else
-        Class[] typeParams = new Class[] {
-        #foreach ( $returnTypeParam in $returnTypeParams )
-
-            ${returnTypeParam.getName()}.class#if( $velocityHasNext ),#end
-        #end
-        };
-        #end
-        return ($returnTypeName) org.iternine.jeppetto.dao.mongodb.enhance.DBObjectUtil.fromObject(${returnTypeName}.class, o, typeParams);
-    }")
-    #end
-    #end
-
-
     $_.method("
     public Object put(String key, Object v) {
         __keys.add(key); // keys can be removed so first thing to do is restore it
@@ -147,24 +90,46 @@ public $_.cls("${baseName}$DirtyableDBObject").ext($base).impl("org.iternine.jep
         #foreach ( $getter in $getters )
         #set ( $key = $_.keyFor($getter.getName()) )
         #set ( $setterName = $_.asSetter($getter) )
-        #if ( $getter.getName() == 'getId' )
         #set ( $returnType = $_.returnTypeOf($getter) )
+        #set ( $returnTypeName = $returnType.getName() )
 
+        #if ( $getter.getName() == 'getId' )
         if (${Q}_id${Q}.equals(key)) {
             #if ( $returnType.getName() == 'java.lang.String')
-            this.$setterName(__${key}FromObject(v instanceof org.bson.types.ObjectId ? ((org.bson.types.ObjectId) v).toString() : v));
-            return v;
+            this.$setterName((v instanceof org.bson.types.ObjectId) ? ((org.bson.types.ObjectId) v).toString() : (String) v);
+            #elseif ( $returnType.isPrimitive() )
+            ## Need coercion logic?
+            this.$setterName((($_.wrapperNameFor($returnType)) v).${returnTypeName}Value());
             #else
-            this.$setterName(__${key}FromObject(v));
-            return v;
+            this.$setterName(($returnTypeName) org.iternine.jeppetto.dao.mongodb.enhance.DBObjectUtil.fromObject(${returnTypeName}.class, v));
             #end
-        }
-        #else
-
-        if (${Q}$key${Q}.equals(key)) {
-            this.$setterName(__${key}FromObject(v));
             return v;
         }
+
+        #else
+        if (${Q}$key${Q}.equals(key)) {
+            #if ( $returnType.isPrimitive() )
+                ## Need coercion logic?
+                this.$setterName((($_.wrapperNameFor($returnType)) v).${returnTypeName}Value());
+            #elseif ( $returnType.isEnum() )
+                this.$setterName((v == null) ? null : (${returnTypeName}) java.lang.Enum.valueOf(${returnTypeName}.class, String.valueOf(v)));
+            #else
+                #set ( $returnTypeParams = $_.returnTypeParamsOf($getter) )
+                #if ( $returnTypeParams.size() == 0 )
+                Class[] typeParams = new Class[0];
+                #else
+                Class[] typeParams = new Class[] {
+                #foreach ( $returnTypeParam in $returnTypeParams )
+
+                    ${returnTypeParam.getName()}.class#if( $velocityHasNext ),#end
+                #end
+                };
+                #end
+                this.$setterName(($returnTypeName) org.iternine.jeppetto.dao.mongodb.enhance.DBObjectUtil.fromObject(${returnTypeName}.class, v, typeParams));
+            #end
+            return v;
+        }
+
         #end
         #end
 
@@ -179,22 +144,29 @@ public $_.cls("${baseName}$DirtyableDBObject").ext($base).impl("org.iternine.jep
         #foreach ( $getter in $getters )
         #set ( $getterName = $getter.getName() )
         #set ( $key = $_.keyFor($getterName) )
-        #if ( $getter.getName() == 'getId' )
         #set ( $returnType = $_.returnTypeOf($getter) )
 
+        #if ( $getter.getName() == 'getId' )
         if (${Q}_id${Q}.equals(key)) {
             #if ( $returnType.getName() == 'java.lang.String')
             String s = this.$getterName();
-            return org.bson.types.ObjectId.isValid(s) ? new org.bson.types.ObjectId(s) : this.__${key}ToDBObject(s);
+            return org.bson.types.ObjectId.isValid(s) ? new org.bson.types.ObjectId(s) : s;
+            #elseif ( $returnType.isPrimitive() )
+            return $_.wrapperNameFor($returnType) .valueOf(this.$getterName());
             #else
-            return this.__${key}ToDBObject(this.$getterName());
+            return org.iternine.jeppetto.dao.mongodb.enhance.DBObjectUtil.toDBObject(this.$getterName());
             #end
         }
-        #else
 
+        #else
         if (${Q}$key${Q}.equals(key)) {
-            return this.__${key}ToDBObject(this.$getterName());
+            #if ( $returnType.isPrimitive() )
+            return $_.wrapperNameFor($returnType) .valueOf(this.$getterName());
+            #else
+            return org.iternine.jeppetto.dao.mongodb.enhance.DBObjectUtil.toDBObject(this.$getterName());
+            #end
         }
+
         #end
         #end
 
@@ -284,7 +256,7 @@ public $_.cls("${baseName}$DirtyableDBObject").ext($base).impl("org.iternine.jep
 
     $_.method("
     public boolean isDirty() {
-        if (__originalValues.size() > 0) {
+        if (__dirtyKeys.size() > 0) {
             return true;
         }
 
@@ -310,7 +282,7 @@ public $_.cls("${baseName}$DirtyableDBObject").ext($base).impl("org.iternine.jep
 
     $_.method("
     public void markPersisted() {
-        __originalValues.clear();
+        __dirtyKeys.clear();
 
         #foreach ( $getter in $getters )
         #set ( $getterName = $getter.getName() )
@@ -334,6 +306,37 @@ public $_.cls("${baseName}$DirtyableDBObject").ext($base).impl("org.iternine.jep
     public boolean isPersisted() {
         return __persisted;
     }")
+
+    $_.method("
+    public java.util.Set getDirtyKeys() {
+        java.util.Set dirtyKeys = new java.util.HashSet(__dirtyKeys);
+
+        #foreach( $getter in $getters )
+        #set ( $getterName = $getter.getName() )
+        #set ( $returnType = $_.returnTypeOf($getter) )
+
+        #if ( !$returnType.isPrimitive() && !$returnType.isEnum() && $returnType.getName() != 'java.lang.String' )
+        #set ( $variableName = $_.keyFor($getterName) )
+
+        Object __$variableName = $getterName();
+
+        if ((__$variableName instanceof org.iternine.jeppetto.dao.mongodb.enhance.DirtyableDBObject
+             && ((org.iternine.jeppetto.dao.mongodb.enhance.DirtyableDBObject) __$variableName).isDirty())
+            || org.iternine.jeppetto.dao.mongodb.enhance.DBObjectUtil.objectIsMutable(__$variableName)) {
+            dirtyKeys.add(${Q}$variableName${Q});
+        }
+        #end
+        #end
+
+        return dirtyKeys;
+    }")
+
+##
+##
+##    $_.method("
+##    public void includeNullValuedKeys(boolean includeNullValuedKeys) {
+##        this.__includeNullValuedKeys = includeNullValuedKeys;
+##    }")
 
 
     //-------------------------------------------------------------

@@ -18,6 +18,7 @@ package org.iternine.jeppetto.dao.mongodb.enhance;
 
 
 import org.bson.BSONObject;
+import org.bson.util.StringRangeSet;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -38,21 +39,35 @@ public class DirtyableDBObjectList
     // Variables - Private
     //-------------------------------------------------------------
 
-    private boolean dirty;
     private List delegate;
+    private List appendedItems;
+    private boolean rewrite = false;
+    private boolean modifiableDelegate;
 
 
     //-------------------------------------------------------------
     // Constructors
     //-------------------------------------------------------------
 
+    /**
+     * Default constructor that uses an ArrayList as the delegate and expects no non-Jeppetto
+     * access.
+     */
     public DirtyableDBObjectList() {
-        this.delegate = new ArrayList();
+        this(new ArrayList(), false);
     }
 
 
-    public DirtyableDBObjectList(List delegate) {
+    /**
+     * Constructor that takes is passed the delegate list along w/ an indication as to
+     * whether the delegate is modifiable by code outside of Jeppetto.
+     *
+     * @param delegate the underlying List implementation
+     * @param modifiableDelegate true if access is possible to the delegate by non-Jeppetto code
+     */
+    public DirtyableDBObjectList(List delegate, boolean modifiableDelegate) {
         this.delegate = delegate;
+        this.modifiableDelegate = modifiableDelegate;
     }
 
 
@@ -62,17 +77,27 @@ public class DirtyableDBObjectList
 
     @Override
     public void add(int index, Object element) {
-        dirty = true;
+        rewrite |= index < delegate.size();
 
-        delegate.add(index, element);
+        Object convertedElement = DBObjectUtil.toDBObject(element);
+        delegate.add(index, convertedElement);
+
+        if (!rewrite) {
+            appendedItems.add(convertedElement);
+        }
     }
 
 
     @Override
     public boolean addAll(int index, Collection elements) {
-        dirty = true;
+        rewrite |= index < delegate.size();
 
-        return delegate.addAll(index, elements);
+        Collection convertedElements = new ArrayList();
+        for (Object element : elements) {
+            convertedElements.add(DBObjectUtil.toDBObject(element));
+        }
+
+        return delegate.addAll(index, convertedElements);
     }
 
 
@@ -80,7 +105,7 @@ public class DirtyableDBObjectList
     public Object remove(int index) {
         Object removed = delegate.remove(index);
 
-        dirty = true;
+        rewrite = true;
 
         return removed;
     }
@@ -90,7 +115,7 @@ public class DirtyableDBObjectList
     public boolean removeAll(Collection collection) {
         boolean changed = delegate.removeAll(collection);
 
-        dirty |= changed;
+        rewrite |= changed;
 
         return changed;
     }
@@ -98,7 +123,7 @@ public class DirtyableDBObjectList
 
     @Override
     public Object set(int index, Object element) {
-        dirty = true;
+        rewrite = true;     // TODO:  tracked modified index value instead?
 
         return delegate.set(index, element);
     }
@@ -106,9 +131,12 @@ public class DirtyableDBObjectList
 
     @Override
     public boolean add(Object element) {
-        boolean changed = delegate.add(element);
+        Object convertedElement = DBObjectUtil.toDBObject(element);
+        boolean changed = delegate.add(convertedElement);
 
-        dirty |= changed;
+        if (changed && !rewrite) {
+            appendedItems.add(convertedElement);
+        }
 
         return changed;
     }
@@ -118,17 +146,24 @@ public class DirtyableDBObjectList
     public boolean remove(Object object) {
         boolean changed = delegate.remove(object);
 
-        dirty |= changed;
+        rewrite |= changed;
 
         return changed;
     }
 
 
     @Override
-    public boolean addAll(Collection ts) {
-        boolean changed = delegate.addAll(ts);
+    public boolean addAll(Collection elements) {
+        Collection convertedElements = new ArrayList();
+        for (Object element : elements) {
+            convertedElements.add(DBObjectUtil.toDBObject(element));
+        }
 
-        dirty |= changed;
+        boolean changed = delegate.addAll(convertedElements);
+
+        if (changed && !rewrite) {
+            appendedItems.addAll(convertedElements);
+        }
 
         return changed;
     }
@@ -138,7 +173,7 @@ public class DirtyableDBObjectList
     public boolean retainAll(Collection collection) {
         boolean changed = delegate.retainAll(collection);
 
-        dirty |= changed;
+        rewrite |= changed;
 
         return changed;
     }
@@ -146,9 +181,7 @@ public class DirtyableDBObjectList
 
     @Override
     public void clear() {
-        if (!delegate.isEmpty()) {
-            dirty = true;
-        }
+        rewrite = true;
 
         delegate.clear();
     }
@@ -174,7 +207,7 @@ public class DirtyableDBObjectList
 
     @Override
     public Iterator iterator() {
-        return delegate.iterator();
+        return delegate.iterator(); // TODO: if iterator.remove() is called, need to track...
     }
 
 
@@ -222,7 +255,7 @@ public class DirtyableDBObjectList
 
     @Override
     public ListIterator listIterator(int i) {
-        return delegate.listIterator(i);
+        return delegate.listIterator(i);    // TODO: if listIterator.remove() is called, need to track...
     }
 
 
@@ -238,19 +271,60 @@ public class DirtyableDBObjectList
 
     @Override
     public boolean isDirty() {
-        return dirty;
+        // TODO: walk items (stop at appended size)
+        return rewrite || appendedItems.size() > 0;
     }
 
 
     @Override
     public void markPersisted() {
-        dirty = false;
+        int i = 0;
+        int maxItemToCheck = delegate.size() - appendedItems.size();
+
+        for (Object object : delegate) {
+            if (!(object instanceof DirtyableDBObject)) {
+                break;  // We assume this means the list contains all non-DirtyableDBObjects so can break out
+            }
+
+            DirtyableDBObject dirtyableDBObject = (DirtyableDBObject) object;
+
+            dirtyableDBObject.markPersisted();
+
+            if (++i >= maxItemToCheck) {
+                break;
+            }
+        }
+
+        rewrite = false;
+        appendedItems.clear();
     }
 
 
     @Override
     public boolean isPersisted() {
         throw new RuntimeException("Can't determine persisted state.");
+    }
+
+
+    @Override
+    public Set<String> getDirtyKeys() {
+        Set<String> dirtyKeys = new LinkedHashSet<String>();
+        int i = 0;
+        int maxItemToCheck = delegate.size() - appendedItems.size();
+
+        for (Object object : delegate) {
+            DirtyableDBObject dirtyableDBObject = (DirtyableDBObject) object;
+
+            if (dirtyableDBObject.isDirty()) {
+                dirtyKeys.add(Integer.toString(i));
+            }
+
+            if (++i >= maxItemToCheck) {
+                break;
+            }
+        }
+
+        return dirtyKeys;
     }
 
 
@@ -272,21 +346,13 @@ public class DirtyableDBObjectList
 
     @Override
     public Set<String> keySet() {
-        Set<String> keys = new LinkedHashSet<String>();
-
-        for (int i = 0; i < size(); i++) {
-            keys.add(String.valueOf(i));
-        }
-
-        return keys;
+        return new StringRangeSet(delegate.size());
     }
 
 
     @Override
     public boolean containsField(String s) {
-        int i = getInt(s, false);
-
-        return i >= 0 && i < size();
+        return getNonNegativeInt(s) < size();
     }
 
 
@@ -298,9 +364,9 @@ public class DirtyableDBObjectList
 
     @Override
     public Object removeField(String s) {
-        int i = getInt(s, true);
+        int i = getNonNegativeInt(s);
 
-        if (i < 0 || i >= size()) {
+        if (i >= size()) {
             return null;
         }
 
@@ -322,13 +388,21 @@ public class DirtyableDBObjectList
 
     @Override
     public Object get(String s) {
-        int i = getInt(s, true);
+        int i = getNonNegativeInt(s);
 
-        if (i < 0 || i >= size()) {
+        if (i >= size()) {
             return null;
         }
 
-        return delegate.get(i);
+        Object result = delegate.get(i);
+
+        if (!(result instanceof DirtyableDBObject)) {
+            result = DBObjectUtil.toDBObject(result);
+
+            delegate.set(i, result);
+        }
+
+        return result;
     }
 
 
@@ -350,15 +424,54 @@ public class DirtyableDBObjectList
 
     @Override
     public Object put(String s, Object v) {
-        int i = getInt(s, true);
+        int i = getNonNegativeInt(s);
 
-        while (i >= size()) {
+        while (i > size()) {
             delegate.add(null);
         }
 
-        set(i, v);
+        delegate.add(v);
 
         return v;
+    }
+
+
+    //-------------------------------------------------------------
+    // Methods - Public
+    //-------------------------------------------------------------
+
+    public boolean isRewrite() {
+        if (rewrite) {
+            return true;
+        }
+
+        if (appendedItems.size() > 0) {
+            int i = 0;
+            int maxItemToCheck = delegate.size() - appendedItems.size();
+
+            for (Object object : delegate) {
+                DirtyableDBObject dirtyableDBObject = (DirtyableDBObject) object;
+
+                if (dirtyableDBObject.isDirty()) {
+                    return true;
+                }
+
+                if (++i >= maxItemToCheck) {
+                    break;
+                }
+            }
+        }
+
+        return false;
+    }
+
+
+    public List getAppendedItems() {
+        if (appendedItems == null) {
+            appendedItems = new ArrayList();
+        }
+
+        return appendedItems;
     }
 
 
@@ -366,15 +479,19 @@ public class DirtyableDBObjectList
     // Methods - Private
     //-------------------------------------------------------------
 
-    private int getInt(String s, boolean throwException) {
-        try {
-            return Integer.parseInt(s);
-        } catch (NumberFormatException e) {
-            if (throwException) {
-                throw new IllegalArgumentException("Unable to handle non-numeric value " + s);
-            }
+    private int getNonNegativeInt(String s) {
+        int i;
 
-            return -1;
+        try {
+            i = Integer.parseInt(s);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Unable to handle non-numeric value " + s);
         }
+
+        if (i < 0) {
+            throw new IllegalArgumentException(s + " is an invalid index value");
+        }
+
+        return i;
     }
 }

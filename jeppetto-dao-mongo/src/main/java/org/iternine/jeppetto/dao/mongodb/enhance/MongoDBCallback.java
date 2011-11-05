@@ -112,7 +112,7 @@ public class MongoDBCallback extends DefaultDBCallback {
                 return new DirtyableDBObjectList();
             } else {
                 try {
-                    return new DirtyableDBObjectList((List) returnClass.newInstance());
+                    return new DirtyableDBObjectList((List) returnClass.newInstance(), false);
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
