@@ -3,13 +3,13 @@
 
     <name>Jeppetto DAO for Mongo</name>
     <artifactId>jeppetto-dao-mongo</artifactId>
-    <version>0.5</version>
+    <version>0.6-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <parent>
         <groupId>org.iternine</groupId>
         <artifactId>jeppetto-parent</artifactId>
-        <version>0.5</version>
+        <version>0.6-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -17,13 +17,13 @@
         <dependency>
             <groupId>org.iternine</groupId>
             <artifactId>jeppetto-dao</artifactId>
-            <version>0.5</version>
+            <version>0.6-SNAPSHOT</version>
         </dependency>
 
         <dependency>
             <groupId>org.iternine</groupId>
             <artifactId>jeppetto-enhance</artifactId>
-            <version>0.5</version>
+            <version>0.6-SNAPSHOT</version>
         </dependency>
 
         <dependency>
@@ -53,7 +53,7 @@
         <dependency>
             <groupId>org.iternine</groupId>
             <artifactId>jeppetto-test-functional</artifactId>
-            <version>0.5</version>
+            <version>0.6-SNAPSHOT</version>
             <scope>test</scope>
         </dependency>
 
@@ -67,7 +67,7 @@
         <dependency>
             <groupId>org.iternine</groupId>
             <artifactId>jeppetto-test-support</artifactId>
-            <version>0.5</version>
+            <version>0.6-SNAPSHOT</version>
             <scope>test</scope>
         </dependency>
 
