@@ -90,9 +90,9 @@
     </licenses>
 
     <scm>
-        <url>https://github.com/jeppetto/jeppetto</url>
-        <connection>scm:git:git://github.com/jeppetto/jeppetto.git</connection>
-        <developerConnection>scm:git:git://github.com/jeppetto/jeppetto.git</developerConnection>
+        <url>scm:git:git@github.com:jeppetto/jeppetto.git</url>
+        <connection>scm:git:git@github.com:jeppetto/jeppetto.git</connection>
+        <developerConnection>scm:git:git@github.com:jeppetto/jeppetto.git</developerConnection>
     </scm>
 
     <developers>
