@@ -3,13 +3,13 @@
 
     <name>Jeppetto DAO</name>
     <artifactId>jeppetto-dao</artifactId>
-    <version>0.5-SNAPSHOT</version>
+    <version>0.5</version>
     <packaging>jar</packaging>
 
     <parent>
         <groupId>org.iternine</groupId>
         <artifactId>jeppetto-parent</artifactId>
-        <version>0.5-SNAPSHOT</version>
+        <version>0.5</version>
     </parent>
 
     <dependencies>
@@ -17,7 +17,7 @@
         <dependency>
             <groupId>org.iternine</groupId>
             <artifactId>jeppetto-enhance</artifactId>
-            <version>0.5-SNAPSHOT</version>
+            <version>0.5</version>
         </dependency>
 
         <dependency>
