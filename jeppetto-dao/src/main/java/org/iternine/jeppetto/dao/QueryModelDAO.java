@@ -38,11 +38,12 @@ public interface QueryModelDAO<T, ID> extends GenericDAO<T, ID> {
      *
      * @return Object that satisfies the query model
      *
-     * @throws NoSuchItemException if the object identified by the queryModel
-     * is not found
+     * @throws NoSuchItemException if the object identified by the queryModel is not found
+     * @throws TooManyItemsException if more than one object identified by the queryModel is found
+     * @throws JeppettoException if any other failure occurs
      */
     T findUniqueUsingQueryModel(QueryModel queryModel)
-            throws NoSuchItemException;
+            throws NoSuchItemException, TooManyItemsException, JeppettoException;
 
 
     /**
@@ -52,8 +53,11 @@ public interface QueryModelDAO<T, ID> extends GenericDAO<T, ID> {
      *                        results
      *
      * @return Iterable of T
+     *
+     * @throws JeppettoException if any underlying failure occurs
      */
-    Iterable<T> findUsingQueryModel(QueryModel queryModel);
+    Iterable<T> findUsingQueryModel(QueryModel queryModel)
+            throws JeppettoException;
 
 
     /**
@@ -64,8 +68,11 @@ public interface QueryModelDAO<T, ID> extends GenericDAO<T, ID> {
      *
      * @return result of the projection - exact type depends on the projection
      *         specified
+     *
+     * @throws JeppettoException if any underlying failure occurs
      */
-    Object projectUsingQueryModel(QueryModel queryModel);
+    Object projectUsingQueryModel(QueryModel queryModel)
+            throws JeppettoException;
 
 
     /**

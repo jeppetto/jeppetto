@@ -18,6 +18,7 @@ package org.iternine.jeppetto.dao.mongodb;
 
 
 import org.iternine.jeppetto.dao.NoSuchItemException;
+import org.iternine.jeppetto.dao.TooManyItemsException;
 
 import com.mongodb.DBCollection;
 import com.mongodb.DBCursor;
@@ -83,7 +84,7 @@ public final class QueryLoggingCommand extends MongoDBCommand {
     
     @Override
     public Object singleResult(DBCollection dbCollection)
-            throws NoSuchItemException {
+            throws NoSuchItemException, TooManyItemsException {
         logger.debug("Executing {} for single {}", delegate, dbCollection.getName());
 
         return delegate.singleResult(dbCollection);

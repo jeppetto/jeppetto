@@ -20,13 +20,16 @@ package org.iternine.jeppetto.dao.jdbc;
 import org.iternine.jeppetto.dao.AccessControlContextProvider;
 import org.iternine.jeppetto.dao.Condition;
 import org.iternine.jeppetto.dao.ConditionType;
+import org.iternine.jeppetto.dao.JeppettoException;
 import org.iternine.jeppetto.dao.NoSuchItemException;
+import org.iternine.jeppetto.dao.OptimisticLockException;
 import org.iternine.jeppetto.dao.Projection;
 import org.iternine.jeppetto.dao.ProjectionType;
 import org.iternine.jeppetto.dao.QueryModel;
 import org.iternine.jeppetto.dao.QueryModelDAO;
 import org.iternine.jeppetto.dao.Sort;
 import org.iternine.jeppetto.dao.SortDirection;
+import org.iternine.jeppetto.dao.TooManyItemsException;
 import org.iternine.jeppetto.dao.id.IdGenerator;
 import org.iternine.jeppetto.dao.jdbc.enhance.EnhancerHelper;
 import org.iternine.jeppetto.dao.jdbc.enhance.JDBCPersistable;
@@ -103,7 +106,7 @@ public class JDBCQueryModelDAO<T, ID>
 
     @Override
     public T findById(ID id)
-            throws NoSuchItemException {
+            throws NoSuchItemException, JeppettoException {
         QueryModel queryModel = new QueryModel();
 
         queryModel.addCondition(buildCondition("id", ConditionType.Equal, Collections.singletonList(id).iterator()));
@@ -113,13 +116,15 @@ public class JDBCQueryModelDAO<T, ID>
 
 
     @Override
-    public Iterable<T> findAll() {
+    public Iterable<T> findAll()
+            throws JeppettoException {
         return findUsingQueryModel(new QueryModel());
     }
 
 
     @Override
-    public void save(T entity) {
+    public void save(T entity)
+            throws OptimisticLockException, JeppettoException {
         Connection connection = null;
 
         try {
@@ -127,7 +132,7 @@ public class JDBCQueryModelDAO<T, ID>
 
             ((JDBCPersistable) enhancer.enhance(entity)).save(connection, idGenerator);
         } catch (SQLException e) {
-            throw new RuntimeException(e);
+            throw new JeppettoException(e);
         } finally {
             if (connection != null) { try { connection.close(); } catch (SQLException ignore) { } }
         }
@@ -135,7 +140,8 @@ public class JDBCQueryModelDAO<T, ID>
 
 
     @Override
-    public void delete(T entity) {
+    public void delete(T entity)
+            throws JeppettoException {
         Connection connection = null;
 
         try {
@@ -144,7 +150,7 @@ public class JDBCQueryModelDAO<T, ID>
             // TODO: support cascading deletes
             ((JDBCPersistable) enhancer.enhance(entity)).delete(connection);
         } catch (SQLException e) {
-            throw new RuntimeException(e);
+            throw new JeppettoException(e);
         } finally {
             if (connection != null) { try { connection.close(); } catch (SQLException ignore) { } }
         }
@@ -152,14 +158,15 @@ public class JDBCQueryModelDAO<T, ID>
 
 
     @Override
-    public void deleteById(ID id) {
+    public void deleteById(ID id)
+            throws JeppettoException {
         // Create a lightweight entity instance to use for delete()
         T entity = enhancer.newInstance();
 
         try {
             entity.getClass().getMethod("setId").invoke(entity, id);
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new JeppettoException(e);
         }
 
         delete(entity);
@@ -167,7 +174,8 @@ public class JDBCQueryModelDAO<T, ID>
 
 
     @Override
-    public void flush() {
+    public void flush()
+            throws JeppettoException {
     }
 
 
@@ -177,7 +185,7 @@ public class JDBCQueryModelDAO<T, ID>
 
     @Override
     public T findUniqueUsingQueryModel(QueryModel queryModel)
-            throws NoSuchItemException {
+            throws NoSuchItemException, TooManyItemsException, JeppettoException {
         Connection connection = null;
         PreparedStatement preparedStatement = null;
         ResultSet resultSet = null;
@@ -196,13 +204,12 @@ public class JDBCQueryModelDAO<T, ID>
             ((JDBCPersistable) t).populateObject(resultSet);
 
             if (resultSet.next()) {
-                throw new RuntimeException("More than one " + entityClass.getSimpleName()
-                                           + " matches query: " + buildSelectString(queryModel));
+                throw new TooManyItemsException(entityClass.getSimpleName(), buildSelectString(queryModel));
             }
 
             return t;
         } catch (SQLException e) {
-            throw new RuntimeException(e);
+            throw new JeppettoException(e);
         } finally {
             if (resultSet != null) { try { resultSet.close(); } catch (SQLException ignore) { } }
             if (preparedStatement != null) { try { preparedStatement.close(); } catch (SQLException ignore) { } }
@@ -212,7 +219,8 @@ public class JDBCQueryModelDAO<T, ID>
 
 
     @Override
-    public Iterable<T> findUsingQueryModel(QueryModel queryModel) {
+    public Iterable<T> findUsingQueryModel(QueryModel queryModel)
+            throws JeppettoException {
         Connection connection = null;
         PreparedStatement preparedStatement = null;
         ResultSet resultSet = null;
@@ -234,7 +242,7 @@ public class JDBCQueryModelDAO<T, ID>
 
             return result;
         } catch (SQLException e) {
-            throw new RuntimeException(e);
+            throw new JeppettoException(e);
         } finally {
             if (resultSet != null) { try { resultSet.close(); } catch (SQLException ignore) { } }
             if (preparedStatement != null) { try { preparedStatement.close(); } catch (SQLException ignore) { } }
@@ -244,8 +252,9 @@ public class JDBCQueryModelDAO<T, ID>
 
 
     @Override
-    public Object projectUsingQueryModel(QueryModel queryModel) {
-        return null;  //To change body of implemented methods use File | Settings | File Templates.
+    public Object projectUsingQueryModel(QueryModel queryModel)
+            throws JeppettoException {
+        return null;  // Todo: implement
     }
 
 
@@ -259,7 +268,7 @@ public class JDBCQueryModelDAO<T, ID>
 
     @Override
     public Projection buildProjection(String projectionField, ProjectionType projectionType, Iterator argsIterator) {
-        return null;  //To change body of implemented methods use File | Settings | File Templates.
+        return null;  // Todo: implement
     }
 
 

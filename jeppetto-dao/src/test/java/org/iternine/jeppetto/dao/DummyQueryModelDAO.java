@@ -52,7 +52,7 @@ public class DummyQueryModelDAO<T, ID>
         try {
             return entityClass.newInstance();
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new JeppettoException(e);
         }
     }
 
@@ -65,7 +65,7 @@ public class DummyQueryModelDAO<T, ID>
             result.add(entityClass.newInstance());
             result.add(entityClass.newInstance());
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new JeppettoException(e);
         }
 
         return result;
@@ -108,7 +108,8 @@ public class DummyQueryModelDAO<T, ID>
 
 
     @Override
-    public void save(T object) {
+    public void save(T object)
+            throws OptimisticLockException {
     }
 
 

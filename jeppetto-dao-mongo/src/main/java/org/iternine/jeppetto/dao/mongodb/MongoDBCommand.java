@@ -18,6 +18,7 @@ package org.iternine.jeppetto.dao.mongodb;
 
 
 import org.iternine.jeppetto.dao.NoSuchItemException;
+import org.iternine.jeppetto.dao.TooManyItemsException;
 
 import com.mongodb.DBCollection;
 import com.mongodb.DBCursor;
@@ -39,7 +40,7 @@ public abstract class MongoDBCommand {
 
 
     public Object singleResult(DBCollection dbCollection)
-            throws NoSuchItemException {
+            throws NoSuchItemException, TooManyItemsException {
         throw new IllegalStateException(getClass().getSimpleName() + " does not provide a single result.");
     }
 

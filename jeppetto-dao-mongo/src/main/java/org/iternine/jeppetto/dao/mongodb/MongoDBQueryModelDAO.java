@@ -18,16 +18,20 @@ package org.iternine.jeppetto.dao.mongodb;
 
 
 import org.iternine.jeppetto.dao.AccessControlContextProvider;
+import org.iternine.jeppetto.dao.AccessControlException;
 import org.iternine.jeppetto.dao.AccessControllable;
 import org.iternine.jeppetto.dao.Condition;
 import org.iternine.jeppetto.dao.ConditionType;
+import org.iternine.jeppetto.dao.JeppettoException;
 import org.iternine.jeppetto.dao.NoSuchItemException;
+import org.iternine.jeppetto.dao.OptimisticLockException;
 import org.iternine.jeppetto.dao.Projection;
 import org.iternine.jeppetto.dao.ProjectionType;
 import org.iternine.jeppetto.dao.QueryModel;
 import org.iternine.jeppetto.dao.QueryModelDAO;
 import org.iternine.jeppetto.dao.Sort;
 import org.iternine.jeppetto.dao.SortDirection;
+import org.iternine.jeppetto.dao.TooManyItemsException;
 import org.iternine.jeppetto.dao.annotation.AccessControl;
 import org.iternine.jeppetto.dao.annotation.AccessControlRule;
 import org.iternine.jeppetto.dao.annotation.AccessControlType;
@@ -45,6 +49,7 @@ import com.mongodb.DBCursor;
 import com.mongodb.DBDecoder;
 import com.mongodb.DBDecoderFactory;
 import com.mongodb.DBObject;
+import com.mongodb.MongoException;
 import com.mongodb.WriteConcern;
 import org.bson.types.ObjectId;
 import org.slf4j.Logger;
@@ -201,7 +206,7 @@ public class MongoDBQueryModelDAO<T, ID>
 
     @Override
     public T findById(ID id)
-            throws NoSuchItemException {
+            throws NoSuchItemException, JeppettoException {
         try {
             QueryModel queryModel = new QueryModel();
             queryModel.addCondition(buildIdCondition(id));
@@ -218,7 +223,8 @@ public class MongoDBQueryModelDAO<T, ID>
 
 
     @Override
-    public final Iterable<T> findAll() {
+    public final Iterable<T> findAll()
+            throws JeppettoException {
         QueryModel queryModel = new QueryModel();
 
         if (accessControlContextProvider != null) {
@@ -230,7 +236,8 @@ public class MongoDBQueryModelDAO<T, ID>
 
 
     @Override
-    public final void save(T entity) {
+    public final void save(T entity)
+            throws OptimisticLockException, JeppettoException {
         T enhancedEntity = enhancer.enhance(entity);
         DirtyableDBObject dbo = (DirtyableDBObject) enhancedEntity;
 
@@ -260,7 +267,8 @@ public class MongoDBQueryModelDAO<T, ID>
 
 
     @Override
-    public final void delete(T entity) {
+    public final void delete(T entity)
+            throws JeppettoException {
         // TODO: Probably don't want to enhance this object as we may need a previously retrieved object so
         // we can construct an appropriate identifying query w/ __olv
         DBObject dbo = (DBObject) enhancer.enhance(entity);
@@ -276,13 +284,15 @@ public class MongoDBQueryModelDAO<T, ID>
 
 
     @Override
-    public final void deleteById(ID id) {
+    public final void deleteById(ID id)
+            throws JeppettoException {
         deleteByIdentifyingQuery(buildIdentifyingQuery(id));
     }
 
 
     @Override
-    public final void flush() {
+    public final void flush()
+            throws JeppettoException {
         if (MongoDBSession.isActive()) {
             MongoDBSession.flush(this);
         }
@@ -294,7 +304,7 @@ public class MongoDBQueryModelDAO<T, ID>
     //-------------------------------------------------------------
 
     public T findUniqueUsingQueryModel(QueryModel queryModel)
-            throws NoSuchItemException {
+            throws NoSuchItemException, TooManyItemsException, JeppettoException {
         // Need to revisit te way caching works as it will miss some items...focus only on the identifyingQuery
         // instead of secondary cache keys...
         MongoDBCommand command = buildCommand(queryModel);
@@ -325,7 +335,8 @@ public class MongoDBQueryModelDAO<T, ID>
     }
 
 
-    public Iterable<T> findUsingQueryModel(QueryModel queryModel) {
+    public Iterable<T> findUsingQueryModel(QueryModel queryModel)
+            throws JeppettoException {
         MongoDBCommand command = buildCommand(queryModel);
         DBCursor dbCursor = command.cursor(dbCollection);
 
@@ -381,7 +392,8 @@ public class MongoDBQueryModelDAO<T, ID>
     }
 
 
-    public Object projectUsingQueryModel(QueryModel queryModel) {
+    public Object projectUsingQueryModel(QueryModel queryModel)
+            throws JeppettoException {
         try {
             return buildCommand(queryModel).singleResult(dbCollection);
         } catch (NoSuchItemException e) {
@@ -416,14 +428,10 @@ public class MongoDBQueryModelDAO<T, ID>
     //-------------------------------------------------------------
 
     @Override
-    public void grantAccess(ID id, String accessId) {
-        DBObject dbObject;
-
-        try {
-            dbObject = (DBObject) findById(id);
-        } catch (NoSuchItemException e) {
-            throw new RuntimeException(e);
-        }
+    public void grantAccess(ID id, String accessId)
+            throws NoSuchItemException, AccessControlException {
+        // TODO: determine if access control limitation
+        DBObject dbObject = (DBObject) findById(id);
 
         @SuppressWarnings( { "unchecked" })
         List<String> accessControlList = (List<String>) dbObject.get(ACCESS_CONTROL_LIST_FIELD);
@@ -443,14 +451,10 @@ public class MongoDBQueryModelDAO<T, ID>
 
 
     @Override
-    public void revokeAccess(ID id, String accessId) {
-        DBObject dbObject;
-
-        try {
-            dbObject = (DBObject) findById(id);
-        } catch (NoSuchItemException e) {
-            throw new RuntimeException(e);
-        }
+    public void revokeAccess(ID id, String accessId)
+            throws NoSuchItemException, AccessControlException {
+        // TODO: determine if access control limitation
+        DBObject dbObject = (DBObject) findById(id);
 
         @SuppressWarnings( { "unchecked" })
         List<String> accessControlList = (List<String>) dbObject.get(ACCESS_CONTROL_LIST_FIELD);
@@ -470,14 +474,10 @@ public class MongoDBQueryModelDAO<T, ID>
 
 
     @Override
-    public List<String> getAccessIds(ID id) {
-        DBObject dbObject;
-
-        try {
-            dbObject = (DBObject) findById(id);
-        } catch (NoSuchItemException e) {
-            throw new RuntimeException(e);
-        }
+    public List<String> getAccessIds(ID id)
+            throws NoSuchItemException, AccessControlException {
+        // TODO: determine if access control limitation
+        DBObject dbObject = (DBObject) findById(id);
 
         //noinspection unchecked
         return (List<String>) dbObject.get(ACCESS_CONTROL_LIST_FIELD);
@@ -561,15 +561,12 @@ public class MongoDBQueryModelDAO<T, ID>
     protected final void trueSave(final DBObject identifyingQuery, final DirtyableDBObject dbo) {
         if (optimisticLockEnabled) {
             Integer optimisticLockVersion = (Integer) dbo.get(OPTIMISTIC_LOCK_VERSION_FIELD);
+            int optimisticLockVersionValue = optimisticLockVersion == null ? 0 : optimisticLockVersion;
 
-            if (optimisticLockVersion == null) {
-                dbo.put(OPTIMISTIC_LOCK_VERSION_FIELD, 1);
-            } else {
-                // TODO: should this modification of identifyingQuery been done earlier (in save())?
-                identifyingQuery.put(OPTIMISTIC_LOCK_VERSION_FIELD, optimisticLockVersion);
+            // TODO: should this modification of identifyingQuery been done earlier (in save())?
+            identifyingQuery.put(OPTIMISTIC_LOCK_VERSION_FIELD, optimisticLockVersionValue);
 
-                dbo.put(OPTIMISTIC_LOCK_VERSION_FIELD, optimisticLockVersion + 1);
-            }
+            dbo.put(OPTIMISTIC_LOCK_VERSION_FIELD, optimisticLockVersionValue + 1);
         }
 
         for (String shardKey : shardKeys) {
@@ -585,7 +582,30 @@ public class MongoDBQueryModelDAO<T, ID>
                                              optimalDbo.toMap() } );
         }
 
-        dbCollection.update(identifyingQuery, optimalDbo, true, false, getWriteConcern());
+        try {
+            dbCollection.update(identifyingQuery, optimalDbo, true, false, getWriteConcern());
+        } catch (MongoException.DuplicateKey e) {
+            if (optimisticLockEnabled && e.getMessage().contains("$_id_")) {
+                Integer localOptimisticLockVersion = (Integer) dbo.get(OPTIMISTIC_LOCK_VERSION_FIELD) - 1;
+
+                if (localOptimisticLockVersion == 0) {
+                    throw new JeppettoException(e); // TODO: id reuse...
+                }
+
+                identifyingQuery.removeField(OPTIMISTIC_LOCK_VERSION_FIELD);
+                DBObject result = dbCollection.findOne(identifyingQuery);
+                Integer remoteOptimisticLockVersion = (Integer) result.get(OPTIMISTIC_LOCK_VERSION_FIELD);
+
+                if (remoteOptimisticLockVersion != null && remoteOptimisticLockVersion > localOptimisticLockVersion) {
+                    throw new OptimisticLockException("Local version = " + localOptimisticLockVersion
+                                                      + ", remote version = " + remoteOptimisticLockVersion);
+                }
+            }
+
+            throw new JeppettoException(e);
+        } catch (MongoException e) {
+            throw new JeppettoException(e);
+        }
 
         dbo.markPersisted();
     }

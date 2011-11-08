@@ -434,6 +434,10 @@ public class DAOBuilder {
                           + "    return result;");
             } else if ("java.lang.Iterable".equals(returnTypeName)) {
                 sb.append(  "\n    return findUsingQueryModel(queryModel);");
+            } else if ("int".equals(returnTypeName)) {
+                sb.append(  "\n    return ((Number) projectUsingQueryModel(queryModel)).intValue();");
+            } else if ("long".equals(returnTypeName)) {
+                sb.append(  "\n    return ((Number) projectUsingQueryModel(queryModel)).longValue();");
             } else {
                 sb.append(  "\n    return ($r) projectUsingQueryModel(queryModel);");
             }

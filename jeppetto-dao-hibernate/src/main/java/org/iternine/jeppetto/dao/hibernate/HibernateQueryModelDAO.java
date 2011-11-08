@@ -19,22 +19,27 @@ package org.iternine.jeppetto.dao.hibernate;
 
 import org.iternine.jeppetto.dao.AccessControlContext;
 import org.iternine.jeppetto.dao.AccessControlContextProvider;
+import org.iternine.jeppetto.dao.AccessControlException;
 import org.iternine.jeppetto.dao.AccessControllable;
 import org.iternine.jeppetto.dao.Condition;
 import org.iternine.jeppetto.dao.ConditionType;
+import org.iternine.jeppetto.dao.JeppettoException;
 import org.iternine.jeppetto.dao.NoSuchItemException;
+import org.iternine.jeppetto.dao.OptimisticLockException;
 import org.iternine.jeppetto.dao.Projection;
 import org.iternine.jeppetto.dao.ProjectionType;
 import org.iternine.jeppetto.dao.QueryModel;
 import org.iternine.jeppetto.dao.QueryModelDAO;
 import org.iternine.jeppetto.dao.Sort;
 import org.iternine.jeppetto.dao.SortDirection;
+import org.iternine.jeppetto.dao.TooManyItemsException;
 import org.iternine.jeppetto.dao.annotation.AccessControl;
 import org.iternine.jeppetto.dao.annotation.AccessControlRule;
 import org.iternine.jeppetto.dao.annotation.AccessControlType;
 
 import org.hibernate.Criteria;
 import org.hibernate.HibernateException;
+import org.hibernate.NonUniqueObjectException;
 import org.hibernate.Query;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
@@ -110,7 +115,7 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
 
     @Override
     public T findById(ID id)
-            throws NoSuchItemException {
+            throws NoSuchItemException, JeppettoException {
         QueryModel queryModel = new QueryModel();
         queryModel.addCondition(buildIdCondition(id));
         
@@ -123,7 +128,8 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
 
 
     @Override
-    public Iterable<T> findAll() {
+    public Iterable<T> findAll()
+            throws JeppettoException {
         QueryModel queryModel = new QueryModel();
 
         if (accessControlContextProvider != null) {
@@ -135,39 +141,45 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
 
 
     @Override
-    public void save(T entity) {
+    public void save(T entity)
+            throws OptimisticLockException, JeppettoException {
         try {
             getCurrentSession().saveOrUpdate(entity);
+        } catch (org.hibernate.OptimisticLockException e) {
+            throw new OptimisticLockException(e);
         } catch (HibernateException e) {
-            throw new RuntimeException(e);
+            throw new JeppettoException(e);
         }
     }
 
 
     @Override
-    public void delete(T entity) {
+    public void delete(T entity)
+            throws JeppettoException {
         try {
             getCurrentSession().delete(entity);
         } catch (HibernateException e) {
-            throw new RuntimeException(e);
+            throw new JeppettoException(e);
         }
     }
 
 
     @Override
-    public void deleteById(ID id) {
+    public void deleteById(ID id)
+            throws JeppettoException {
         try {
             getCurrentSession().delete(findById(id));
         } catch (NoSuchItemException ignore) {
             // If it doesn't exist, no need to delete.
         } catch (HibernateException e) {
-            throw new RuntimeException(e);
+            throw new JeppettoException(e);
         }
     }
 
 
     @Override
-    public void flush() {
+    public void flush()
+            throws JeppettoException {
         getCurrentSession().flush();
     }
 
@@ -178,15 +190,21 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
 
     @Override
     public T findUniqueUsingQueryModel(QueryModel queryModel)
-            throws NoSuchItemException {
+            throws NoSuchItemException, TooManyItemsException, JeppettoException {
         T result;
 
-        if (accessControlContextProvider == null || roleAllowsAccess(queryModel.getAccessControlContext().getRole())) {
-            // noinspection unchecked
-            result = (T) buildCriteria(queryModel).uniqueResult();
-        } else {
-            // noinspection unchecked
-            result = (T) createEntryBasedQuery(queryModel).uniqueResult();
+        try {
+            if (accessControlContextProvider == null || roleAllowsAccess(queryModel.getAccessControlContext().getRole())) {
+                // noinspection unchecked
+                result = (T) buildCriteria(queryModel).uniqueResult();
+            } else {
+                // noinspection unchecked
+                result = (T) createEntryBasedQuery(queryModel).uniqueResult();
+            }
+        } catch (NonUniqueObjectException e) {
+            throw new TooManyItemsException(e.getMessage());
+        } catch (HibernateException e) {
+            throw new JeppettoException(e);
         }
 
         if (result == null) {
@@ -198,37 +216,47 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
 
 
     @Override
-    public Iterable<T> findUsingQueryModel(QueryModel queryModel) {
-        if (accessControlContextProvider == null || roleAllowsAccess(queryModel.getAccessControlContext().getRole())) {
-            Criteria criteria = buildCriteria(queryModel);
+    public Iterable<T> findUsingQueryModel(QueryModel queryModel)
+            throws JeppettoException {
+        try {
+            if (accessControlContextProvider == null || roleAllowsAccess(queryModel.getAccessControlContext().getRole())) {
+                Criteria criteria = buildCriteria(queryModel);
 
-            if (queryModel.getSorts() != null) {
-                for (Sort sort : queryModel.getSorts()) {
-                    criteria.addOrder(sort.getSortDirection() == SortDirection.Ascending ? Order.asc(sort.getField())
-                                                                                         : Order.desc(sort.getField()));
+                if (queryModel.getSorts() != null) {
+                    for (Sort sort : queryModel.getSorts()) {
+                        criteria.addOrder(sort.getSortDirection() == SortDirection.Ascending ? Order.asc(sort.getField())
+                                                                                             : Order.desc(sort.getField()));
+                    }
                 }
-            }
 
-            if (queryModel.getMaxResults() > 0) {
-                criteria.setMaxResults(queryModel.getMaxResults());
-            }
+                if (queryModel.getMaxResults() > 0) {
+                    criteria.setMaxResults(queryModel.getMaxResults());
+                }
 
-            if (queryModel.getFirstResult() > 0) {
-                criteria.setFirstResult(queryModel.getFirstResult());
-            }
+                if (queryModel.getFirstResult() > 0) {
+                    criteria.setFirstResult(queryModel.getFirstResult());
+                }
 
-            //noinspection unchecked
-            return criteria.list();
-        } else {
-            //noinspection unchecked
-            return createEntryBasedQuery(queryModel).list();
+                //noinspection unchecked
+                return criteria.list();
+            } else {
+                //noinspection unchecked
+                return createEntryBasedQuery(queryModel).list();
+            }
+        } catch (HibernateException e) {
+            throw new JeppettoException(e);
         }
     }
 
 
     @Override
-    public Object projectUsingQueryModel(QueryModel queryModel) {
-        return buildCriteria(queryModel).uniqueResult();
+    public Object projectUsingQueryModel(QueryModel queryModel)
+            throws JeppettoException {
+        try {
+            return buildCriteria(queryModel).uniqueResult();
+        } catch (HibernateException e) {
+            throw new JeppettoException(e);
+        }
     }
 
 
@@ -340,26 +368,32 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
     //-------------------------------------------------------------
 
     @Override
-    public AccessControlContextProvider getAccessControlContextProvider() {
-        return accessControlContextProvider;
-    }
-
-
-    @Override
-    public void grantAccess(ID id, String accessId) {
+    public void grantAccess(ID id, String accessId)
+            throws NoSuchItemException, AccessControlException {
+        // TODO: determine if object exists and if caller has access
         accessControlEntryHelper.createEntry(persistentClass, id, accessId);
     }
 
 
     @Override
-    public void revokeAccess(ID id, String accessId) {
+    public void revokeAccess(ID id, String accessId)
+            throws NoSuchItemException, AccessControlException {
+        // TODO: determine if object exists and if caller has access
         accessControlEntryHelper.deleteEntry(persistentClass, id, accessId);
     }
 
 
     @Override
-    public List<String> getAccessIds(ID id) {
+    public List<String> getAccessIds(ID id)
+            throws NoSuchItemException, AccessControlException {
+        // TODO: determine if object exists and if caller has access
         return accessControlEntryHelper.getEntries(persistentClass, id);
+    }
+
+
+    @Override
+    public AccessControlContextProvider getAccessControlContextProvider() {
+        return accessControlContextProvider;
     }
 
 
