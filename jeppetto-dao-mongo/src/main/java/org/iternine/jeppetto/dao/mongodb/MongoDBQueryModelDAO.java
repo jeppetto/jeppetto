@@ -594,6 +594,12 @@ public class MongoDBQueryModelDAO<T, ID>
 
                 identifyingQuery.removeField(OPTIMISTIC_LOCK_VERSION_FIELD);
                 DBObject result = dbCollection.findOne(identifyingQuery);
+
+                if (result == null) {
+                    throw new OptimisticLockException("Probably an OptimisticLockException, but conflicting object "
+                                                      + "identified by " + identifyingQuery + " no longer exists.");
+                }
+
                 Integer remoteOptimisticLockVersion = (Integer) result.get(OPTIMISTIC_LOCK_VERSION_FIELD);
 
                 if (remoteOptimisticLockVersion != null && remoteOptimisticLockVersion > localOptimisticLockVersion) {
