@@ -17,27 +17,29 @@
 package org.iternine.jeppetto.dao;
 
 
-public class AccessControlException extends JeppettoException {
+public class TooManyItemsException extends JeppettoException {
 
     //-------------------------------------------------------------
     // Constructors
     //-------------------------------------------------------------
 
-    public AccessControlException() {
+    public TooManyItemsException() {
     }
 
 
-    public AccessControlException(String s) {
-        super(s);
+    public TooManyItemsException(String message) {
+        super(message);
     }
 
 
-    public AccessControlException(Throwable throwable) {
-        super(throwable);
-    }
-
-
-    public AccessControlException(String s, Throwable throwable) {
-        super(s, throwable);
+    /**
+     * Return an exception which says that more than one item of type itemType
+     * with identifier 'identifier' was found.
+     *
+     * @param itemType A string describing the type of item
+     * @param identifier A string identifier for the item
+     */
+    public TooManyItemsException(String itemType, String identifier) {
+        super("More than one item of type '" + itemType + "' identified by '" + identifier + "' was found.");
     }
 }

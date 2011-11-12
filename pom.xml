@@ -5,7 +5,7 @@
     <name>Jeppetto</name>
     <groupId>org.iternine</groupId>
     <artifactId>jeppetto-parent</artifactId>
-    <version>0.5-SNAPSHOT</version>
+    <version>0.6-SNAPSHOT</version>
     <packaging>pom</packaging>
     <url>http://iternine.org/jeppetto.html</url>
 
@@ -90,9 +90,9 @@
     </licenses>
 
     <scm>
-        <url>https://github.com/jeppetto/jeppetto</url>
-        <connection>scm:git:git://github.com/jeppetto/jeppetto.git</connection>
-        <developerConnection>scm:git:git://github.com/jeppetto/jeppetto.git</developerConnection>
+        <url>scm:git:git@github.com:jeppetto/jeppetto.git</url>
+        <connection>scm:git:git@github.com:jeppetto/jeppetto.git</connection>
+        <developerConnection>scm:git:git@github.com:jeppetto/jeppetto.git</developerConnection>
     </scm>
 
     <developers>

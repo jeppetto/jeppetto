@@ -17,12 +17,14 @@
 package org.iternine.jeppetto.dao.mongodb;
 
 
+import org.iternine.jeppetto.dao.JeppettoException;
+import org.iternine.jeppetto.dao.OptimisticLockException;
+import org.iternine.jeppetto.test.SimpleObject;
 import org.iternine.jeppetto.test.SimpleObjectDAO;
 import org.iternine.jeppetto.test.SimpleObjectDAOTest;
 import org.iternine.jeppetto.testsupport.MongoDatabaseProvider;
 import org.iternine.jeppetto.testsupport.TestContext;
 
-import com.mongodb.MongoException;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -66,11 +68,42 @@ public class MongoSimpleObjectDAOTest extends SimpleObjectDAOTest {
     // Methods - Test Cases
     //-------------------------------------------------------------
 
-    @Test(expected = MongoException.DuplicateKey.class)
+    @Test(expected = JeppettoException.class)
     public void createDuplicateOnUniquenessConstraintCausesException() {
 
         super.createData();
         super.createData();
+    }
+
+
+    @Test(expected = JeppettoException.class)
+    public void idReuseShouldFail() {
+        SimpleObject simpleObject1 = new SimpleObject();
+        simpleObject1.setId("a");
+        simpleObject1.setIntValue(-1);
+        getSimpleObjectDAO().save(simpleObject1);
+
+        SimpleObject simpleObject2 = new SimpleObject();
+        simpleObject2.setId("a");
+        simpleObject2.setIntValue(3);
+        getSimpleObjectDAO().save(simpleObject2);
+    }
+
+
+    @Test(expected = OptimisticLockException.class)
+    public void optimisticLockException() {
+        SimpleObject simpleObject = new SimpleObject();
+        simpleObject.setId("a");
+        getSimpleObjectDAO().save(simpleObject);
+
+        SimpleObject result1 = getSimpleObjectDAO().findById("a");
+        SimpleObject result2 = getSimpleObjectDAO().findById("a");
+
+        result1.setIntValue(1);
+        result2.setIntValue(2);
+
+        getSimpleObjectDAO().save(result1);
+        getSimpleObjectDAO().save(result2);
     }
 
 

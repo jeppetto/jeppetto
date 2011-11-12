@@ -17,27 +17,27 @@
 package org.iternine.jeppetto.dao;
 
 
-public class AccessControlException extends JeppettoException {
+public class OptimisticLockException extends JeppettoException {
 
     //-------------------------------------------------------------
     // Constructors
     //-------------------------------------------------------------
 
-    public AccessControlException() {
+    public OptimisticLockException() {
     }
 
 
-    public AccessControlException(String s) {
+    public OptimisticLockException(String s) {
         super(s);
     }
 
 
-    public AccessControlException(Throwable throwable) {
+    public OptimisticLockException(Throwable throwable) {
         super(throwable);
     }
 
 
-    public AccessControlException(String s, Throwable throwable) {
+    public OptimisticLockException(String s, Throwable throwable) {
         super(s, throwable);
     }
 }

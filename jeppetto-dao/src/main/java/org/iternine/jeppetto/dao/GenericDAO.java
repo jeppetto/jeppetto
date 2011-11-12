@@ -35,17 +35,21 @@ public interface GenericDAO<T, ID> {
      * @return Object with the specified id
      *
      * @throws NoSuchItemException if the object identified by the id is not found
+     * @throws JeppettoException if any other failure occurs
      */
     T findById(ID id)
-            throws NoSuchItemException;
+            throws NoSuchItemException, JeppettoException;
 
 
     /**
      * Find all objects of type T.
      *
      * @return Iterable of T
+     *
+     * @throws JeppettoException if any underlying failure occurs
      */
-    Iterable<T> findAll();
+    Iterable<T> findAll()
+            throws JeppettoException;
 
 
     /**
@@ -53,28 +57,42 @@ public interface GenericDAO<T, ID> {
      * been modified.
      *
      * @param object to save.
+     *
+     * @throws OptimisticLockException if optimistic locking is enabled and a save is attempted on an already
+     *                                 modified object.
+     * @throws JeppettoException if any other failure occurs
      */
-    void save(T object);
+    void save(T object)
+            throws OptimisticLockException, JeppettoException;
 
 
     /**
      * Delete the specified object from the persistent store.
      *
      * @param object to delete.
+     *
+     * @throws JeppettoException if any underlying failure occurs
      */
-    void delete(T object);
+    void delete(T object)
+            throws JeppettoException;
 
 
     /**
      * Delete an object from the persistent store based on the id.
      *
      * @param id of the object to delete.
+     *
+     * @throws JeppettoException if any underlying failure occurs
      */
-    void deleteById(ID id);
+    void deleteById(ID id)
+            throws JeppettoException;
 
 
     /**
      * If the implementation supports lazy writes, manually flush changes to the external database
+     *
+     * @throws JeppettoException if any underlying failure occurs
      */
-    void flush();
+    void flush()
+            throws JeppettoException;
 }

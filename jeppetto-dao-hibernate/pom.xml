@@ -3,13 +3,13 @@
 
     <name>Jeppetto DAO for Hibernate</name>
     <artifactId>jeppetto-dao-hibernate</artifactId>
-    <version>0.5-SNAPSHOT</version>
+    <version>0.6-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <parent>
         <groupId>org.iternine</groupId>
         <artifactId>jeppetto-parent</artifactId>
-        <version>0.5-SNAPSHOT</version>
+        <version>0.6-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -17,19 +17,19 @@
         <dependency>
             <groupId>org.iternine</groupId>
             <artifactId>jeppetto-dao</artifactId>
-            <version>0.5-SNAPSHOT</version>
+            <version>0.6-SNAPSHOT</version>
         </dependency>
 
         <dependency>
             <groupId>org.hibernate</groupId>
             <artifactId>hibernate-core</artifactId>
-            <version>3.3.1.GA</version>
+            <version>3.6.8.Final</version>
         </dependency>
 
         <dependency>
             <groupId>org.hibernate</groupId>
             <artifactId>hibernate-annotations</artifactId>
-            <version>3.4.0.GA</version>
+            <version>3.5.6-Final</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.hibernate</groupId>
@@ -46,7 +46,7 @@
         <dependency>
             <groupId>org.hibernate</groupId>
             <artifactId>hibernate-ehcache</artifactId>
-            <version>3.3.1.GA</version>
+            <version>3.6.8.Final</version>
         </dependency>
 
         <dependency>
@@ -99,14 +99,14 @@
         <dependency>
             <groupId>org.iternine</groupId>
             <artifactId>jeppetto-test-functional</artifactId>
-            <version>0.5-SNAPSHOT</version>
+            <version>0.6-SNAPSHOT</version>
             <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>org.iternine</groupId>
             <artifactId>jeppetto-test-support</artifactId>
-            <version>0.5-SNAPSHOT</version>
+            <version>0.6-SNAPSHOT</version>
             <scope>test</scope>
         </dependency>
 

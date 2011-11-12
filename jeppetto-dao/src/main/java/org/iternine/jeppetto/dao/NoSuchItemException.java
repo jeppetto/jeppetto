@@ -17,7 +17,7 @@
 package org.iternine.jeppetto.dao;
 
 
-public class NoSuchItemException extends Exception {
+public class NoSuchItemException extends JeppettoException {
 
     //-------------------------------------------------------------
     // Constructors

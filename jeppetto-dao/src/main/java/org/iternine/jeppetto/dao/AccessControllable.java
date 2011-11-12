@@ -26,13 +26,16 @@ import java.util.List;
  */
 public interface AccessControllable<ID> {
 
-    void grantAccess(ID id, String accessId);
+    void grantAccess(ID id, String accessId)
+            throws NoSuchItemException, AccessControlException;
 
 
-    void revokeAccess(ID id, String accessId);
+    void revokeAccess(ID id, String accessId)
+            throws NoSuchItemException, AccessControlException;
 
 
-    List<String> getAccessIds(ID id);
+    List<String> getAccessIds(ID id)
+            throws NoSuchItemException, AccessControlException;
 
 
     AccessControlContextProvider getAccessControlContextProvider();

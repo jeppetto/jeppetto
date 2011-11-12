@@ -18,6 +18,7 @@ package org.iternine.jeppetto.dao.mongodb;
 
 
 import org.iternine.jeppetto.dao.NoSuchItemException;
+import org.iternine.jeppetto.dao.TooManyItemsException;
 import org.iternine.jeppetto.dao.mongodb.enhance.DirtyableDBObject;
 
 import com.mongodb.BasicDBObject;
@@ -58,7 +59,7 @@ public class BasicDBObjectCommand extends MongoDBCommand {
     @SuppressWarnings({"unchecked"})
     @Override
     public Object singleResult(DBCollection dbCollection)
-            throws NoSuchItemException {
+            throws NoSuchItemException, TooManyItemsException {
         DBCursor cursor = cursor(dbCollection);
         cursor.limit(2);
 
@@ -69,7 +70,7 @@ public class BasicDBObjectCommand extends MongoDBCommand {
         Object result = cursor.next();
 
         if (cursor.hasNext()) {
-            throw new RuntimeException("More than one " + dbCollection.getName() + " matches query: " + query);
+            throw new TooManyItemsException(dbCollection.getName(), query.toString());
         }
 
         ((DirtyableDBObject) result).markPersisted();
