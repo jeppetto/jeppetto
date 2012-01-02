@@ -31,7 +31,7 @@ public class EnhancerHelper {
     // Variables - Private
     //-------------------------------------------------------------
 
-    private static Map<Class, Enhancer> dirtyableDBObjectEnhancers = new HashMap<Class, Enhancer>();
+    private static final Map<Class, Enhancer> dirtyableDBObjectEnhancers = new HashMap<Class, Enhancer>();
 
 
     //-------------------------------------------------------------
@@ -49,11 +49,19 @@ public class EnhancerHelper {
      */
     @SuppressWarnings( { "unchecked" })
     public static <T> Enhancer<T> getDirtyableDBObjectEnhancer(Class<T> baseClass) {
-        Enhancer<T> enhancer = (Enhancer<T>) dirtyableDBObjectEnhancers.get(baseClass);
+        if (dirtyableDBObjectEnhancers.containsKey(baseClass)) {
+            return (Enhancer<T>) dirtyableDBObjectEnhancers.get(baseClass);
+        }
 
-        if (enhancer == null) {
-            if (DirtyableDBObject.class.isAssignableFrom(baseClass)) {
+        synchronized (dirtyableDBObjectEnhancers) {
+            Enhancer<T> enhancer;
+
+            if (dirtyableDBObjectEnhancers.get(baseClass) != null) {
+                enhancer = (Enhancer<T>) dirtyableDBObjectEnhancers.get(baseClass);
+            } else if (DirtyableDBObject.class.isAssignableFrom(baseClass)) {
                 enhancer = new NoOpEnhancer<T>(baseClass);
+
+                dirtyableDBObjectEnhancers.put(baseClass, enhancer);
             } else {
                 enhancer = new VelocityEnhancer<T>(baseClass) {
                     //-------------------------------------------------------------
@@ -75,11 +83,11 @@ public class EnhancerHelper {
                         return "org/iternine/jeppetto/dao/mongodb/enhance/dirtyableDBObject.vm";
                     }
                 };
+
+                dirtyableDBObjectEnhancers.put(baseClass, enhancer);
             }
 
-            dirtyableDBObjectEnhancers.put(baseClass, enhancer);
+            return enhancer;
         }
-
-        return enhancer;
     }
 }

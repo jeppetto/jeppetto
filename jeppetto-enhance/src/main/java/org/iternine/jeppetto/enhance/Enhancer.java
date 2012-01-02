@@ -27,7 +27,7 @@ public abstract class Enhancer<T> {
     // Variables - Private
     //-------------------------------------------------------------
 
-    private Class<T> baseClass;
+    private final Class<T> baseClass;
     private Class<? extends T> enhancedClass;
 
     private static final Logger logger = LoggerFactory.getLogger(Enhancer.class);
@@ -76,7 +76,11 @@ public abstract class Enhancer<T> {
 
     public Class<? extends T> getEnhancedClass() {
         if (enhancedClass == null) {
-            enhancedClass = enhanceClass(baseClass);
+            synchronized (baseClass) {
+                if (enhancedClass == null) {
+                    enhancedClass = enhanceClass(baseClass);
+                }
+            }
         }
 
         return enhancedClass;

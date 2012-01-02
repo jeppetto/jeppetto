@@ -43,7 +43,7 @@ public class MongoDBCallback extends DefaultDBCallback {
     // Variables - Private
     //-------------------------------------------------------------
 
-    private static Map<String, Map<String, Class>> perCollectionClassCache = new HashMap<String, Map<String, Class>>();
+    private static Map<String, Class> classCache = new HashMap<String, Class>();
     private DBCollection dbCollection;
 
     private static Logger logger = LoggerFactory.getLogger(MongoDBCallback.class);
@@ -64,10 +64,6 @@ public class MongoDBCallback extends DefaultDBCallback {
 
         if (dbCollection != null && !dbCollection.getName().equals("$cmd")) {
             this.dbCollection = dbCollection;
-
-            if (!perCollectionClassCache.containsKey(dbCollection.getName())) {
-                perCollectionClassCache.put(dbCollection.getName(), new HashMap<String, Class>());
-            }
         }
     }
 
@@ -153,18 +149,16 @@ public class MongoDBCallback extends DefaultDBCallback {
 
 
     private Class getClassFromCache(String path) {
-        Map<String, Class> classCache = perCollectionClassCache.get(dbCollection.getName());
+        Class clazz = classCache.get(dbCollection.getName() + "." + path);
 
-        if (classCache.containsKey(path)) {
-            return classCache.get(path);
+        if (clazz != null) {
+            return clazz;
         }
 
         int lastDotIndex = path.lastIndexOf('.');
 
         if (lastDotIndex > 0) {
-            String dotPath = path.substring(0, lastDotIndex + 1);
-
-            return classCache.get(dotPath);
+            return classCache.get(dbCollection.getName() + "." + path.substring(0, lastDotIndex + 1));
         }
 
         return null;
@@ -184,12 +178,11 @@ public class MongoDBCallback extends DefaultDBCallback {
      */
     private Class deriveClass(String path, String lastPathPart, boolean array) {
         Class containerClass;
-        Map<String, Class> classCache = perCollectionClassCache.get(dbCollection.getName());
 
         if (path.equals(lastPathPart)) {
             containerClass = dbCollection.getObjectClass();
         } else {
-            containerClass = classCache.get(path.substring(0, path.lastIndexOf('.')));
+            containerClass = classCache.get(dbCollection.getName() + "." + path.substring(0, path.lastIndexOf('.')));
         }
 
         if (containerClass != null && DBObject.class.isAssignableFrom(containerClass)) {
@@ -222,12 +215,13 @@ public class MongoDBCallback extends DefaultDBCallback {
         }
 
         Type returnType = getter.getGenericReturnType();
+        String qualifiedPath = dbCollection.getName() + "." + path;
 
         if (Class.class.isAssignableFrom(returnType.getClass())) {
             // noinspection unchecked
             Class enhancedClass = EnhancerHelper.getDirtyableDBObjectEnhancer((Class) returnType).getEnhancedClass();
 
-            classCache.put(path, enhancedClass);
+            classCache.put(qualifiedPath, enhancedClass);
 
             return enhancedClass;
         } else if (ParameterizedType.class.isAssignableFrom(returnType.getClass())) {
@@ -244,18 +238,18 @@ public class MongoDBCallback extends DefaultDBCallback {
                 throw new RuntimeException("unknown type: " + rawType);
             }
 
-            classCache.put(path, rawType);
+            classCache.put(qualifiedPath, rawType);
 
             if (!DBObjectUtil.needsNoConversion(rawClass)) {
                 //noinspection unchecked
                 enhancedClass = EnhancerHelper.getDirtyableDBObjectEnhancer(rawClass).getEnhancedClass();
 
-                classCache.put(path + ".", enhancedClass);
+                classCache.put(qualifiedPath + ".", enhancedClass);
             }
 
             return rawType;
         } else {
-            throw new RuntimeException("Don't know how to handle: " + path);
+            throw new RuntimeException("Don't know how to handle: " + qualifiedPath);
         }
     }
 }
