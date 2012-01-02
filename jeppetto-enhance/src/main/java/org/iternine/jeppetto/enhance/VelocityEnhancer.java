@@ -61,6 +61,7 @@ public abstract class VelocityEnhancer<T> extends Enhancer<T> {
             engine.setProperty("class.resource.loader.class", ClasspathResourceLoader.class.getName());
             engine.setProperty(RuntimeConstants.RUNTIME_LOG_LOGSYSTEM_CLASS, "org.iternine.jeppetto.enhance.SLF4JLogChute");
             engine.setProperty("velocimacro.library", "");
+            engine.setProperty("runtime.log.invalid.references", "false");
 
             engine.init();
         } catch (Exception e) {
