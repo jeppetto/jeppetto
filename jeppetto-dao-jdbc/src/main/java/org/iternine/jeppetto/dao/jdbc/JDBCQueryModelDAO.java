@@ -254,7 +254,14 @@ public class JDBCQueryModelDAO<T, ID>
     @Override
     public Object projectUsingQueryModel(QueryModel queryModel)
             throws JeppettoException {
-        return null;  // Todo: implement
+        throw new RuntimeException("projectUsingQueryModel not yet implemented");
+    }
+
+
+    @Override
+    public void deleteUsingQueryModel(QueryModel queryModel)
+            throws JeppettoException {
+        throw new RuntimeException("deleteUsingQueryModel not yet implemented");
     }
 
 

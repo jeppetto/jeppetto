@@ -261,6 +261,13 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
 
 
     @Override
+    public void deleteUsingQueryModel(QueryModel queryModel)
+            throws JeppettoException {
+        throw new RuntimeException("deleteUsingQueryModel not yet implemented");
+    }
+
+
+    @Override
     public Condition buildCondition(String conditionField,
                                     ConditionType conditionType,
                                     Iterator argsIterator) {

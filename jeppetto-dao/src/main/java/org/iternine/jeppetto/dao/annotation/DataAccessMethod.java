@@ -17,6 +17,8 @@
 package org.iternine.jeppetto.dao.annotation;
 
 
+import org.iternine.jeppetto.dao.OperationType;
+
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -26,6 +28,8 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 public @interface DataAccessMethod {
+
+    public abstract OperationType operation() default OperationType.Read;
 
     public abstract Condition[] conditions() default {};
 

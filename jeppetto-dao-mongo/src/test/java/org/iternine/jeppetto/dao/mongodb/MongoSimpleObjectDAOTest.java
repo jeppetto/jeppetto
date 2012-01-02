@@ -18,6 +18,7 @@ package org.iternine.jeppetto.dao.mongodb;
 
 
 import org.iternine.jeppetto.dao.JeppettoException;
+import org.iternine.jeppetto.dao.NoSuchItemException;
 import org.iternine.jeppetto.dao.OptimisticLockException;
 import org.iternine.jeppetto.test.SimpleObject;
 import org.iternine.jeppetto.test.SimpleObjectDAO;
@@ -25,8 +26,11 @@ import org.iternine.jeppetto.test.SimpleObjectDAOTest;
 import org.iternine.jeppetto.testsupport.MongoDatabaseProvider;
 import org.iternine.jeppetto.testsupport.TestContext;
 
+import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
+
+import java.util.Arrays;
 
 
 public class MongoSimpleObjectDAOTest extends SimpleObjectDAOTest {
@@ -104,6 +108,50 @@ public class MongoSimpleObjectDAOTest extends SimpleObjectDAOTest {
 
         getSimpleObjectDAO().save(result1);
         getSimpleObjectDAO().save(result2);
+    }
+
+
+
+    @Test
+    // TODO: Move to functional test (requires hibernate implementation)
+    public void saveMultipleThenDeleteSome()
+            throws NoSuchItemException {
+        SimpleObject simpleObject = new SimpleObject();
+        simpleObject.setIntValue(1234);
+
+        getSimpleObjectDAO().save(simpleObject);
+
+        SimpleObject simpleObject2 = new SimpleObject();
+        simpleObject2.setIntValue(2345);
+
+        getSimpleObjectDAO().save(simpleObject2);
+
+        SimpleObject simpleObject3 = new SimpleObject();
+        simpleObject2.setIntValue(3456);
+
+        getSimpleObjectDAO().save(simpleObject3);
+
+        Iterable<SimpleObject> results = getSimpleObjectDAO().findAll();
+
+        int resultCount = 0;
+        // noinspection UnusedDeclaration
+        for (SimpleObject ignore : results) {
+            resultCount++;
+        }
+
+        Assert.assertTrue(resultCount == 3);
+
+        getSimpleObjectDAO().deleteByIntValueWithin(Arrays.asList(1234, 2345));
+
+        Iterable<SimpleObject> results2 = getSimpleObjectDAO().findAll();
+
+        int resultCount2 = 0;
+        // noinspection UnusedDeclaration
+        for (SimpleObject ignore : results2) {
+            resultCount2++;
+        }
+
+        Assert.assertTrue(resultCount2 == 1);
     }
 
 

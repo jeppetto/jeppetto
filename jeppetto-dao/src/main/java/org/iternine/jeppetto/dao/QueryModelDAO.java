@@ -49,8 +49,7 @@ public interface QueryModelDAO<T, ID> extends GenericDAO<T, ID> {
     /**
      * Find objects of type T that correspond to the QueryModel.
      *
-     * @param queryModel that contains criteria that will be true of the
-     *                        results
+     * @param queryModel that contains criteria that will be true of the results
      *
      * @return Iterable of T
      *
@@ -72,6 +71,17 @@ public interface QueryModelDAO<T, ID> extends GenericDAO<T, ID> {
      * @throws JeppettoException if any underlying failure occurs
      */
     Object projectUsingQueryModel(QueryModel queryModel)
+            throws JeppettoException;
+
+
+    /**
+     * Delete objects of type T that correspond to the QueryModel.
+     *
+     * @param queryModel that contains criteria of items to delete
+     *
+     * @throws JeppettoException if any underlying failure occurs
+     */
+    void deleteUsingQueryModel(QueryModel queryModel)
             throws JeppettoException;
 
 

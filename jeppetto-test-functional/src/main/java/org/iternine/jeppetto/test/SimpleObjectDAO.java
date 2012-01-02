@@ -20,6 +20,7 @@ package org.iternine.jeppetto.test;
 import org.iternine.jeppetto.dao.ConditionType;
 import org.iternine.jeppetto.dao.GenericDAO;
 import org.iternine.jeppetto.dao.NoSuchItemException;
+import org.iternine.jeppetto.dao.OperationType;
 import org.iternine.jeppetto.dao.ProjectionType;
 import org.iternine.jeppetto.dao.SortDirection;
 import org.iternine.jeppetto.dao.annotation.Association;
@@ -166,4 +167,14 @@ public interface SimpleObjectDAO extends GenericDAO<SimpleObject, String> {
             projections = { @Projection(type = ProjectionType.CountDistinct, field = "intValue") }
     )
     int countIntValue();
+
+
+    void deleteByIntValueWithin(List<Integer> someInts);
+
+
+    @DataAccessMethod(
+            operation = OperationType.Delete,
+            conditions = { @Condition(field = "intValue", type = ConditionType.Within) }
+    )
+    void deleteSomeObjects(List<Integer> someInts);
 }

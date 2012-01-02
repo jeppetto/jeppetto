@@ -184,9 +184,15 @@ public class DAOBuilder {
                     sb.append("    queryModel.setAccessControlContext(getAccessControlContextProvider().getCurrent());\n\n");
                 }
             }
+
+            if (dataAccessMethod.operation() == OperationType.Read) {
+                buildReturnClause(interfaceMethod, sb, modelClass);
+            } else {
+                buildDeleteClause(sb);
+            }
         } else {
             // deal w/ '...As()' case
-            buildQueryModelFromMethodName(interfaceMethod.getName(), sb);
+            OperationType operationType = buildQueryModelFromMethodName(interfaceMethod.getName(), sb);
 
             if (accessControlEnabled) {
                 if (interfaceMethod.getName().endsWith("As")) {
@@ -195,9 +201,13 @@ public class DAOBuilder {
                     sb.append("    queryModel.setAccessControlContext(getAccessControlContextProvider().getCurrent());\n\n");
                 }
             }
-        }
 
-        buildReturnClause(interfaceMethod, sb, modelClass);
+            if (operationType == OperationType.Read) {
+                buildReturnClause(interfaceMethod, sb, modelClass);
+            } else {
+                buildDeleteClause(sb);
+            }
+        }
 
         sb.append('\n').append('}');
 
@@ -260,10 +270,11 @@ public class DAOBuilder {
 
 
     /**
-     * We build 'findBy' and 'countBy' QueryModels in the following way:
+     * We build 'findBy', 'countBy', and 'deleteBy' QueryModels in the following way:
      * <p/>
      *      findBy<query part>*[OrderBy<order part>*]
      *      countBy<query part>*[OrderBy<order part>*]
+     *      deleteBy<query part>*
      * <p/>
      * Query parts are of the following forms:
      * <p/>
@@ -297,16 +308,24 @@ public class DAOBuilder {
      *
      * @param methodName of the method to construct a QueryModel from
      * @param sb the StringBuilder to place the resulting logic into
+     *
+     * @return the OperationType that the methodName refers to.
      */
-    private static void buildQueryModelFromMethodName(String methodName, StringBuilder sb) {
+    private static OperationType buildQueryModelFromMethodName(String methodName, StringBuilder sb) {
         String queryString;
+        OperationType operationType;
 
         if (methodName.startsWith("findBy")) {
             queryString = methodName.substring("findBy".length());
+            operationType = OperationType.Read;
         } else if (methodName.startsWith("countBy")) {
             sb.append("    queryModel.setProjection(buildProjection(null, org.iternine.jeppetto.dao.ProjectionType.RowCount, argsIterator));\n\n");
 
             queryString = methodName.substring("countBy".length());
+            operationType = OperationType.Read;
+        } else if (methodName.startsWith("deleteBy")) {
+            queryString = methodName.substring("deleteBy".length());
+            operationType = OperationType.Delete;
         } else {
             throw new UnsupportedOperationException("Don't know how to handle '" + methodName + "'");
         }
@@ -355,7 +374,7 @@ public class DAOBuilder {
             }
         }
 
-        if (orderParts != null) {
+        if (orderParts != null && operationType == OperationType.Read) {
             for (String orderPart : orderParts.split("And")) {
                 SortDirection sortDirection;
                 String fieldName;
@@ -374,6 +393,8 @@ public class DAOBuilder {
 
             sb.append('\n');
         }
+
+        return operationType;
     }
 
 
@@ -444,6 +465,11 @@ public class DAOBuilder {
         } catch (NotFoundException e) {
             throw new RuntimeException(e);
         }
+    }
+
+
+    private static void buildDeleteClause(StringBuilder sb) {
+        sb.append("\n    deleteUsingQueryModel(queryModel);");
     }
 
 

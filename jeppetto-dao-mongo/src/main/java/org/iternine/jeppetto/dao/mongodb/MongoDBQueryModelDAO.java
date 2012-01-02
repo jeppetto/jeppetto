@@ -403,6 +403,25 @@ public class MongoDBQueryModelDAO<T, ID>
 
 
     @Override
+    public void deleteUsingQueryModel(QueryModel queryModel)
+            throws JeppettoException {
+        try {
+            DBObject deleteQuery = buildQueryObject(queryModel);
+
+            if (queryLogger != null) {
+                queryLogger.debug("Deleting {}s identified by {}",
+                                  new Object[] { getCollectionClass().getSimpleName(),
+                                                 deleteQuery.toMap() } );
+            }
+
+            dbCollection.remove(deleteQuery, getWriteConcern());
+        } catch (MongoException e) {
+            throw new JeppettoException(e);
+        }
+    }
+
+
+    @Override
     public Condition buildCondition(String conditionField,
                                     ConditionType conditionType,
                                     Iterator argsIterator) {

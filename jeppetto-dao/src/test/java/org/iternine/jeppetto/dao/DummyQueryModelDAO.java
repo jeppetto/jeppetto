@@ -79,6 +79,12 @@ public class DummyQueryModelDAO<T, ID>
 
 
     @Override
+    public void deleteUsingQueryModel(QueryModel queryModel)
+            throws JeppettoException {
+    }
+
+
+    @Override
     public Condition buildCondition(String conditionField,
                                     ConditionType conditionType,
                                     Iterator argsIterator) {
