@@ -40,8 +40,8 @@ public class DirtyableDBObjectList
     //-------------------------------------------------------------
 
     private List delegate;
-    private List appendedItems;
     private boolean rewrite = false;
+    private int firstAppendedIndex;
     private boolean modifiableDelegate;
 
 
@@ -67,6 +67,7 @@ public class DirtyableDBObjectList
      */
     public DirtyableDBObjectList(List delegate, boolean modifiableDelegate) {
         this.delegate = delegate;
+        this.firstAppendedIndex = delegate.size();
         this.modifiableDelegate = modifiableDelegate;
     }
 
@@ -81,10 +82,6 @@ public class DirtyableDBObjectList
 
         Object convertedElement = DBObjectUtil.toDBObject(element);
         delegate.add(index, convertedElement);
-
-        if (!rewrite) {
-            appendedItems.add(convertedElement);
-        }
     }
 
 
@@ -132,13 +129,8 @@ public class DirtyableDBObjectList
     @Override
     public boolean add(Object element) {
         Object convertedElement = DBObjectUtil.toDBObject(element);
-        boolean changed = delegate.add(convertedElement);
 
-        if (changed && !rewrite) {
-            appendedItems.add(convertedElement);
-        }
-
-        return changed;
+        return delegate.add(convertedElement);
     }
 
 
@@ -159,13 +151,7 @@ public class DirtyableDBObjectList
             convertedElements.add(DBObjectUtil.toDBObject(element));
         }
 
-        boolean changed = delegate.addAll(convertedElements);
-
-        if (changed && !rewrite) {
-            appendedItems.addAll(convertedElements);
-        }
-
-        return changed;
+        return delegate.addAll(convertedElements);
     }
 
 
@@ -230,8 +216,8 @@ public class DirtyableDBObjectList
 
 
     @Override
-    public Object get(int i) {
-        return delegate.get(i);
+    public Object get(int index) {
+        return delegate.get(index);
     }
 
 
@@ -254,14 +240,14 @@ public class DirtyableDBObjectList
 
 
     @Override
-    public ListIterator listIterator(int i) {
-        return delegate.listIterator(i);    // TODO: if listIterator.remove() is called, need to track...
+    public ListIterator listIterator(int index) {
+        return delegate.listIterator(index);    // TODO: if listIterator.remove() is called, need to track...
     }
 
 
     @Override
-    public List subList(int i, int i1) {
-        return delegate.subList(i, i1);
+    public List subList(int fromIndex, int toIndex) {
+        return delegate.subList(fromIndex, toIndex);
     }
 
 
@@ -272,14 +258,13 @@ public class DirtyableDBObjectList
     @Override
     public boolean isDirty() {
         // TODO: walk items (stop at appended size)
-        return rewrite || appendedItems.size() > 0;
+        return rewrite || delegate.size() > firstAppendedIndex;
     }
 
 
     @Override
     public void markPersisted() {
         int i = 0;
-        int maxItemToCheck = delegate.size() - appendedItems.size();
 
         for (Object object : delegate) {
             if (!(object instanceof DirtyableDBObject)) {
@@ -290,13 +275,13 @@ public class DirtyableDBObjectList
 
             dirtyableDBObject.markPersisted();
 
-            if (++i >= maxItemToCheck) {
+            if (++i >= firstAppendedIndex) {
                 break;
             }
         }
 
         rewrite = false;
-        appendedItems.clear();
+        firstAppendedIndex = delegate.size();
     }
 
 
@@ -310,7 +295,6 @@ public class DirtyableDBObjectList
     public Set<String> getDirtyKeys() {
         Set<String> dirtyKeys = new LinkedHashSet<String>();
         int i = 0;
-        int maxItemToCheck = delegate.size() - appendedItems.size();
 
         for (Object object : delegate) {
             DirtyableDBObject dirtyableDBObject = (DirtyableDBObject) object;
@@ -319,7 +303,7 @@ public class DirtyableDBObjectList
                 dirtyKeys.add(Integer.toString(i));
             }
 
-            if (++i >= maxItemToCheck) {
+            if (++i >= firstAppendedIndex) {
                 break;
             }
         }
@@ -445,20 +429,17 @@ public class DirtyableDBObjectList
             return true;
         }
 
-        if (appendedItems.size() > 0) {
-            int i = 0;
-            int maxItemToCheck = delegate.size() - appendedItems.size();
+        int i = 0;
 
-            for (Object object : delegate) {
-                DirtyableDBObject dirtyableDBObject = (DirtyableDBObject) object;
+        for (Object object : delegate) {
+            DirtyableDBObject dirtyableDBObject = (DirtyableDBObject) object;
 
-                if (dirtyableDBObject.isDirty()) {
-                    return true;
-                }
+            if (dirtyableDBObject.isDirty()) {
+                return true;
+            }
 
-                if (++i >= maxItemToCheck) {
-                    break;
-                }
+            if (++i >= firstAppendedIndex) {
+                break;
             }
         }
 
@@ -466,12 +447,13 @@ public class DirtyableDBObjectList
     }
 
 
-    public List getAppendedItems() {
-        if (appendedItems == null) {
-            appendedItems = new ArrayList();
-        }
+    public boolean hasAppendedItems() {
+        return delegate.size() > firstAppendedIndex;
+    }
 
-        return appendedItems;
+
+    public List getAppendedItems() {
+        return delegate.subList(firstAppendedIndex, delegate.size());
     }
 
 

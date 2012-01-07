@@ -148,8 +148,7 @@ public abstract class AccessControlTest {
         SimpleObject simpleObject = new SimpleObject();
 
         getAccessControlTestDAO().save(simpleObject);
-        getAccessControlTestDAO().revokeAccess(simpleObject.getId(),
-                                                      accessControlContext1.getAccessId());
+        getAccessControlTestDAO().revokeAccess(simpleObject.getId(), accessControlContext1.getAccessId());
 
         accessControlContextProvider.setCurrent(accessControlContext4);
 
@@ -179,13 +178,11 @@ public abstract class AccessControlTest {
 
         getAccessControlTestDAO().save(simpleObject);
 
-        getAccessControlTestDAO().grantAccess(simpleObject.getId(),
-                                                     accessControlContext2.getAccessId());
+        getAccessControlTestDAO().grantAccess(simpleObject.getId(), accessControlContext2.getAccessId());
 
         accessControlContextProvider.setCurrent(accessControlContext2);
 
-        SimpleObject resultObject = getAccessControlTestDAO().findById(
-                simpleObject.getId());
+        SimpleObject resultObject = getAccessControlTestDAO().findById(simpleObject.getId());
 
         Assert.assertEquals(resultObject.getId(), simpleObject.getId());
         Assert.assertEquals(2, getAccessControlTestDAO().getAccessIds(resultObject.getId()).size());

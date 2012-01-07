@@ -439,24 +439,33 @@ public class MongoDBQueryModelDAO<T, ID>
         @SuppressWarnings( { "unchecked" })
         List<String> accessControlList = (List<String>) dbObject.get(ACCESS_CONTROL_LIST_FIELD);
 
-        if (accessControlList == null) {
-            accessControlList = new ArrayList<String>();
+        if (accessControlList != null && accessControlList.contains(accessId)) {
+            return;
         }
 
-        // TODO: handle dups...
-        accessControlList.add(accessId);
+        DBObject accessUpdate = new BasicDBObject("$push", new BasicDBObject(ACCESS_CONTROL_LIST_FIELD, accessId));
+        DBObject identifyingQuery = buildIdentifyingQuery(dbObject);
 
-        dbObject.put(ACCESS_CONTROL_LIST_FIELD, accessControlList);
+        for (String shardKey : shardKeys) {
+            identifyingQuery.put(shardKey, dbObject.get(shardKey));
+        }
 
-        //noinspection unchecked
-        save((T) dbObject);
+        if (queryLogger != null) {
+            queryLogger.info("Granting access to object identified by {} to {}.", identifyingQuery.toMap(), accessId);
+        }
+
+        try {
+            dbCollection.update(identifyingQuery, accessUpdate, true, false, getWriteConcern());
+        } catch (MongoException e) {
+            throw new JeppettoException(e);
+        }
     }
 
 
+    // TODO: revisit...
     @Override
     public void revokeAccess(ID id, String accessId)
             throws NoSuchItemException, AccessControlException {
-        // TODO: determine if access control limitation
         DBObject dbObject = (DBObject) findById(id);
 
         @SuppressWarnings( { "unchecked" })
@@ -466,13 +475,23 @@ public class MongoDBQueryModelDAO<T, ID>
             return;
         }
 
-        // TODO: verify no dups
-        accessControlList.remove(accessId);
+        DBObject accessUpdate = new BasicDBObject("$pull", new BasicDBObject(ACCESS_CONTROL_LIST_FIELD, accessId));
+        DBObject identifyingQuery = buildIdentifyingQuery(dbObject);
 
-        dbObject.put(ACCESS_CONTROL_LIST_FIELD, accessControlList);
+        for (String shardKey : shardKeys) {
+            identifyingQuery.put(shardKey, dbObject.get(shardKey));
+        }
 
-        //noinspection unchecked
-        save((T) dbObject);
+        if (queryLogger != null) {
+            // TODO: What happens if revoke happens and another thread already has object in memory and tries to save()?
+            queryLogger.info("Revoking access to object identified by {} to {}.", identifyingQuery.toMap(), accessId);
+        }
+
+        try {
+            dbCollection.update(identifyingQuery, accessUpdate, true, false, getWriteConcern());
+        } catch (MongoException e) {
+            throw new JeppettoException(e);
+        }
     }
 
 
@@ -577,6 +596,15 @@ public class MongoDBQueryModelDAO<T, ID>
         }
 
         final DBObject optimalDbo = determineOptimalDBObject(dbo);
+
+        if (optimalDbo.keySet().size() == 0) {
+            if (queryLogger != null) {
+                queryLogger.debug("Bypassing save on object identified by {}; optimization rendered no changes.",
+                                  identifyingQuery.toMap());
+            }
+
+            return;
+        }
 
         if (queryLogger != null) {
             queryLogger.debug("Saving {} identified by {} with document {}",
@@ -865,7 +893,7 @@ public class MongoDBQueryModelDAO<T, ID>
 
                 if (list.isRewrite()) {
                     settableItems.put(prefix + dirtyKey, value);
-                } else if (list.getAppendedItems().size() > 0) {
+                } else if (list.hasAppendedItems()) {
                     pushableItems.put(prefix + dirtyKey, list.getAppendedItems());
                 } else {
                     walkDirtyableDBObject(prefix + dirtyKey + ".", list, settableItems, pushableItems);
