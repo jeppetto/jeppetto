@@ -3,7 +3,7 @@
                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-2.0.xsd">
 
-    <include file="migrations/001-simple-model.xml"/>
+    <include file="migrations/002-access-control-test-model.xml"/>
 
     <include file="migrations/security.changelog.xml"/>
 

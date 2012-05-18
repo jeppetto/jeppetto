@@ -27,6 +27,7 @@ public class AccessControlEntry {
     private String objectType;
     private String objectId;
     private String accessibleBy;
+    private String accessType;
 
 
     //-------------------------------------------------------------
@@ -78,5 +79,15 @@ public class AccessControlEntry {
 
     public void setAccessibleBy(String accessibleBy) {
         this.accessibleBy = accessibleBy;
+    }
+
+
+    public String getAccessType() {
+        return accessType;
+    }
+
+
+    public void setAccessType(String accessType) {
+        this.accessType = accessType;
     }
 }

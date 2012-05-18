@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011 Jeppetto and Jonathan Thompson
+ * Copyright (c) 2012 Jeppetto and Jonathan Thompson
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,15 +14,25 @@
  * limitations under the License.
  */
 
-package org.iternine.jeppetto.dao;
+package org.iternine.jeppetto.dao.annotation;
 
 
-import java.util.Set;
+import org.iternine.jeppetto.dao.AccessType;
+
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 
-public interface AccessControlContext {
+@Retention(RetentionPolicy.RUNTIME)
+@Target(value = { })
+public @interface Accessor {
 
-    String getAccessId();
+    enum Type { Role, Anyone }
 
-    Set<String> getRoles();
+    Type type();
+
+    String typeValue() default "";
+
+    AccessType access();
 }

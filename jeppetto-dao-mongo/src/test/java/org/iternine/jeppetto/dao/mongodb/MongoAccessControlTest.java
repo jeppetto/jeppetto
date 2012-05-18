@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011 Jeppetto and Jonathan Thompson
+ * Copyright (c) 2012 Jeppetto and Jonathan Thompson
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,19 @@
  * limitations under the License.
  */
 
+
 package org.iternine.jeppetto.dao.mongodb;
 
 
-import org.iternine.jeppetto.test.AccessControlTest;
-import org.iternine.jeppetto.test.AccessControlTestDAO;
+import org.iternine.jeppetto.dao.AccessControlException;
+import org.iternine.jeppetto.dao.NoSuchItemException;
+import org.iternine.jeppetto.test.accesscontrol.DefaultAccessObjectDAO;
+import org.iternine.jeppetto.test.accesscontrol.AccessControlTest;
+import org.iternine.jeppetto.test.accesscontrol.IdentifiedCreatableObjectDAO;
+import org.iternine.jeppetto.test.accesscontrol.RoleCreatableObjectDAO;
 import org.iternine.jeppetto.testsupport.MongoDatabaseProvider;
 import org.iternine.jeppetto.testsupport.TestContext;
+import org.junit.Ignore;
 
 
 public class MongoAccessControlTest extends AccessControlTest {
@@ -33,14 +39,30 @@ public class MongoAccessControlTest extends AccessControlTest {
 
 
     //-------------------------------------------------------------
-    // Implementation - SimpleObjectDAOTest
+    // Implementation - AccessControlTest
     //-------------------------------------------------------------
 
     @Override
-    protected AccessControlTestDAO getAccessControlTestDAO() {
+    protected DefaultAccessObjectDAO getDefaultAccessObjectDAO() {
         ensureTestContextExists();
 
-        return (AccessControlTestDAO) testContext.getBean("accessControlTestDAO");
+        return (DefaultAccessObjectDAO) testContext.getBean("defaultAccessObjectDAO");
+    }
+
+
+    @Override
+    protected IdentifiedCreatableObjectDAO getIdentifiedCreatableObjectDAO() {
+        ensureTestContextExists();
+
+        return (IdentifiedCreatableObjectDAO) testContext.getBean("identifiedCreatableObjectDAO");
+    }
+
+
+    @Override
+    protected RoleCreatableObjectDAO getRoleCreatableObjectDAO() {
+        ensureTestContextExists();
+
+        return (RoleCreatableObjectDAO) testContext.getBean("roleCreatableObjectDAO");
     }
 
 
@@ -55,12 +77,23 @@ public class MongoAccessControlTest extends AccessControlTest {
 
 
     //-------------------------------------------------------------
+    // Methods - Overrides
+    //-------------------------------------------------------------
+
+    // TODO: Remove override when efficient-mongo is checked in
+    @Ignore("Remove override when efficient-mongo is checked in")
+    public void unauthorizedAccessAttempts()
+            throws AccessControlException, NoSuchItemException {
+    }
+
+
+    //-------------------------------------------------------------
     // Methods - Private
     //-------------------------------------------------------------
 
     private void ensureTestContextExists() {
         if (testContext == null) {
-            testContext = new TestContext("AccessControlTest.spring.xml",
+            testContext = new TestContext("MongoAccessControlTest.spring.xml",
                                           "MongoDAOTest.properties",
                                           new MongoDatabaseProvider());
         }

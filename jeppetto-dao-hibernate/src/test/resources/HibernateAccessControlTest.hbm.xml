@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC
+        "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+        "http://www.hibernate.org/dtd/hibernate-mapping-3.0.dtd">
+<hibernate-mapping package="org.iternine.jeppetto">
+
+    <class name="org.iternine.jeppetto.test.accesscontrol.DefaultAccessObject">
+        <id name="id" length="32">
+            <generator class="org.iternine.jeppetto.dao.hibernate.UUIDIdentifierGenerator"/>
+        </id>
+
+        <property name="intValue"/>
+    </class>
+
+    <class name="org.iternine.jeppetto.test.accesscontrol.IdentifiedCreatableObject">
+        <id name="id" length="32">
+            <generator class="org.iternine.jeppetto.dao.hibernate.UUIDIdentifierGenerator"/>
+        </id>
+
+        <property name="intValue"/>
+    </class>
+
+    <class name="org.iternine.jeppetto.test.accesscontrol.RoleCreatableObject">
+        <id name="id" length="32">
+            <generator class="org.iternine.jeppetto.dao.hibernate.UUIDIdentifierGenerator"/>
+        </id>
+    </class>
+
+</hibernate-mapping>

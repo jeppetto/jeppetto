@@ -17,6 +17,9 @@
 package org.iternine.jeppetto.dao;
 
 
+import java.util.HashSet;
+import java.util.Set;
+
 public class SimpleAccessControlContext
         implements AccessControlContext {
 
@@ -25,7 +28,7 @@ public class SimpleAccessControlContext
     //-------------------------------------------------------------
 
     private String accessId;
-    private String role;
+    private Set<String> roles;
 
 
     //-------------------------------------------------------------
@@ -37,8 +40,8 @@ public class SimpleAccessControlContext
     }
 
 
-    public String getRole() {
-        return role;
+    public Set<String> getRoles() {
+        return roles;
     }
 
 
@@ -51,7 +54,26 @@ public class SimpleAccessControlContext
     }
 
 
-    public void setRole(String role) {
-        this.role = role;
+    public void setRoles(Set<String> roles) {
+        this.roles = roles;
+    }
+    
+    
+    public void addRole(String role) {
+        if (roles == null) {
+            this.roles = new HashSet<String>();
+        }
+
+        roles.add(role);
+    }
+
+
+    //-------------------------------------------------------------
+    // Methods - Canonical
+    //-------------------------------------------------------------
+
+    @Override
+    public String toString() {
+        return "AccessControlContext{ accessId = '" + accessId + "', roles = " + roles + " }";
     }
 }

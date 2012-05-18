@@ -27,5 +27,7 @@ import java.lang.annotation.ElementType;
 @Target(ElementType.TYPE)
 public @interface AccessControl {
 
-    AccessControlRule[] rules();
+    Creator[] creators() default {};
+    
+    Accessor[] accessors() default {};
 }

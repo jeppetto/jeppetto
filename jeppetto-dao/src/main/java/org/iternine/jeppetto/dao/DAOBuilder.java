@@ -178,7 +178,7 @@ public class DAOBuilder {
                     sb.append("    queryModel.setAccessControlContext((org.iternine.jeppetto.dao.AccessControlContext) argsIterator.next());\n\n");
                 } else if (!dataAccessMethod.invokeWithRole().isEmpty()) {
                     sb.append("    org.iternine.jeppetto.dao.SimpleAccessControlContext accessControlContext = new org.iternine.jeppetto.dao.SimpleAccessControlContext();\n");
-                    sb.append("    accessControlContext.setRole(\"").append(dataAccessMethod.invokeWithRole()).append("\");\n");
+                    sb.append("    accessControlContext.addRole(\"").append(dataAccessMethod.invokeWithRole()).append("\");\n");
                     sb.append("    queryModel.setAccessControlContext(accessControlContext);\n\n");
                 } else {
                     sb.append("    queryModel.setAccessControlContext(getAccessControlContextProvider().getCurrent());\n\n");

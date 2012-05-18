@@ -17,7 +17,7 @@
 package org.iternine.jeppetto.dao;
 
 
-import java.util.List;
+import java.util.Map;
 
 
 /**
@@ -26,15 +26,19 @@ import java.util.List;
  */
 public interface AccessControllable<ID> {
 
-    void grantAccess(ID id, String accessId)
+    void grantAccess(ID id, String accessId, AccessType accessType)
             throws NoSuchItemException, AccessControlException;
 
 
     void revokeAccess(ID id, String accessId)
             throws NoSuchItemException, AccessControlException;
 
+    
+    AccessType getGrantedAccess(ID id, String accessId)
+            throws NoSuchItemException, AccessControlException;
 
-    List<String> getAccessIds(ID id)
+
+    Map<String, AccessType> getGrantedAccesses(ID id)
             throws NoSuchItemException, AccessControlException;
 
 

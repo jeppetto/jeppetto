@@ -17,9 +17,11 @@
 package org.iternine.jeppetto.dao.mongodb;
 
 
+import org.iternine.jeppetto.dao.AccessControlContext;
 import org.iternine.jeppetto.dao.AccessControlContextProvider;
 import org.iternine.jeppetto.dao.AccessControlException;
 import org.iternine.jeppetto.dao.AccessControllable;
+import org.iternine.jeppetto.dao.AccessType;
 import org.iternine.jeppetto.dao.Condition;
 import org.iternine.jeppetto.dao.ConditionType;
 import org.iternine.jeppetto.dao.JeppettoException;
@@ -33,8 +35,8 @@ import org.iternine.jeppetto.dao.Sort;
 import org.iternine.jeppetto.dao.SortDirection;
 import org.iternine.jeppetto.dao.TooManyItemsException;
 import org.iternine.jeppetto.dao.annotation.AccessControl;
-import org.iternine.jeppetto.dao.annotation.AccessControlRule;
-import org.iternine.jeppetto.dao.annotation.AccessControlType;
+import org.iternine.jeppetto.dao.annotation.Accessor;
+import org.iternine.jeppetto.dao.annotation.Creator;
 import org.iternine.jeppetto.dao.mongodb.enhance.DBObjectUtil;
 import org.iternine.jeppetto.dao.mongodb.enhance.DirtyableDBObject;
 import org.iternine.jeppetto.dao.mongodb.enhance.EnhancerHelper;
@@ -63,6 +65,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 
 /**
@@ -140,7 +143,8 @@ public class MongoDBQueryModelDAO<T, ID>
 
     private static final String ID_FIELD = "_id";
     private static final String OPTIMISTIC_LOCK_VERSION_FIELD = "__olv";
-    private static final String ACCESS_CONTROL_LIST_FIELD = "__acl";
+    private static final String ACCESS_CONTROL_FIELD = "__acl";
+    private static final Pattern READ_PATTERN = Pattern.compile("^R");
 
 
     //-------------------------------------------------------------
@@ -241,18 +245,17 @@ public class MongoDBQueryModelDAO<T, ID>
         T enhancedEntity = enhancer.enhance(entity);
         DirtyableDBObject dbo = (DirtyableDBObject) enhancedEntity;
 
-        if (!dbo.isPersisted()) {
+        if (dbo.isPersisted()) {
+            if (accessControlContextProvider != null) {
+                verifyWriteAllowed(dbo); // TODO: should access control check be added to identifyingQuery?
+            }
+        } else {
             if (dbo.get(ID_FIELD) == null) {
                 dbo.put(ID_FIELD, new ObjectId());  // If the id isn't explicitly set, assume intent is for mongo ids
             }
 
             if (accessControlContextProvider != null) {
-                if (roleAllowsAccess(accessControlContextProvider.getCurrent().getRole())
-                    || accessControlContextProvider.getCurrent().getAccessId() == null) {
-                    dbo.put(ACCESS_CONTROL_LIST_FIELD, Collections.<Object>emptyList());
-                } else {
-                    dbo.put(ACCESS_CONTROL_LIST_FIELD, Collections.singletonList(accessControlContextProvider.getCurrent().getAccessId()));
-                }
+                assessAndAssignAccessControl(dbo);
             }
         }
 
@@ -307,7 +310,7 @@ public class MongoDBQueryModelDAO<T, ID>
             throws NoSuchItemException, TooManyItemsException, JeppettoException {
         // Need to revisit te way caching works as it will miss some items...focus only on the identifyingQuery
         // instead of secondary cache keys...
-        MongoDBCommand command = buildCommand(queryModel);
+        MongoDBCommand command = buildCommand(queryModel, AccessType.Read);
 
         if (MongoDBSession.isActive()) {
             // noinspection unchecked
@@ -337,7 +340,7 @@ public class MongoDBQueryModelDAO<T, ID>
 
     public Iterable<T> findUsingQueryModel(QueryModel queryModel)
             throws JeppettoException {
-        MongoDBCommand command = buildCommand(queryModel);
+        MongoDBCommand command = buildCommand(queryModel, AccessType.Read);
         DBCursor dbCursor = command.cursor(dbCollection);
 
         if (queryModel.getSorts() != null) {
@@ -395,7 +398,7 @@ public class MongoDBQueryModelDAO<T, ID>
     public Object projectUsingQueryModel(QueryModel queryModel)
             throws JeppettoException {
         try {
-            return buildCommand(queryModel).singleResult(dbCollection);
+            return buildCommand(queryModel, AccessType.Read).singleResult(dbCollection);
         } catch (NoSuchItemException e) {
             return null;  // TODO: evaluate if correct
         }
@@ -406,12 +409,11 @@ public class MongoDBQueryModelDAO<T, ID>
     public void deleteUsingQueryModel(QueryModel queryModel)
             throws JeppettoException {
         try {
-            DBObject deleteQuery = buildQueryObject(queryModel);
+            DBObject deleteQuery = buildQueryObject(queryModel, AccessType.ReadWrite);
 
             if (queryLogger != null) {
                 queryLogger.debug("Deleting {}s identified by {}",
-                                  new Object[] { getCollectionClass().getSimpleName(),
-                                                 deleteQuery.toMap() } );
+                                  new Object[] { getCollectionClass().getSimpleName(), deleteQuery.toMap() } );
             }
 
             dbCollection.remove(deleteQuery, getWriteConcern());
@@ -447,59 +449,98 @@ public class MongoDBQueryModelDAO<T, ID>
     //-------------------------------------------------------------
 
     @Override
-    public void grantAccess(ID id, String accessId)
+    public void grantAccess(ID id, String accessId, AccessType accessType)
             throws NoSuchItemException, AccessControlException {
-        // TODO: determine if access control limitation
-        DBObject dbObject = (DBObject) findById(id);
-
-        @SuppressWarnings( { "unchecked" })
-        List<String> accessControlList = (List<String>) dbObject.get(ACCESS_CONTROL_LIST_FIELD);
-
-        if (accessControlList == null) {
-            accessControlList = new ArrayList<String>();
+        if (accessControlContextProvider == null) {
+            throw new AccessControlException("Access Control is not enabled. No AccessControlContextProvider specified.");
         }
 
-        // TODO: handle dups...
-        accessControlList.add(accessId);
+        if (accessType == AccessType.None) {
+            revokeAccess(id, accessId);
 
-        dbObject.put(ACCESS_CONTROL_LIST_FIELD, accessControlList);
+            return;
+        }
+
+        DBObject dbo = (DBObject) findById(id);
+
+        verifyWriteAllowed(dbo);
+
+        @SuppressWarnings( { "unchecked" })
+        Map<String, String> accessControl = (Map<String, String>) dbo.get(ACCESS_CONTROL_FIELD);
+
+        if (accessControl == null) {
+            accessControl = new HashMap<String, String>();
+        }
+
+        accessControl.put(accessId, accessType.shortName());
+
+        dbo.put(ACCESS_CONTROL_FIELD, accessControl);
 
         //noinspection unchecked
-        save((T) dbObject);
+        save((T) dbo);
     }
 
 
     @Override
     public void revokeAccess(ID id, String accessId)
             throws NoSuchItemException, AccessControlException {
-        // TODO: determine if access control limitation
-        DBObject dbObject = (DBObject) findById(id);
+        if (accessControlContextProvider == null) {
+            throw new AccessControlException("Access Control is not enabled. No AccessControlContextProvider specified.");
+        }
 
-        @SuppressWarnings( { "unchecked" })
-        List<String> accessControlList = (List<String>) dbObject.get(ACCESS_CONTROL_LIST_FIELD);
+        DBObject dbo = (DBObject) findById(id);
 
-        if (accessControlList == null) {
+        verifyWriteAllowed(dbo);
+
+        @SuppressWarnings("unchecked")
+        Map<String, String> accessControl = (Map<String, String>)  dbo.get(ACCESS_CONTROL_FIELD);
+
+        if (accessControl == null) {
             return;
         }
 
-        // TODO: verify no dups
-        accessControlList.remove(accessId);
+        accessControl.remove(accessId);
 
-        dbObject.put(ACCESS_CONTROL_LIST_FIELD, accessControlList);
+        dbo.put(ACCESS_CONTROL_FIELD, accessControl);
 
         //noinspection unchecked
-        save((T) dbObject);
+        save((T) dbo);
     }
 
 
     @Override
-    public List<String> getAccessIds(ID id)
+    public AccessType getGrantedAccess(ID id, String accessId)
             throws NoSuchItemException, AccessControlException {
-        // TODO: determine if access control limitation
-        DBObject dbObject = (DBObject) findById(id);
+        return getGrantedAccesses(id).get(accessId);
+    }
 
-        //noinspection unchecked
-        return (List<String>) dbObject.get(ACCESS_CONTROL_LIST_FIELD);
+
+    @Override
+    public Map<String, AccessType> getGrantedAccesses(ID id)
+            throws NoSuchItemException, AccessControlException {
+        if (accessControlContextProvider == null) {
+            throw new AccessControlException("Access Control is not enabled. No AccessControlContextProvider specified.");
+        }
+
+        DBObject dbo = (DBObject) findById(id);
+
+        // Should this list be limited based on caller?  For now we'll limit it to writers.
+        verifyWriteAllowed(dbo);
+
+        @SuppressWarnings("unchecked")
+        Map<String, String> accessControl = (Map<String, String>) dbo.get(ACCESS_CONTROL_FIELD);
+
+        if (accessControl == null || accessControl.size() == 0) {
+            return Collections.emptyMap();
+        }
+
+        // TODO: consider replacing with map that transforms on demand and/or singletonMap for 1 entry
+        Map<String, AccessType> result = new HashMap<String, AccessType>();
+        for (Map.Entry<String, String> entry : accessControl.entrySet()) {
+            result.put(entry.getKey(), AccessType.getAccessTypeFromShortName(entry.getValue()));
+        }
+        
+        return result;
     }
 
 
@@ -527,17 +568,17 @@ public class MongoDBQueryModelDAO<T, ID>
     }
 
 
-    protected DBObject[] createIdentifyingQueries(DBObject dbObject) {
+    protected DBObject[] createIdentifyingQueries(DBObject dbo) {
         int uniqueIndexCount = uniqueIndexes.size() + 1;
         List<DBObject> queries = new ArrayList<DBObject>(uniqueIndexCount);
 
-        queries.add(buildIdentifyingQuery(dbObject));
+        queries.add(buildIdentifyingQuery(dbo));
 
         for (Collection<String> indexFields : uniqueIndexes.values()) {
             DBObject query = new BasicDBObject();
 
             for (String indexField : indexFields) {
-                query.put(indexField, getFieldValueFrom(dbObject, indexField));
+                query.put(indexField, getFieldValueFrom(dbo, indexField));
             }
 
             queries.add(augmentObjectCacheKey(query));
@@ -551,9 +592,9 @@ public class MongoDBQueryModelDAO<T, ID>
     // Methods - Protected - Final
     //-------------------------------------------------------------
 
-    protected final DBObject buildIdentifyingQuery(DBObject dbObject) {
+    protected final DBObject buildIdentifyingQuery(DBObject dbo) {
         //noinspection unchecked
-        return buildIdentifyingQuery((ID) dbObject.get(ID_FIELD));
+        return buildIdentifyingQuery((ID) dbo.get(ID_FIELD));
     }
 
 
@@ -722,8 +763,8 @@ public class MongoDBQueryModelDAO<T, ID>
     }
 
 
-    private MongoDBCommand buildCommand(QueryModel queryModel) {
-        BasicDBObject query = buildQueryObject(queryModel);
+    private MongoDBCommand buildCommand(QueryModel queryModel, AccessType accessType) {
+        BasicDBObject query = buildQueryObject(queryModel, accessType);
         MongoDBCommand command;
 
         if (queryModel.getProjection() == null) {
@@ -804,7 +845,7 @@ public class MongoDBQueryModelDAO<T, ID>
     }
 
 
-    private BasicDBObject buildQueryObject(QueryModel queryModel) {
+    private BasicDBObject buildQueryObject(QueryModel queryModel, AccessType accessType) {
         BasicDBObject query = new BasicDBObject();
         List<Condition> allCriteria = new ArrayList<Condition>();
 
@@ -834,9 +875,12 @@ public class MongoDBQueryModelDAO<T, ID>
         }
 
         if (accessControlContextProvider != null) {
-            if (!roleAllowsAccess(queryModel.getAccessControlContext().getRole())) {
-                // NB: will match any item w/in the ACL list.
-                query.put(ACCESS_CONTROL_LIST_FIELD, queryModel.getAccessControlContext().getAccessId());
+            if (!annotationAllowsAccess(queryModel.getAccessControlContext(), accessType)) {
+                if (accessType == AccessType.Read) {
+                    query.put(ACCESS_CONTROL_FIELD + "." + queryModel.getAccessControlContext().getAccessId(), READ_PATTERN);
+                } else {
+                    query.put(ACCESS_CONTROL_FIELD + "." + queryModel.getAccessControlContext().getAccessId(), accessType.shortName());
+                }
             }
         }
 
@@ -859,19 +903,88 @@ public class MongoDBQueryModelDAO<T, ID>
     }
 
 
-    private boolean roleAllowsAccess(String role) {
-        AccessControl accessControl;
+    // TODO: ensure this is called by all update paths (e.g. other callers to trueSave())
+    private void verifyWriteAllowed(DBObject dbo)
+            throws AccessControlException {
+        AccessControlContext accessControlContext = accessControlContextProvider.getCurrent();
+        @SuppressWarnings( { "unchecked" })
+        Map<String, String> accessControl = (Map<String, String>) dbo.get(ACCESS_CONTROL_FIELD);
 
-        if (role == null || role.isEmpty()) {
+        if (accessControlContext == null
+            || (!AccessType.ReadWrite.shortName().equals(accessControl.get(accessControlContext.getAccessId()))
+                && !annotationAllowsAccess(accessControlContext, AccessType.ReadWrite))) {
+                throw new AccessControlException("Unable to write " + dbo.toMap() + " with " + accessControlContext);
+        }
+    }
+
+
+    private void assessAndAssignAccessControl(DBObject dbo)
+            throws AccessControlException {
+        AccessControlContext accessControlContext = accessControlContextProvider.getCurrent();
+
+        AccessControl accessControl = getAccessControlAnnotation();
+        if (accessControl != null) {
+            for (Creator creator : accessControl.creators()) {
+                switch (creator.type()) {
+                case Identified:
+                    if (accessControlContext.getAccessId() != null) {
+                        dbo.put(ACCESS_CONTROL_FIELD, Collections.singletonMap(accessControlContext.getAccessId(),
+                                                                               creator.grantedAccess().shortName()));
+                        return;
+                    }
+
+                    break;
+
+                case Role:
+                    if (accessControlContext.getRoles() != null && accessControlContext.getRoles().contains(creator.typeValue())) {
+                        dbo.put(ACCESS_CONTROL_FIELD, Collections.singletonMap(accessControlContext.getAccessId(),
+                                                                               creator.grantedAccess().shortName()));
+
+                        return;
+                    }
+
+                    break;
+
+                case Anonymous:
+                    // No explicit grants given.
+                    dbo.put(ACCESS_CONTROL_FIELD, Collections.emptyMap());
+
+                    return;
+                }
+            }
+
+            throw new AccessControlException("Unable to create " + dbo.getClass().getSuperclass().getSimpleName()
+                                             + " with " + accessControlContext
+                                             + ".  Check object's @AccessControl annotation.");
+        } else {
+            // When no annotation is present, any user can create the object.  If user is unknown, no explicit grants.
+            // Otherwise, ReadWrite access is given to the caller.
+            if (accessControlContext.getAccessId() == null) {
+                dbo.put(ACCESS_CONTROL_FIELD, Collections.emptyMap());
+            } else {
+                dbo.put(ACCESS_CONTROL_FIELD, Collections.singletonMap(accessControlContext.getAccessId(),
+                                                                       AccessType.ReadWrite.shortName()));
+            }
+        }
+    }
+
+
+    private boolean annotationAllowsAccess(AccessControlContext accessControlContext, AccessType accessType) {
+        if (accessType == null) {
             return false;
         }
 
+        AccessControl accessControl;
         if ((accessControl = getAccessControlAnnotation()) == null) {
             return false;
         }
 
-        for (AccessControlRule accessControlRule : accessControl.rules()) {
-            if (accessControlRule.type() == AccessControlType.Role && accessControlRule.value().equals(role)) {
+        Set<String> roles = accessControlContext.getRoles();
+
+        for (Accessor accessor : accessControl.accessors()) {
+            if (accessor.access().allows(accessType)
+                && (accessor.type() == Accessor.Type.Anyone
+                    || (accessor.type() == Accessor.Type.Role && roles != null && roles.contains(accessor.typeValue())))) {
                 return true;
             }
         }

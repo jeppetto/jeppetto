@@ -17,8 +17,10 @@
 package org.iternine.jeppetto;
 
 
-import org.iternine.jeppetto.test.AccessControlTest;
-import org.iternine.jeppetto.test.AccessControlTestDAO;
+import org.iternine.jeppetto.test.accesscontrol.AccessControlTest;
+import org.iternine.jeppetto.test.accesscontrol.DefaultAccessObjectDAO;
+import org.iternine.jeppetto.test.accesscontrol.IdentifiedCreatableObjectDAO;
+import org.iternine.jeppetto.test.accesscontrol.RoleCreatableObjectDAO;
 import org.iternine.jeppetto.testsupport.TestContext;
 
 
@@ -32,19 +34,30 @@ public class HibernateAccessControlTest extends AccessControlTest {
 
 
     //-------------------------------------------------------------
-    // Implementation - SimpleObjectDAOTest
+    // Implementation - AccessControlTest
     //-------------------------------------------------------------
 
     @Override
-    protected AccessControlTestDAO getAccessControlTestDAO() {
-        if (testContext == null) {
-            testContext = new TestContext("AccessControlTest.spring.xml",
-                                          "HibernateDAOTest.test.properties",
-                                          "hibernateDAOTest.jdbc.driverClass");
+    protected DefaultAccessObjectDAO getDefaultAccessObjectDAO() {
+        ensureTestContextExists();
 
-        }
+        return (DefaultAccessObjectDAO) testContext.getBean("defaultAccessObjectDAO");
+    }
 
-        return (AccessControlTestDAO) testContext.getBean("accessControlTestDAO");
+
+    @Override
+    protected IdentifiedCreatableObjectDAO getIdentifiedCreatableObjectDAO() {
+        ensureTestContextExists();
+
+        return (IdentifiedCreatableObjectDAO) testContext.getBean("identifiedCreatableObjectDAO");
+    }
+
+
+    @Override
+    protected RoleCreatableObjectDAO getRoleCreatableObjectDAO() {
+        ensureTestContextExists();
+
+        return (RoleCreatableObjectDAO) testContext.getBean("roleCreatableObjectDAO");
     }
 
 
@@ -54,6 +67,19 @@ public class HibernateAccessControlTest extends AccessControlTest {
             testContext.close();
 
             testContext = null;
+        }
+    }
+
+
+    //-------------------------------------------------------------
+    // Methods - Private
+    //-------------------------------------------------------------
+
+    private void ensureTestContextExists() {
+        if (testContext == null) {
+            testContext = new TestContext("HibernateAccessControlTest.spring.xml",
+                                          "HibernateDAOTest.test.properties",
+                                          "hibernateDAOTest.jdbc.driverClass");
         }
     }
 }

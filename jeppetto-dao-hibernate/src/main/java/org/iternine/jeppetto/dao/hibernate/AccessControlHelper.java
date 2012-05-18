@@ -17,9 +17,12 @@
 package org.iternine.jeppetto.dao.hibernate;
 
 
+import org.hibernate.HibernateException;
+import org.iternine.jeppetto.dao.AccessControlContext;
+import org.iternine.jeppetto.dao.AccessControlException;
+import org.iternine.jeppetto.dao.AccessType;
 import org.iternine.jeppetto.dao.annotation.AccessControl;
-import org.iternine.jeppetto.dao.annotation.AccessControlRule;
-import org.iternine.jeppetto.dao.annotation.AccessControlType;
+import org.iternine.jeppetto.dao.annotation.Accessor;
 
 import org.hibernate.Criteria;
 import org.hibernate.Session;
@@ -27,11 +30,14 @@ import org.hibernate.SessionFactory;
 import org.hibernate.criterion.Restrictions;
 
 import java.io.Serializable;
-import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 
-public class AccessControlEntryHelper {
+public class AccessControlHelper {
 
     //-------------------------------------------------------------
     // Variables - Private
@@ -53,13 +59,19 @@ public class AccessControlEntryHelper {
     // Methods - Package
     //-------------------------------------------------------------
 
-    void createEntry(Class<?> objectType, Serializable id, String accessId) {
+    // TODO: check if object already exists -- if yes, modify accessType
+    void createEntry(Class<?> objectType, Serializable id, String accessId, AccessType accessType) {
+        if (accessType == AccessType.None) {
+            return;
+        }
+
         Session session = sessionFactory.getCurrentSession();
         AccessControlEntry accessControlEntry = new AccessControlEntry();
 
         accessControlEntry.setObjectType(objectType.getSimpleName());
         accessControlEntry.setObjectId(id.toString());
         accessControlEntry.setAccessibleBy(accessId);
+        accessControlEntry.setAccessType(accessType.shortName());
 
         session.save(accessControlEntry);
     }
@@ -92,10 +104,9 @@ public class AccessControlEntryHelper {
     }
 
 
-    List<String> getEntries(Class<?> objectType, Serializable id) {
-        List<String> result = new ArrayList<String>();
+    Map<String, AccessType> getEntries(Class<?> objectType, Serializable id) {
+        Map<String, AccessType> result = new HashMap<String, AccessType>();
         Session session = sessionFactory.getCurrentSession();
-
         Criteria criteria = session.createCriteria(AccessControlEntry.class);
 
         criteria.add(Restrictions.eq("objectType", objectType.getSimpleName()));
@@ -103,30 +114,39 @@ public class AccessControlEntryHelper {
 
         //noinspection unchecked
         for (AccessControlEntry accessControlEntry : (List<AccessControlEntry>) criteria.list()) {
-            result.add(accessControlEntry.getAccessibleBy());
+            result.put(accessControlEntry.getAccessibleBy(), AccessType.getAccessTypeFromShortName(accessControlEntry.getAccessType()));
         }
 
         return result;
     }
 
+    
+    void validateContextAllows(Class<?> objectType, Serializable id, AccessControlContext accessControlContext, AccessType accessType) {
+        if (annotationAllowsAccess(objectType, accessControlContext, accessType)
+            || accessControlEntryAllows(objectType, id, accessControlContext.getAccessId(), accessType)) {
+            return;
+        }
 
-    //-------------------------------------------------------------
-    // Methods - Private
-    //-------------------------------------------------------------
+        throw new AccessControlException("Can't access object [" + id + "] for " + accessType + " with " + accessControlContext);
+    }
 
-    private boolean roleAllowsAccess(Class<?> objectType, String role) {
-        AccessControl accessControl;
 
-        if (role == null || role.isEmpty()) {
+    boolean annotationAllowsAccess(Class<?> objectType, AccessControlContext accessControlContext, AccessType accessType) {
+        if (accessType == null) {
             return false;
         }
 
+        AccessControl accessControl;
         if ((accessControl = getAccessControlAnnotation(objectType)) == null) {
             return false;
         }
 
-        for (AccessControlRule accessControlRule : accessControl.rules()) {
-            if (accessControlRule.type() == AccessControlType.Role && accessControlRule.value().equals(role)) {
+        Set<String> roles = accessControlContext.getRoles();
+
+        for (Accessor accessor : accessControl.accessors()) {
+            if (accessor.access().allows(accessType)
+                && (accessor.type() == Accessor.Type.Anyone
+                    || (accessor.type() == Accessor.Type.Role && roles != null && roles.contains(accessor.typeValue())))) {
                 return true;
             }
         }
@@ -135,7 +155,38 @@ public class AccessControlEntryHelper {
     }
 
 
-    private AccessControl getAccessControlAnnotation(Class<?> objectType) {
+    boolean accessControlEntryAllows(Class<?> objectType, Serializable id, String accessId, AccessType accessType) {
+        if (accessType == AccessType.None) {
+            return false;
+        }
+
+        Session session = null;
+
+        try {
+            session = sessionFactory.openSession();
+            Criteria criteria = session.createCriteria(AccessControlEntry.class);
+
+            criteria.add(Restrictions.eq("objectType", objectType.getSimpleName()));
+            criteria.add(Restrictions.eq("objectId", id.toString()));
+            criteria.add(Restrictions.eq("accessibleBy", accessId));
+
+            if (accessType == AccessType.Read) {
+                criteria.add(Restrictions.in("accessType", Arrays.asList(AccessType.Read.shortName(),
+                                                                         AccessType.ReadWrite.shortName())));
+            } else {
+                criteria.add(Restrictions.eq("accessType", AccessType.ReadWrite.shortName()));
+            }
+
+            return criteria.uniqueResult() != null;
+        } finally {
+            if (session != null) {
+                try { session.close(); } catch (HibernateException ignore) { }
+            }
+        }
+    }
+
+
+    AccessControl getAccessControlAnnotation(Class<?> objectType) {
         while (objectType != null) {
             // noinspection unchecked
             AccessControl accessControl = objectType.getAnnotation(AccessControl.class);

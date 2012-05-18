@@ -17,10 +17,15 @@
 package org.iternine.jeppetto.dao.hibernate;
 
 
+import org.iternine.jeppetto.dao.AccessControlContext;
 import org.iternine.jeppetto.dao.AccessControlContextProvider;
 
 import org.hibernate.EmptyInterceptor;
 import org.hibernate.type.Type;
+import org.iternine.jeppetto.dao.AccessControlException;
+import org.iternine.jeppetto.dao.AccessType;
+import org.iternine.jeppetto.dao.annotation.AccessControl;
+import org.iternine.jeppetto.dao.annotation.Creator;
 
 import java.io.Serializable;
 
@@ -31,7 +36,7 @@ public class AccessControlInterceptor extends EmptyInterceptor {
     // Variables - Private
     //-------------------------------------------------------------
 
-    private AccessControlEntryHelper accessControlEntryHelper;
+    private AccessControlHelper accessControlHelper;
     private AccessControlContextProvider accessControlContextProvider;
 
 
@@ -40,10 +45,63 @@ public class AccessControlInterceptor extends EmptyInterceptor {
     //-------------------------------------------------------------
 
     @Override
+    public boolean onFlushDirty(Object entity, Serializable id, Object[] currentState, Object[] previousState,
+                                String[] propertyNames, Type[] types) {
+        if (entity.getClass().isAssignableFrom(AccessControlEntry.class)) {
+            return false;
+        }
+
+        accessControlHelper.validateContextAllows(entity.getClass(), id, accessControlContextProvider.getCurrent(), AccessType.ReadWrite);
+
+        return false;
+    }
+
+
+    @Override
     public boolean onSave(Object entity, Serializable id, Object[] state, String[] propertyNames, Type[] types) {
-        if (!entity.getClass().isAssignableFrom(AccessControlEntry.class)
-            && accessControlContextProvider.getCurrent().getAccessId() != null) {
-            accessControlEntryHelper.createEntry(entity.getClass(), id, accessControlContextProvider.getCurrent().getAccessId());
+        // TODO: Determine if this is a new or existing object and validate write access
+        if (entity.getClass().isAssignableFrom(AccessControlEntry.class)) {
+            return false;
+        }
+
+        AccessControlContext accessControlContext = accessControlContextProvider.getCurrent();
+
+        AccessControl accessControl = accessControlHelper.getAccessControlAnnotation(entity.getClass());
+        if (accessControl != null) {
+            for (Creator creator : accessControl.creators()) {
+                switch (creator.type()) {
+                case Identified:
+                    if (accessControlContext.getAccessId() != null) {
+                        accessControlHelper.createEntry(entity.getClass(), id, accessControlContext.getAccessId(), creator.grantedAccess());
+
+                        return false;
+                    }
+
+                    break;
+
+                case Role:
+                    if (accessControlContext.getRoles() != null && accessControlContext.getRoles().contains(creator.typeValue())) {
+                        accessControlHelper.createEntry(entity.getClass(), id, accessControlContext.getAccessId(), creator.grantedAccess());
+
+                        return false;
+                    }
+
+                    break;
+
+                case Anonymous:
+                    return false;
+                }
+            }
+
+            throw new AccessControlException("Unable to create " + entity.getClass().getSimpleName()
+                                             + " with " + accessControlContext
+                                             + ".  Check object's @AccessControl annotation.");
+        } else {
+            // When no annotation is present, any user can create the object.  If user is unknown, no explicit grants.
+            // Otherwise, ReadWrite access is given to the caller.
+            if (accessControlContext.getAccessId() != null) {
+                accessControlHelper.createEntry(entity.getClass(), id, accessControlContext.getAccessId(), AccessType.ReadWrite);
+            }
         }
 
         return false;
@@ -52,8 +110,9 @@ public class AccessControlInterceptor extends EmptyInterceptor {
 
     @Override
     public void onDelete(Object entity, Serializable id, Object[] state, String[] propertyNames, Type[] types) {
+        // TODO: Determine if this is a new or existing object and validate write access
         if (!entity.getClass().isAssignableFrom(AccessControlEntry.class)) {
-            accessControlEntryHelper.deleteAllEntries(entity.getClass(), id);
+            accessControlHelper.deleteAllEntries(entity.getClass(), id);
         }
     }
 
@@ -62,8 +121,8 @@ public class AccessControlInterceptor extends EmptyInterceptor {
     // Methods - IoC
     //-------------------------------------------------------------
 
-    public void setAccessControlHelper(AccessControlEntryHelper accessControlEntryHelper) {
-        this.accessControlEntryHelper = accessControlEntryHelper;
+    public void setAccessControlHelper(AccessControlHelper accessControlHelper) {
+        this.accessControlHelper = accessControlHelper;
     }
 
 

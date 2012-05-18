@@ -207,7 +207,7 @@ public class MongoDBCallback extends DefaultDBCallback {
             // noinspection ConstantConditions
             getter = containerClass.getMethod("get" + Character.toUpperCase(lastPathPart.charAt(0)) + lastPathPart.substring(1));
         } catch (NoSuchMethodException e) {
-            if (!EXPLAIN_PATHS_TO_IGNORE.contains(lastPathPart)) {
+            if (!EXPLAIN_PATHS_TO_IGNORE.contains(lastPathPart) && !lastPathPart.startsWith("__")) {
                 logger.warn("No getter for: {} ({})", lastPathPart, e.getMessage());
             }
 

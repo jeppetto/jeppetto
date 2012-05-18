@@ -114,7 +114,7 @@ public enum MongoDBOperator {
 
 
     //-------------------------------------------------------------
-    // Methods - Public
+    // Methods - Private
     //-------------------------------------------------------------
 
     private Object translateEnumsIfNecessary(Object argument) {

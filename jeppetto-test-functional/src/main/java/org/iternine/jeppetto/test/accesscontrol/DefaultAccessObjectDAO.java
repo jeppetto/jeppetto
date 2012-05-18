@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011 Jeppetto and Jonathan Thompson
+ * Copyright (c) 2012 Jeppetto and Jonathan Thompson
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,19 +14,12 @@
  * limitations under the License.
  */
 
-package org.iternine.jeppetto.dao.annotation;
+package org.iternine.jeppetto.test.accesscontrol;
 
 
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import org.iternine.jeppetto.dao.AccessControllable;
+import org.iternine.jeppetto.dao.GenericDAO;
 
 
-@Retention(RetentionPolicy.RUNTIME)
-@Target(value = { })
-public @interface AccessControlRule {
-
-    AccessControlType type();
-
-    String value();
+public interface DefaultAccessObjectDAO extends GenericDAO<DefaultAccessObject, String>, AccessControllable<String> {
 }

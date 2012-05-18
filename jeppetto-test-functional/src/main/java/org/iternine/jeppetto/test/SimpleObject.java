@@ -17,10 +17,6 @@
 package org.iternine.jeppetto.test;
 
 
-import org.iternine.jeppetto.dao.annotation.AccessControl;
-import org.iternine.jeppetto.dao.annotation.AccessControlRule;
-import org.iternine.jeppetto.dao.annotation.AccessControlType;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -29,9 +25,6 @@ import java.util.Map;
 import java.util.Set;
 
 
-@AccessControl(rules = {
-    @AccessControlRule(type = AccessControlType.Role,  value = "Administrator")
-} )
 public class SimpleObject {
 
     //-------------------------------------------------------------

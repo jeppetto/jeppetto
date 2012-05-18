@@ -21,6 +21,7 @@ import org.iternine.jeppetto.dao.AccessControlContext;
 import org.iternine.jeppetto.dao.AccessControlContextProvider;
 import org.iternine.jeppetto.dao.AccessControlException;
 import org.iternine.jeppetto.dao.AccessControllable;
+import org.iternine.jeppetto.dao.AccessType;
 import org.iternine.jeppetto.dao.Condition;
 import org.iternine.jeppetto.dao.ConditionType;
 import org.iternine.jeppetto.dao.JeppettoException;
@@ -33,9 +34,6 @@ import org.iternine.jeppetto.dao.QueryModelDAO;
 import org.iternine.jeppetto.dao.Sort;
 import org.iternine.jeppetto.dao.SortDirection;
 import org.iternine.jeppetto.dao.TooManyItemsException;
-import org.iternine.jeppetto.dao.annotation.AccessControl;
-import org.iternine.jeppetto.dao.annotation.AccessControlRule;
-import org.iternine.jeppetto.dao.annotation.AccessControlType;
 
 import org.hibernate.Criteria;
 import org.hibernate.HibernateException;
@@ -86,7 +84,7 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
 
     private Class<T> persistentClass;
     private SessionFactory sessionFactory;
-    private AccessControlEntryHelper accessControlEntryHelper;
+    private AccessControlHelper accessControlHelper;
     private AccessControlContextProvider accessControlContextProvider;
     private String idField = "id";      // TODO: Allow for configuration...
 
@@ -95,16 +93,16 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
     // Constructors
     //-------------------------------------------------------------
 
-    public HibernateQueryModelDAO(Class<T> persistentClass, Map<String, Object> daoProperties) {
+    protected HibernateQueryModelDAO(Class<T> persistentClass, Map<String, Object> daoProperties) {
         this(persistentClass, daoProperties, null);
     }
 
 
-    public HibernateQueryModelDAO(Class<T> persistentClass, Map<String, Object> daoProperties,
-                                  AccessControlContextProvider accessControlContextProvider) {
+    protected HibernateQueryModelDAO(Class<T> persistentClass, Map<String, Object> daoProperties,
+                                     AccessControlContextProvider accessControlContextProvider) {
         this.persistentClass = persistentClass;
         this.sessionFactory = (SessionFactory) daoProperties.get("sessionFactory");
-        this.accessControlEntryHelper = (AccessControlEntryHelper) daoProperties.get("accessControlEntryHelper");
+        this.accessControlHelper = (AccessControlHelper) daoProperties.get("accessControlHelper");
         this.accessControlContextProvider = accessControlContextProvider;
     }
 
@@ -194,12 +192,13 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
         T result;
 
         try {
-            if (accessControlContextProvider == null || roleAllowsAccess(queryModel.getAccessControlContext().getRole())) {
+            if (accessControlContextProvider == null
+                || accessControlHelper.annotationAllowsAccess(persistentClass, queryModel.getAccessControlContext(), AccessType.Read)) {
                 // noinspection unchecked
                 result = (T) buildCriteria(queryModel).uniqueResult();
             } else {
                 // noinspection unchecked
-                result = (T) createEntryBasedQuery(queryModel).uniqueResult();
+                result = (T) createAccessControlledQuery(queryModel).uniqueResult();
             }
         } catch (NonUniqueObjectException e) {
             throw new TooManyItemsException(e.getMessage());
@@ -219,7 +218,8 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
     public Iterable<T> findUsingQueryModel(QueryModel queryModel)
             throws JeppettoException {
         try {
-            if (accessControlContextProvider == null || roleAllowsAccess(queryModel.getAccessControlContext().getRole())) {
+            if (accessControlContextProvider == null
+                || accessControlHelper.annotationAllowsAccess(persistentClass, queryModel.getAccessControlContext(), AccessType.Read)) {
                 Criteria criteria = buildCriteria(queryModel);
 
                 if (queryModel.getSorts() != null) {
@@ -241,7 +241,7 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
                 return criteria.list();
             } else {
                 //noinspection unchecked
-                return createEntryBasedQuery(queryModel).list();
+                return createAccessControlledQuery(queryModel).list();
             }
         } catch (HibernateException e) {
             throw new JeppettoException(e);
@@ -375,26 +375,54 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
     //-------------------------------------------------------------
 
     @Override
-    public void grantAccess(ID id, String accessId)
+    public void grantAccess(ID id, String accessId, AccessType accessType)
             throws NoSuchItemException, AccessControlException {
-        // TODO: determine if object exists and if caller has access
-        accessControlEntryHelper.createEntry(persistentClass, id, accessId);
+        if (accessControlContextProvider == null) {
+            throw new AccessControlException("Access Control is not enabled. No AccessControlContextProvider specified.");
+        }
+
+        if (accessType == AccessType.None) {
+            revokeAccess(id, accessId);
+
+            return;
+        }
+
+        accessControlHelper.validateContextAllows(persistentClass, id, accessControlContextProvider.getCurrent(), AccessType.ReadWrite);
+
+        accessControlHelper.createEntry(persistentClass, id, accessId, accessType);
     }
 
 
     @Override
     public void revokeAccess(ID id, String accessId)
             throws NoSuchItemException, AccessControlException {
-        // TODO: determine if object exists and if caller has access
-        accessControlEntryHelper.deleteEntry(persistentClass, id, accessId);
+        if (accessControlContextProvider == null) {
+            throw new AccessControlException("Access Control is not enabled. No AccessControlContextProvider specified.");
+        }
+
+        accessControlHelper.validateContextAllows(persistentClass, id, accessControlContextProvider.getCurrent(), AccessType.ReadWrite);
+
+        accessControlHelper.deleteEntry(persistentClass, id, accessId);
     }
 
 
     @Override
-    public List<String> getAccessIds(ID id)
+    public AccessType getGrantedAccess(ID id, String accessId)
             throws NoSuchItemException, AccessControlException {
-        // TODO: determine if object exists and if caller has access
-        return accessControlEntryHelper.getEntries(persistentClass, id);
+        return getGrantedAccesses(id).get(accessId);
+    }
+
+
+    @Override
+    public Map<String, AccessType> getGrantedAccesses(ID id)
+            throws NoSuchItemException, AccessControlException {
+        if (accessControlContextProvider == null) {
+            throw new AccessControlException("Access Control is not enabled. No AccessControlContextProvider specified.");
+        }
+
+        accessControlHelper.validateContextAllows(persistentClass, id, accessControlContextProvider.getCurrent(), AccessType.ReadWrite);
+
+        return accessControlHelper.getEntries(persistentClass, id);
     }
 
 
@@ -426,45 +454,6 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
     //-------------------------------------------------------------
     // Methods - Private
     //-------------------------------------------------------------
-
-    private boolean roleAllowsAccess(String role) {
-        AccessControl accessControl;
-
-        if (role == null || role.isEmpty()) {
-            return false;
-        }
-
-        if ((accessControl = getAccessControlAnnotation()) == null) {
-            return false;
-        }
-
-        for (AccessControlRule accessControlRule : accessControl.rules()) {
-            if (accessControlRule.type() == AccessControlType.Role && accessControlRule.value().equals(role)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-
-    private AccessControl getAccessControlAnnotation() {
-        Class classToExamine = persistentClass;
-
-        while (classToExamine != null) {
-            // noinspection unchecked
-            AccessControl accessControl = (AccessControl) classToExamine.getAnnotation(AccessControl.class);
-
-            if (accessControl != null) {
-                return accessControl;
-            }
-
-            classToExamine = classToExamine.getSuperclass();
-        }
-
-        return null;
-    }
-
 
     private Criteria buildCriteria(QueryModel queryModel) {
         Criteria criteria = getCurrentSession().createCriteria(persistentClass);
@@ -499,7 +488,7 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
 
 
     // TODO: Add projection, maxResults, firstResult support
-    private Query createEntryBasedQuery(QueryModel queryModel) {
+    private Query createAccessControlledQuery(QueryModel queryModel) {
         Criteria criteria = getCurrentSession().createCriteria(persistentClass);
 
         for (String associationPath : queryModel.getAssociationConditions().keySet()) {
