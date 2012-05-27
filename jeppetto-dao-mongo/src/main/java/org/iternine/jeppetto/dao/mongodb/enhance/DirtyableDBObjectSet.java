@@ -17,27 +17,30 @@
 package org.iternine.jeppetto.dao.mongodb.enhance;
 
 
-import org.bson.BSONObject;
+import org.iternine.jeppetto.dao.JeppettoException;
 
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedHashSet;
-import java.util.Map;
 import java.util.Set;
 
 
-@SuppressWarnings( { "unchecked" })
-public class DirtyableDBObjectSet
-        implements Set, DirtyableDBObject {
+/**
+ * A DirtyableDBObjectSet uses two underlying collection objects to manage the semantics of this class.  The
+ * first is a Set object which is used to ensure Set semantics are followed, the second is an underlying List,
+ * provided by the base class, to ensure ordering and provide the lookup by index methods that DBObject
+ * implementations require.
+ */
+@SuppressWarnings({ "unchecked" })
+public class DirtyableDBObjectSet extends DirtyableDBObjectList
+        implements Set {
 
     //-------------------------------------------------------------
     // Variables - Private
     //-------------------------------------------------------------
 
     private Set delegate;
-    private boolean dirty = false;
 
 
     //-------------------------------------------------------------
@@ -45,11 +48,22 @@ public class DirtyableDBObjectSet
     //-------------------------------------------------------------
 
     public DirtyableDBObjectSet() {
+        super();
+
         this.delegate = new HashSet();
     }
 
 
-    public DirtyableDBObjectSet(Set delegate) {
+    /**
+     *
+     * @param delegate
+     * @param modifiableDelegate true if access is possible to the delegate by non-Jeppetto code
+     */
+    // TODO: Determine who calls and if we should have a DirtyableDBObjectSet(List delegate, boolean modi...)
+    // TODO: Do we need to convert items in the delegate() to DirtyableDBObjects?
+    public DirtyableDBObjectSet(Set delegate, boolean modifiableDelegate) {
+        super(new ArrayList(delegate), modifiableDelegate);
+
         this.delegate = delegate;
     }
 
@@ -60,57 +74,87 @@ public class DirtyableDBObjectSet
 
     @Override
     public int size() {
-        return delegate.size();
+        return super.size();
     }
 
 
     @Override
     public boolean isEmpty() {
-        return delegate.isEmpty();
+        return super.isEmpty();
     }
 
 
     @Override
-    public boolean contains(Object o) {
-        return delegate.contains(o);
+    public boolean contains(Object element) {
+        return delegate.contains(element);
     }
 
 
     @Override
     public Iterator iterator() {
-        return delegate.iterator(); // TODO: make an immutable iterator or else track dirty state from it
+        final Iterator iterator = super.iterator();
+
+        return new Iterator() {
+            @Override
+            public boolean hasNext() {
+                return iterator.hasNext();
+            }
+
+
+            @Override
+            public Object next() {
+                return iterator.next();
+            }
+
+
+            @Override
+            public void remove() {
+                // TODO: Verify this will return the same 'next()'
+                Object next = iterator.next();
+
+                delegate.remove(next);
+
+                iterator.remove();
+
+                // TODO: Mark super as dirty?
+            }
+        };
     }
 
 
     @Override
     public Object[] toArray() {
-        return delegate.toArray();
+        return super.toArray();
     }
 
 
     @Override
     public Object[] toArray(Object[] objects) {
-        return delegate.toArray(objects);
+        return super.toArray(objects);
     }
 
 
     @Override
-    public boolean add(Object o) {
-        boolean changed = delegate.add(o);
+    public boolean add(Object element) {
+        if (delegate.add(element)) {
+            super.add(element);
 
-        dirty |= changed;
+            return true;
+        }
 
-        return changed;
+        return false;
     }
 
 
     @Override
-    public boolean remove(Object o) {
-        boolean changed = delegate.remove(o);
+    public boolean remove(Object element) {
+        if (delegate.remove(element)) {
+            super.remove(element); // TODO: verify remove?
 
-        dirty |= changed;
+            return true;
+        }
 
-        return changed;
+        return false;
     }
 
 
@@ -121,30 +165,30 @@ public class DirtyableDBObjectSet
 
 
     @Override
-    public boolean addAll(Collection collection) {
-        boolean changed = delegate.addAll(collection);
+    public boolean addAll(Collection elements) {
+        boolean changed = false;
 
-        dirty |= changed;
-
-        return changed;
-    }
-
-
-    @Override
-    public boolean retainAll(Collection collection) {
-        boolean changed = delegate.retainAll(collection);
-
-        dirty |= changed;
+        for (Object element : elements) {
+            changed |= add(element);
+        }
 
         return changed;
     }
 
 
     @Override
-    public boolean removeAll(Collection collection) {
-        boolean changed = delegate.removeAll(collection);
+    public boolean retainAll(Collection elements) {
+        throw new JeppettoException("Not implemented");
+    }
 
-        dirty |= changed;
+
+    @Override
+    public boolean removeAll(Collection elements) {
+        boolean changed = false;
+
+        for (Object element : elements) {
+            changed |= remove(element);
+        }
 
         return changed;
     }
@@ -152,39 +196,8 @@ public class DirtyableDBObjectSet
 
     @Override
     public void clear() {
-        if (!isEmpty()) {
-            dirty = true;
-        }
-
+        super.clear();
         delegate.clear();
-    }
-
-
-    //-------------------------------------------------------------
-    // Implementation - DirtyableDBObject
-    //-------------------------------------------------------------
-
-    @Override
-    public boolean isDirty() {
-        return dirty;
-    }
-
-
-    @Override
-    public void markPersisted() {
-        dirty = false;
-    }
-
-
-    @Override
-    public boolean isPersisted() {
-        throw new RuntimeException("Can't determine persisted state.");
-    }
-
-
-    @Override
-    public Set<String> getDirtyKeys() {
-        return null; // TODO
     }
 
 
@@ -193,107 +206,22 @@ public class DirtyableDBObjectSet
     //-------------------------------------------------------------
 
     @Override
-    public void markAsPartialObject() {
-        throw new RuntimeException("Can't mark DirtyableDBObjectSet as partial");
-    }
-
-
-    @Override
-    public boolean isPartialObject() {
-        return false;
-    }
-
-
-    @Override
-    public Set<String> keySet() {
-        Set<String> keys = new LinkedHashSet<String>();
-
-        for (Object o : delegate) {
-            keys.add(o.toString());
-        }
-
-        return keys;
-    }
-
-
-    @Override
-    public boolean containsField(String s) {
-        for (Object o : delegate) {
-            if (o.toString().equals(s)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-
-    @Override
-    public boolean containsKey(String s) {
-        return containsField(s);
-    }
-
-
-    @Override
     public Object removeField(String s) {
-        for (Iterator iterator = delegate.iterator(); iterator.hasNext(); ) {
-            Object o = iterator.next();
+        Object o = super.removeField(s);
 
-            if (o.toString().equals(s)) {
-                iterator.remove();
-                dirty = true;
-
-                return o;
-            }
+        if (o != null) {
+            delegate.remove(o);
         }
 
-        return null;
-    }
-
-
-    @Override
-    public Map toMap() {
-        Map result = new HashMap();
-
-        for (String key : keySet()) {
-            result.put(key, get(key));
-        }
-
-        return result;
-    }
-
-
-    @Override
-    public Object get(String s) {
-        for (Object o : delegate) {
-            if (o.toString().equals(s)) {
-                return o;
-            }
-        }
-
-        return null;
-    }
-
-
-    @Override
-    public void putAll(Map m) {
-        for (Map.Entry entry : (Set<Map.Entry>) m.entrySet()) {
-            put(entry.getKey().toString(), entry.getValue() );
-        }
-    }
-
-
-    @Override
-    public void putAll(BSONObject o) {
-        for (String k : o.keySet()) {
-            put(k, o.get(k));
-        }
+        return o;
     }
 
 
     @Override
     public Object put(String s, Object v) {
-        add(v);
+        super.put(s, v);
+
+        delegate.add(v);
 
         return v;
     }

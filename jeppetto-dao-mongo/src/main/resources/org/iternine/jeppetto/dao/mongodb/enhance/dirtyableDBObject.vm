@@ -114,18 +114,7 @@ public $_.cls("${baseName}$DirtyableDBObject").ext($base).impl("org.iternine.jep
             #elseif ( $returnType.isEnum() )
                 this.$setterName((v == null) ? null : (${returnTypeName}) java.lang.Enum.valueOf(${returnTypeName}.class, String.valueOf(v)));
             #else
-                #set ( $returnTypeParams = $_.returnTypeParamsOf($getter) )
-                #if ( $returnTypeParams.size() == 0 )
-                Class[] typeParams = new Class[0];
-                #else
-                Class[] typeParams = new Class[] {
-                #foreach ( $returnTypeParam in $returnTypeParams )
-
-                    ${returnTypeParam.getName()}.class#if( $velocityHasNext ),#end
-                #end
-                };
-                #end
-                this.$setterName(($returnTypeName) org.iternine.jeppetto.dao.mongodb.enhance.DBObjectUtil.fromObject(${returnTypeName}.class, v, typeParams));
+                this.$setterName(($returnTypeName) org.iternine.jeppetto.dao.mongodb.enhance.DBObjectUtil.fromObject(${returnTypeName}.class, v));
             #end
             return v;
         }
@@ -308,7 +297,7 @@ public $_.cls("${baseName}$DirtyableDBObject").ext($base).impl("org.iternine.jep
     }")
 
     $_.method("
-    public java.util.Set getDirtyKeys() {
+    public java.util.Iterator getDirtyKeys() {
         java.util.Set dirtyKeys = new java.util.HashSet(__dirtyKeys);
 
         #foreach( $getter in $getters )
@@ -328,7 +317,7 @@ public $_.cls("${baseName}$DirtyableDBObject").ext($base).impl("org.iternine.jep
         #end
         #end
 
-        return dirtyKeys;
+        return dirtyKeys.iterator();
     }")
 
 ##

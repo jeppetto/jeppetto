@@ -19,7 +19,7 @@ package org.iternine.jeppetto.dao.mongodb.enhance;
 
 import com.mongodb.DBObject;
 
-import java.util.Set;
+import java.util.Iterator;
 
 
 public interface DirtyableDBObject extends DBObject {
@@ -45,7 +45,7 @@ public interface DirtyableDBObject extends DBObject {
     /**
      * @return Set of keys corresponding to changed fields in this DBObject
      */
-    Set<String> getDirtyKeys();
+    Iterator<String> getDirtyKeys();
 
 
 //    /**

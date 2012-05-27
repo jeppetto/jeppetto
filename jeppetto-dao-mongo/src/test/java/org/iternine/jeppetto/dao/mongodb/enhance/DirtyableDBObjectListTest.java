@@ -31,7 +31,7 @@ public class DirtyableDBObjectListTest {
     //-------------------------------------------------------------
 
     @Test
-    public void addToExistingIndexIndicatesRewrite() {
+    public void appendToListIndicatesNoRewrite() {
         List<String> delegate = new ArrayList<String>();
 
         delegate.add("foo");
@@ -39,6 +39,20 @@ public class DirtyableDBObjectListTest {
         DirtyableDBObjectList dirtyableDBObjectList = new DirtyableDBObjectList(delegate, false);
 
         dirtyableDBObjectList.add(1, "bar");
+
+        Assert.assertFalse(dirtyableDBObjectList.isRewrite());
+    }
+
+
+    @Test
+    public void modifyIndexIndicatesRewrite() {
+        List<String> delegate = new ArrayList<String>();
+
+        delegate.add("foo");
+
+        DirtyableDBObjectList dirtyableDBObjectList = new DirtyableDBObjectList(delegate, false);
+
+        dirtyableDBObjectList.add(0, "bar");
 
         Assert.assertTrue(dirtyableDBObjectList.isRewrite());
     }

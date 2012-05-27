@@ -17,20 +17,15 @@
 package org.iternine.jeppetto.dao.mongodb.enhance;
 
 
+import org.iternine.jeppetto.dao.JeppettoException;
 import org.iternine.jeppetto.enhance.Enhancer;
 
-import com.google.common.base.Function;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import com.mongodb.BasicDBObject;
 import com.mongodb.DBObject;
 import com.mongodb.DBPointer;
 import com.mongodb.DBRefBase;
 import org.bson.types.ObjectId;
 
-import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Collection;
@@ -112,25 +107,36 @@ public class DBObjectUtil {
     }
 
 
-    public static Object fromObject(Class<?> type, final Object o, final Class<?>... typeParameters) {
+    public static Object fromObject(Class<?> type, final Object o) {
         if (o == null) {
             return null;
         } else if (type.isAssignableFrom(o.getClass())) {
             if (List.class.isAssignableFrom(type)) {
-                return fromList(o, typeParameters);
+                if (DirtyableDBObjectList.class.isAssignableFrom(o.getClass())) {
+                    return o;
+                }
+
+                return new DirtyableDBObjectList((List) o, true);
             } else if (Map.class.isAssignableFrom(type)) {
-                return fromMap(o, typeParameters);
+                if (DirtyableDBObjectMap.class.isAssignableFrom(o.getClass())) {
+                    return o;
+                }
+
+                //noinspection unchecked
+                return new DirtyableDBObjectMap((Map<String, Object>) o);
             } else if (Set.class.isAssignableFrom(type)) {
-                return fromSet(o, typeParameters);
-            } else if (Iterable.class.isAssignableFrom(type)) {
-                return fromList(o, typeParameters);
+                if (DirtyableDBObjectSet.class.isAssignableFrom(o.getClass())) {
+                    return o;
+                }
+
+                return new DirtyableDBObjectSet((Set) o, true);
             }
 
             return type.cast(o);
         } else if (Iterable.class.isAssignableFrom(o.getClass()) && Set.class.isAssignableFrom(type)) {
-            return fromSet(o, typeParameters);
+            throw new JeppettoException();
+//            return fromSet(o, typeParameters);
         } else if (o instanceof DBObject) {
-            // TODO: validate works on nested objects of various types...
             DBObject copy = (DBObject) EnhancerHelper.getDirtyableDBObjectEnhancer(type).newInstance();
 
             copy.putAll((DBObject) o);
@@ -160,7 +166,7 @@ public class DBObjectUtil {
         } else if (List.class.isAssignableFrom(object.getClass())) {
             return new DirtyableDBObjectList((List) object, true);
         } else if (Set.class.isAssignableFrom(object.getClass())) {
-            return new DirtyableDBObjectSet((Set) object);
+            return new DirtyableDBObjectSet((Set) object, true);
         } else if (Iterable.class.isAssignableFrom(object.getClass())) {
             throw new RuntimeException("oops...");
 //            return new DirtyableDBObjectList((Iterable) object);
@@ -184,71 +190,5 @@ public class DBObjectUtil {
             //noinspection unchecked
             return enhancer.enhance(object);
         }
-    }
-
-
-    //-------------------------------------------------------------
-    // Methods - Private - Static
-    //-------------------------------------------------------------
-
-    private static Class<?> coalesceTypeParam(Type[] classes, int index) {
-        return (Class<?>) (classes == null || index >= classes.length ? Object.class : classes[index]);
-    }
-
-
-    private static Function<Object, Object> fromObjectFunction(final Class<?> type, final Class<?>... typeParams) {
-        return new Function<Object, Object>() {
-            @Override
-            public Object apply(Object from) {
-                return fromObject(type, from, typeParams);
-            }
-        };
-    }
-
-
-    private static Map<?, ?> fromMap(final Object source, final Class<?>... typeParameters) {
-        if (DirtyableDBObjectMap.class.isAssignableFrom(source.getClass())) {
-            return (Map<?, ?>) source;
-        }
-
-        Function<Object, Object> valueFunction = fromObjectFunction(coalesceTypeParam(typeParameters, 1));
-
-        if (String.class != coalesceTypeParam(typeParameters, 0)) {
-            Function<Object, Object> keyFunction = fromObjectFunction(coalesceTypeParam(typeParameters, 0));
-            Map<?, ?> sourceMap = (Map<?, ?>) source;
-            DirtyableDBObjectMap converted = new DirtyableDBObjectMap();
-
-            for (Map.Entry<?, ?> entry : sourceMap.entrySet()) {
-                converted.put(keyFunction.apply(entry.getKey()), valueFunction.apply(entry.getValue()));
-            }
-
-            converted.markPersisted();
-            
-            return converted;
-        } else {
-            return new DirtyableDBObjectMap(Maps.transformValues((Map<?, ?>) source, valueFunction));
-        }
-    }
-
-
-    private static Set<?> fromSet(final Object source, final Class<?>... typeParameters) {
-        if (DirtyableDBObjectSet.class.isAssignableFrom(source.getClass())) {
-            return (Set<?>) source;
-        }
-
-        Function<Object, Object> valueFunction = fromObjectFunction(coalesceTypeParam(typeParameters, 0));
-
-        return new DirtyableDBObjectSet(Sets.newHashSet(Iterables.transform((Set<?>) source, valueFunction)));
-    }
-
-
-    private static List<?> fromList(final Object source, final Class<?>... typeParameters) {
-        if (DirtyableDBObjectList.class.isAssignableFrom(source.getClass())) {
-            return (List<?>) source;
-        }
-
-        Function<Object, Object> valueFunction = fromObjectFunction(coalesceTypeParam(typeParameters, 0));
-
-        return new DirtyableDBObjectList(Lists.transform((List<?>) source, valueFunction), true);
     }
 }

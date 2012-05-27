@@ -39,7 +39,6 @@ import org.iternine.jeppetto.dao.mongodb.enhance.DBObjectUtil;
 import org.iternine.jeppetto.dao.mongodb.enhance.DirtyableDBObject;
 import org.iternine.jeppetto.dao.mongodb.enhance.DirtyableDBObjectList;
 import org.iternine.jeppetto.dao.mongodb.enhance.DirtyableDBObjectMap;
-import org.iternine.jeppetto.dao.mongodb.enhance.DirtyableDBObjectSet;
 import org.iternine.jeppetto.dao.mongodb.enhance.EnhancerHelper;
 import org.iternine.jeppetto.dao.mongodb.enhance.MongoDBDecoder;
 import org.iternine.jeppetto.dao.mongodb.projections.ProjectionCommands;
@@ -856,7 +855,6 @@ public class MongoDBQueryModelDAO<T, ID>
     }
 
 
-    // TODO: deal w/ extra values.. (e.g. olv, acl, user-modified)
     private DBObject determineOptimalDBObject(DirtyableDBObject dirtyableDBObject) {
         if (!dirtyableDBObject.isPersisted()) {
 //            dirtyableDBObject.includeNullValuedKeys(saveNulls);
@@ -865,9 +863,14 @@ public class MongoDBQueryModelDAO<T, ID>
         }
 
         DBObject settableItems = new BasicDBObject();
-        DBObject pushableItems = new BasicDBObject();
+        DBObject unsettableItems = new BasicDBObject();
 
-        walkDirtyableDBObject("", dirtyableDBObject, settableItems, pushableItems);
+        walkDirtyableDBObject("", dirtyableDBObject, settableItems, unsettableItems);
+
+        if (optimisticLockEnabled) {
+            // TODO: Don't like re-reading this value here, when handled in calling method
+            settableItems.put(OPTIMISTIC_LOCK_VERSION_FIELD, dirtyableDBObject.get(OPTIMISTIC_LOCK_VERSION_FIELD));
+        }
 
         DBObject optimalDBObject = new BasicDBObject();
 
@@ -875,8 +878,8 @@ public class MongoDBQueryModelDAO<T, ID>
             optimalDBObject.put("$set", settableItems);
         }
 
-        if (pushableItems.keySet().size() > 0) {
-            optimalDBObject.put("$pushAll", pushableItems);
+        if (unsettableItems.keySet().size() > 0) {
+            optimalDBObject.put("$unset", unsettableItems);
         }
 
         return optimalDBObject;
@@ -884,32 +887,43 @@ public class MongoDBQueryModelDAO<T, ID>
 
 
     private void walkDirtyableDBObject(String prefix, DirtyableDBObject dirtyableDBObject,
-                                       DBObject settableItems, DBObject pushableItems) {
-        for (String dirtyKey : dirtyableDBObject.getDirtyKeys()) {
-            Object value = dirtyableDBObject.get(dirtyKey);
+                                       DBObject settableItems, DBObject unsettableItems) {
+        for (Iterator<String> dirtyKeys = dirtyableDBObject.getDirtyKeys(); dirtyKeys.hasNext(); ) {
+            String dirtyKey = dirtyKeys.next();
+            Object dirtyObject = dirtyableDBObject.get(dirtyKey);
 
-            if (value instanceof DirtyableDBObjectList) {
-                DirtyableDBObjectList list = (DirtyableDBObjectList) value;
+            if (dirtyObject instanceof DirtyableDBObjectList) {   // NB: encompasses DirtyableDBObjectSet
+                DirtyableDBObjectList dirtyableDBObjectList = (DirtyableDBObjectList) dirtyObject;
 
-                if (list.isRewrite()) {
-                    settableItems.put(prefix + dirtyKey, value);
-                } else if (list.hasAppendedItems()) {
-                    pushableItems.put(prefix + dirtyKey, list.getAppendedItems());
-                } else {
-                    walkDirtyableDBObject(prefix + dirtyKey + ".", list, settableItems, pushableItems);
+                if (!dirtyableDBObjectList.isPersisted() || dirtyableDBObjectList.isRewrite()) {
+                    settableItems.put(prefix + dirtyKey, dirtyableDBObjectList);
+
+                    continue;
                 }
-            } else if (value instanceof DirtyableDBObjectSet) {
-                throw new RuntimeException("Implement");
-            } else if (value instanceof DirtyableDBObjectMap) {
-                throw new RuntimeException("Implement");
-            } else if (value instanceof DirtyableDBObject) {
-                if (!((DirtyableDBObject) value).isPersisted()) {
-                    settableItems.put(prefix + dirtyKey, value);
+
+                walkDirtyableDBObject(prefix + dirtyKey + ".", dirtyableDBObjectList, settableItems, unsettableItems);
+            } else if (dirtyObject instanceof DirtyableDBObjectMap) {
+                DirtyableDBObjectMap dirtyableDBObjectMap = (DirtyableDBObjectMap) dirtyObject;
+
+                if (!dirtyableDBObjectMap.isPersisted()) {
+                    settableItems.put(prefix + dirtyKey, dirtyableDBObjectMap);
+
+                    continue;
+                }
+
+                for (Object removedKey : dirtyableDBObjectMap.getRemovedKeys()) {
+                    unsettableItems.put(prefix + dirtyKey + "." + removedKey, 1);
+                }
+
+                walkDirtyableDBObject(prefix + dirtyKey + ".", dirtyableDBObjectMap, settableItems, unsettableItems);
+            } else if (dirtyObject instanceof DirtyableDBObject) {
+                if (!((DirtyableDBObject) dirtyObject).isPersisted()) {
+                    settableItems.put(prefix + dirtyKey, dirtyObject);
                 } else {
-                    walkDirtyableDBObject(prefix + dirtyKey + ".", (DirtyableDBObject) value, settableItems, pushableItems);
+                    walkDirtyableDBObject(prefix + dirtyKey + ".", (DirtyableDBObject) dirtyObject, settableItems, unsettableItems);
                 }
             } else {
-                settableItems.put(prefix + dirtyKey, value);
+                settableItems.put(prefix + dirtyKey, DBObjectUtil.toDBObject(dirtyObject));
             }
         }
     }

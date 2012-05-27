@@ -17,14 +17,23 @@
 package org.iternine.jeppetto.dao.mongodb.enhance;
 
 
+import org.iternine.jeppetto.dao.JeppettoException;
+
 import org.bson.BSONObject;
 
+import java.util.AbstractSet;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
 
+/**
+ * Despite the lack of explicit generic types, this acts like a Map<String, Object> due to the way
+ * MongoDB expects the keys to be expressed.  ClassCastExceptions may occur if this is violated.
+ */
 @SuppressWarnings({ "unchecked" })
 public class DirtyableDBObjectMap
         implements Map, DirtyableDBObject {
@@ -33,8 +42,10 @@ public class DirtyableDBObjectMap
     // Variables - Private
     //-------------------------------------------------------------
 
-    private boolean dirty;
-    private Map delegate;
+    private Map<String, Object> delegate;
+    private Set<String> addedOrUpdatedKeys = new HashSet<String>();
+    private Set<String> removedKeys = new HashSet<String>();
+    private boolean persisted;
 
 
     //-------------------------------------------------------------
@@ -42,11 +53,11 @@ public class DirtyableDBObjectMap
     //-------------------------------------------------------------
 
     public DirtyableDBObjectMap() {
-        this.delegate = new HashMap();
+        this(new HashMap<String, Object>());
     }
 
 
-    public DirtyableDBObjectMap(Map delegate) {
+    public DirtyableDBObjectMap(Map<String, Object> delegate) {
         this.delegate = delegate;
     }
 
@@ -57,18 +68,21 @@ public class DirtyableDBObjectMap
 
     @Override
     public Object put(Object key, Object value) {
-        dirty = true;
+        String stringKey = (String) key;
 
-        return delegate.put(key, value);
+        addedOrUpdatedKeys.add(stringKey);
+
+        return delegate.put(stringKey, value);
     }
 
 
     @Override
     public Object remove(Object key) {
-        Object result = delegate.remove(key);
+        String stringKey = (String) key;
+        Object result = delegate.remove(stringKey);
 
         if (result != null) {
-            dirty = true;
+            removedKeys.add(stringKey);
         }
 
         return result;
@@ -77,20 +91,18 @@ public class DirtyableDBObjectMap
 
     @Override
     public void putAll(Map m) {
-        if (!m.isEmpty()) {
-            dirty = true;
-        }
+        for (Object o : m.entrySet()) {
+            Entry entry = (Entry) o;
 
-        delegate.putAll(m);
+            put(entry.getKey(), entry.getValue());
+        }
     }
 
 
     @Override
     public void clear() {
-        if (!isEmpty()) {
-            dirty = true;
-        }
-
+        removedKeys.addAll(delegate.keySet());
+        addedOrUpdatedKeys.clear();
         delegate.clear();
     }
 
@@ -108,41 +120,123 @@ public class DirtyableDBObjectMap
 
 
     @Override
-    public boolean containsKey(Object o) {
-        return delegate.containsKey(o);
+    public boolean containsKey(Object key) {
+        return delegate.containsKey(key);
     }
 
 
     @Override
-    public boolean containsValue(Object o) {
-        return delegate.containsValue(o);
+    public boolean containsValue(Object value) {
+        return delegate.containsValue(value);
     }
 
 
     @Override
-    public Object get(Object o) {
-        return delegate.get(o);
+    public Object get(Object key) {
+        Object value = delegate.get(key);
+
+        if (value == null || value instanceof DirtyableDBObject || DBObjectUtil.needsNoConversion(value.getClass())) {
+            return value;
+        }
+
+        // TODO: revisit whether these semantics makes sense
+        Object converted = DBObjectUtil.toDBObject(value);
+        delegate.put((String) key, converted);
+
+        return converted;
     }
 
 
     @Override
     public Set keySet() {
-        // TODO: verify set isn't modified
+        // TODO: handle case when set is modified
         return delegate.keySet();
     }
 
 
     @Override
     public Collection values() {
-        // TODO: verify collection isn't modified
+        // TODO: convert items to a DirtyableDBObject...
+        // TODO: handle case when set is modified
         return delegate.values();
     }
 
 
     @Override
     public Set entrySet() {
-        // TODO: verify set isn't modified
-        return delegate.entrySet();
+        return new AbstractSet() {
+            @Override
+            public Iterator iterator() {
+                return new Iterator() {
+                    private Iterator<Entry<String, Object>> delegateIterator = delegate.entrySet().iterator();
+                    private String currentKey;
+
+                    @Override
+                    public boolean hasNext() {
+                        return delegateIterator.hasNext();
+                    }
+
+
+                    @Override
+                    public Object next() {
+                        Entry<String, Object> current = delegateIterator.next();
+                        this.currentKey = current.getKey();
+                        final Object currentValue;
+
+                        if (current.getValue() instanceof DirtyableDBObject || DBObjectUtil.needsNoConversion(current.getValue().getClass())) {
+                            currentValue = current.getValue();
+                        } else {
+                            currentValue = DBObjectUtil.toDBObject(current.getValue());
+
+                            delegate.put(currentKey, currentValue);
+                        }
+
+                        return new Entry<String, Object>() {
+                            @Override
+                            public String getKey() {
+                                return currentKey;
+                            }
+
+
+                            @Override
+                            public Object getValue() {
+                                return currentValue;
+                            }
+
+
+                            @Override
+                            public Object setValue(Object value) {
+                                throw new UnsupportedOperationException();
+                            }
+                        };
+                    }
+
+
+                    @Override
+                    public void remove() {
+                        DirtyableDBObjectMap.this.remove(currentKey);
+                    }
+                };
+            }
+
+
+            @Override
+            public int size() {
+                return delegate.size();
+            }
+
+
+            @Override
+            public boolean remove(Object o) {
+                return DirtyableDBObjectMap.this.remove(o) != null;
+            }
+
+
+            @Override
+            public void clear() {
+                DirtyableDBObjectMap.this.clear();
+            }
+        };
     }
 
 
@@ -152,25 +246,77 @@ public class DirtyableDBObjectMap
 
     @Override
     public boolean isDirty() {
-        return dirty;
+        return !addedOrUpdatedKeys.isEmpty() || !removedKeys.isEmpty() || getDirtyKeys().hasNext();
     }
 
 
     @Override
     public void markPersisted() {
-        dirty = false;
+        addedOrUpdatedKeys.clear();
+        removedKeys.clear();
+
+        for (Object o : delegate.entrySet()) {
+            Entry entry = (Entry) o;
+
+            //noinspection SuspiciousMethodCalls
+            if (addedOrUpdatedKeys.contains(entry.getKey())) {
+                continue;
+            }
+
+            if (entry.getValue() instanceof DirtyableDBObject) {
+                DirtyableDBObject dirtyableDBObject = (DirtyableDBObject) entry.getValue();
+
+                dirtyableDBObject.markPersisted();
+            }
+        }
+
+        persisted = true;
     }
 
 
     @Override
     public boolean isPersisted() {
-        throw new RuntimeException("Can't determine persisted state.");
+        return persisted;
     }
 
 
     @Override
-    public Set<String> getDirtyKeys() {
-        return null; // TODO
+    public Iterator<String> getDirtyKeys() {
+        return new Iterator<String>() {
+            private Iterator<Entry<String, Object>> entries = entrySet().iterator();
+            private Entry<String, Object> entry;
+
+            @Override
+            public boolean hasNext() {
+                while (entries.hasNext()) {
+                    entry = entries.next();
+
+                    // At this point, every value in the map is either a DirtyableDBObject or an immutable
+                    // type (such as String).  The exception is the byte[] type, which doesn't get converted and
+                    // we don't know if it changed, so we'll assume it's dirty.
+                    if (addedOrUpdatedKeys.contains(entry.getKey())
+                        || (entry.getValue() instanceof DirtyableDBObject
+                            && (((DirtyableDBObject) entry.getValue()).isDirty() || !((DirtyableDBObject) entry.getValue()).isPersisted()))
+                        || entry.getValue() instanceof byte[]) {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+
+
+            @Override
+            public String next() {
+                return entry.getKey();
+            }
+
+
+            @Override
+            public void remove() {
+                throw new JeppettoException("Can't remove items from dirtyKeys");
+            }
+        };
     }
 
 
@@ -180,7 +326,7 @@ public class DirtyableDBObjectMap
 
     @Override
     public void markAsPartialObject() {
-        throw new RuntimeException("Can't mark DirtyableMap as partial");
+        throw new JeppettoException("Can't mark DirtyableDBObjectMap as partial");
     }
 
 
@@ -192,31 +338,23 @@ public class DirtyableDBObjectMap
 
     @Override
     public Object put(String key, Object value) {
-        dirty = true;
-
         return delegate.put(key, value);
     }
 
 
     @Override
     public void putAll(BSONObject bsonObject) {
-        Set<String> keys = bsonObject.keySet();
+        for (Object o : bsonObject.toMap().entrySet()) {
+            Entry entry = (Entry) o;
 
-        if (keys.isEmpty()) {
-            return;
-        }
-
-        dirty = true;
-
-        for (String key : keys) {
-            delegate.put(key, bsonObject.get(key));
+            delegate.put((String) entry.getKey(), entry.getValue());
         }
     }
 
 
     @Override
     public Object get(String key) {
-        return delegate.get(key);
+        return get((Object) key);
     }
 
 
@@ -241,5 +379,14 @@ public class DirtyableDBObjectMap
     @Override
     public boolean containsField(String field) {
         return delegate.containsKey(field);
+    }
+
+
+    //-------------------------------------------------------------
+    // Methods - Public
+    //-------------------------------------------------------------
+
+    public Set getRemovedKeys() {
+        return removedKeys;
     }
 }

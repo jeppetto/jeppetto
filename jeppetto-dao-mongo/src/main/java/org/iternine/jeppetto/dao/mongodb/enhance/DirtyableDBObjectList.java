@@ -17,14 +17,16 @@
 package org.iternine.jeppetto.dao.mongodb.enhance;
 
 
+import org.iternine.jeppetto.dao.JeppettoException;
+
 import org.bson.BSONObject;
 import org.bson.util.StringRangeSet;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
@@ -41,8 +43,10 @@ public class DirtyableDBObjectList
 
     private List delegate;
     private boolean rewrite = false;
+    private Set<Integer> modifiedIndexes = new HashSet<Integer>();
     private int firstAppendedIndex;
     private boolean modifiableDelegate;
+    private boolean persisted;
 
 
     //-------------------------------------------------------------
@@ -80,8 +84,7 @@ public class DirtyableDBObjectList
     public void add(int index, Object element) {
         rewrite |= index < delegate.size();
 
-        Object convertedElement = DBObjectUtil.toDBObject(element);
-        delegate.add(index, convertedElement);
+        delegate.add(index, element);
     }
 
 
@@ -89,12 +92,7 @@ public class DirtyableDBObjectList
     public boolean addAll(int index, Collection elements) {
         rewrite |= index < delegate.size();
 
-        Collection convertedElements = new ArrayList();
-        for (Object element : elements) {
-            convertedElements.add(DBObjectUtil.toDBObject(element));
-        }
-
-        return delegate.addAll(index, convertedElements);
+        return delegate.addAll(index, elements);
     }
 
 
@@ -102,7 +100,7 @@ public class DirtyableDBObjectList
     public Object remove(int index) {
         Object removed = delegate.remove(index);
 
-        rewrite = true;
+        rewrite |= index >= firstAppendedIndex;
 
         return removed;
     }
@@ -120,7 +118,9 @@ public class DirtyableDBObjectList
 
     @Override
     public Object set(int index, Object element) {
-        rewrite = true;     // TODO:  tracked modified index value instead?
+        if (index < firstAppendedIndex) {
+            modifiedIndexes.add(index);
+        }
 
         return delegate.set(index, element);
     }
@@ -128,9 +128,7 @@ public class DirtyableDBObjectList
 
     @Override
     public boolean add(Object element) {
-        Object convertedElement = DBObjectUtil.toDBObject(element);
-
-        return delegate.add(convertedElement);
+        return delegate.add(element);
     }
 
 
@@ -146,12 +144,7 @@ public class DirtyableDBObjectList
 
     @Override
     public boolean addAll(Collection elements) {
-        Collection convertedElements = new ArrayList();
-        for (Object element : elements) {
-            convertedElements.add(DBObjectUtil.toDBObject(element));
-        }
-
-        return delegate.addAll(convertedElements);
+        return delegate.addAll(elements);
     }
 
 
@@ -193,18 +186,20 @@ public class DirtyableDBObjectList
 
     @Override
     public Iterator iterator() {
-        return delegate.iterator(); // TODO: if iterator.remove() is called, need to track...
+        return listIterator(0);
     }
 
 
     @Override
     public Object[] toArray() {
+        // TODO: Convert to DirtyableDBObjects
         return delegate.toArray();
     }
 
 
     @Override
     public Object[] toArray(Object[] objects) {
+        // TODO: Convert to DirtyableDBObjects
         return delegate.toArray(objects);
     }
 
@@ -217,7 +212,17 @@ public class DirtyableDBObjectList
 
     @Override
     public Object get(int index) {
-        return delegate.get(index);
+        Object element = delegate.get(index);
+
+        if (element == null || element instanceof DirtyableDBObject || DBObjectUtil.needsNoConversion(element.getClass())) {
+            return element;
+        }
+
+        // TODO: revisit whether these semantics makes sense
+        Object converted = DBObjectUtil.toDBObject(element);
+        delegate.set(index, converted);
+
+        return converted;
     }
 
 
@@ -235,19 +240,107 @@ public class DirtyableDBObjectList
 
     @Override
     public ListIterator listIterator() {
-        return delegate.listIterator();
+        return listIterator(0);
     }
 
 
     @Override
-    public ListIterator listIterator(int index) {
-        return delegate.listIterator(index);    // TODO: if listIterator.remove() is called, need to track...
+    public ListIterator listIterator(final int index) {
+        return new ListIterator() {
+            private ListIterator delegateIterator = delegate.listIterator(index);
+            private int modifiableIndex = -1;
+
+            @Override
+            public boolean hasNext() {
+                return delegateIterator.hasNext();
+            }
+
+
+            @Override
+            public Object next() {
+                modifiableIndex = delegateIterator.nextIndex();
+                Object next = delegateIterator.next();
+
+                if (next instanceof DirtyableDBObject || DBObjectUtil.needsNoConversion(next.getClass())) {
+                    return next;
+                }
+
+                Object converted = DBObjectUtil.toDBObject(next);
+                delegate.set(modifiableIndex, converted);
+
+                return converted;
+            }
+
+
+            @Override
+            public boolean hasPrevious() {
+                return delegateIterator.hasPrevious();
+            }
+
+
+            @Override
+            public Object previous() {
+                modifiableIndex = delegateIterator.previousIndex();
+                Object previous = delegateIterator.previous();
+
+                if (previous instanceof DirtyableDBObject || DBObjectUtil.needsNoConversion(previous.getClass())) {
+                    return previous;
+                }
+
+                Object converted = DBObjectUtil.toDBObject(previous);
+                delegate.set(modifiableIndex, converted);
+
+                return converted;
+            }
+
+
+            @Override
+            public int nextIndex() {
+                return delegateIterator.nextIndex();
+            }
+
+
+            @Override
+            public int previousIndex() {
+                return delegateIterator.previousIndex();
+            }
+
+
+            @Override
+            public void remove() {
+                if (modifiableIndex < 0) {
+                    throw new IllegalStateException("Iterator is not in a modifiable state.  Did you call next()/previous()?");
+                }
+
+                DirtyableDBObjectList.this.remove(modifiableIndex);
+
+                modifiableIndex = -1;
+            }
+
+
+            @Override
+            public void set(Object o) {
+                if (modifiableIndex < 0) {
+                    throw new IllegalStateException("Iterator is not in a modifiable state.  Did you call next()/previous()?");
+                }
+
+                DirtyableDBObjectList.this.set(modifiableIndex, o);
+
+                modifiableIndex = -1;
+            }
+
+
+            @Override
+            public void add(Object o) {
+                throw new UnsupportedOperationException();
+            }
+        };
     }
 
 
     @Override
     public List subList(int fromIndex, int toIndex) {
-        return delegate.subList(fromIndex, toIndex);
+        return delegate.subList(fromIndex, toIndex);    // TODO: Need to track changes in the sublist
     }
 
 
@@ -257,8 +350,7 @@ public class DirtyableDBObjectList
 
     @Override
     public boolean isDirty() {
-        // TODO: walk items (stop at appended size)
-        return rewrite || delegate.size() > firstAppendedIndex;
+        return rewrite || delegate.size() > firstAppendedIndex || !modifiedIndexes.isEmpty() || getDirtyKeys().hasNext();
     }
 
 
@@ -268,47 +360,61 @@ public class DirtyableDBObjectList
 
         for (Object object : delegate) {
             if (!(object instanceof DirtyableDBObject)) {
-                break;  // We assume this means the list contains all non-DirtyableDBObjects so can break out
+                continue;
             }
 
             DirtyableDBObject dirtyableDBObject = (DirtyableDBObject) object;
 
             dirtyableDBObject.markPersisted();
-
-            if (++i >= firstAppendedIndex) {
-                break;
-            }
         }
 
         rewrite = false;
+        modifiedIndexes.clear();
         firstAppendedIndex = delegate.size();
+        persisted = true;
     }
 
 
     @Override
     public boolean isPersisted() {
-        throw new RuntimeException("Can't determine persisted state.");
+        return persisted;
     }
 
 
     @Override
-    public Set<String> getDirtyKeys() {
-        Set<String> dirtyKeys = new LinkedHashSet<String>();
-        int i = 0;
+    public Iterator<String> getDirtyKeys() {
+        return new Iterator<String>() {
+            private Iterator delegateIterator = delegate.iterator();
+            private int i = -1;
 
-        for (Object object : delegate) {
-            DirtyableDBObject dirtyableDBObject = (DirtyableDBObject) object;
+            @Override
+            public boolean hasNext() {
+                while (delegateIterator.hasNext()) {
+                    Object object = delegateIterator.next();
 
-            if (dirtyableDBObject.isDirty()) {
-                dirtyKeys.add(Integer.toString(i));
+                    if (++i >= firstAppendedIndex
+                        || modifiedIndexes.contains(i)
+                        || !(object instanceof DirtyableDBObject)
+                        || ((DirtyableDBObject) object).isDirty()) {
+                        return true;
+                    }
+                }
+
+                return false;
             }
 
-            if (++i >= firstAppendedIndex) {
-                break;
-            }
-        }
 
-        return dirtyKeys;
+            @Override
+            public String next() {
+                return Integer.toString(i);
+            }
+
+
+            @Override
+            public void remove() {
+                throw new JeppettoException("Can't remove items from dirtyKeys");
+            }
+        };
     }
 
 
@@ -318,7 +424,7 @@ public class DirtyableDBObjectList
 
     @Override
     public void markAsPartialObject() {
-        throw new RuntimeException("Can't mark DirtyableDBObjectList as partial");
+        throw new JeppettoException("Can't mark DirtyableDBObjectList as partial");
     }
 
 
@@ -372,21 +478,7 @@ public class DirtyableDBObjectList
 
     @Override
     public Object get(String s) {
-        int i = getNonNegativeInt(s);
-
-        if (i >= size()) {
-            return null;
-        }
-
-        Object result = delegate.get(i);
-
-        if (!(result instanceof DirtyableDBObject)) {
-            result = DBObjectUtil.toDBObject(result);
-
-            delegate.set(i, result);
-        }
-
-        return result;
+        return get(getNonNegativeInt(s));
     }
 
 
@@ -425,35 +517,7 @@ public class DirtyableDBObjectList
     //-------------------------------------------------------------
 
     public boolean isRewrite() {
-        if (rewrite) {
-            return true;
-        }
-
-        int i = 0;
-
-        for (Object object : delegate) {
-            DirtyableDBObject dirtyableDBObject = (DirtyableDBObject) object;
-
-            if (dirtyableDBObject.isDirty()) {
-                return true;
-            }
-
-            if (++i >= firstAppendedIndex) {
-                break;
-            }
-        }
-
-        return false;
-    }
-
-
-    public boolean hasAppendedItems() {
-        return delegate.size() > firstAppendedIndex;
-    }
-
-
-    public List getAppendedItems() {
-        return delegate.subList(firstAppendedIndex, delegate.size());
+        return rewrite;
     }
 
 

@@ -31,7 +31,10 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Collections;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 
 public class DirtyableDBObjectTest {
@@ -113,8 +116,8 @@ public class DirtyableDBObjectTest {
         SimpleObject resultSimpleObject = simpleObjectDAO.findById(simpleObject.getId());
         resultSimpleObject.setIntValue(9876);
 
-        Assert.assertTrue(((DirtyableDBObject) resultSimpleObject).isDirty());
-        Assert.assertEquals(Collections.singleton("intValue"), ((DirtyableDBObject) resultSimpleObject).getDirtyKeys());
+        //noinspection unchecked
+        assertKeys(((DirtyableDBObject) resultSimpleObject).getDirtyKeys(), new HashSet(Collections.singleton("intValue")));
 
         simpleObjectDAO.save(resultSimpleObject);
 
@@ -136,8 +139,8 @@ public class DirtyableDBObjectTest {
 
         resultSimpleObject.setRelatedObject(relatedObject);
 
-        Assert.assertTrue(((DirtyableDBObject) resultSimpleObject).isDirty());
-        Assert.assertEquals(Collections.singleton("relatedObject"), ((DirtyableDBObject) resultSimpleObject).getDirtyKeys());
+        //noinspection unchecked
+        assertKeys(((DirtyableDBObject) resultSimpleObject).getDirtyKeys(), new HashSet(Collections.singleton("relatedObject")));
 
         simpleObjectDAO.save(resultSimpleObject);
 
@@ -160,8 +163,8 @@ public class DirtyableDBObjectTest {
 
         resultSimpleObject.getRelatedObject().setRelatedIntValue(123);
 
-        Assert.assertTrue(((DirtyableDBObject) resultSimpleObject).isDirty());
-        Assert.assertEquals(Collections.singleton("relatedObject"), ((DirtyableDBObject) resultSimpleObject).getDirtyKeys());
+        //noinspection unchecked
+        assertKeys(((DirtyableDBObject) resultSimpleObject).getDirtyKeys(), new HashSet(Collections.singleton("relatedObject")));
 
         simpleObjectDAO.save(resultSimpleObject);
 
@@ -187,8 +190,8 @@ public class DirtyableDBObjectTest {
 
         resultSimpleObject.setRelatedObject(relatedObject2);
 
-        Assert.assertTrue(((DirtyableDBObject) resultSimpleObject).isDirty());
-        Assert.assertEquals(Collections.singleton("relatedObject"), ((DirtyableDBObject) resultSimpleObject).getDirtyKeys());
+        //noinspection unchecked
+        assertKeys(((DirtyableDBObject) resultSimpleObject).getDirtyKeys(), new HashSet(Collections.singleton("relatedObject")));
 
         simpleObjectDAO.save(resultSimpleObject);
 
@@ -214,8 +217,8 @@ public class DirtyableDBObjectTest {
 
         resultSimpleObject.addRelatedObject(relatedObject2);
 
-        Assert.assertTrue(((DirtyableDBObject) resultSimpleObject).isDirty());
-        Assert.assertEquals(Collections.singleton("relatedObjects"), ((DirtyableDBObject) resultSimpleObject).getDirtyKeys());
+        //noinspection unchecked
+        assertKeys(((DirtyableDBObject) resultSimpleObject).getDirtyKeys(), new HashSet(Collections.singleton("relatedObjects")));
 
         simpleObjectDAO.save(resultSimpleObject);
 
@@ -239,13 +242,12 @@ public class DirtyableDBObjectTest {
 
         resultRelatedObject.setRelatedIntValue(123);
 
-        Assert.assertTrue(((DirtyableDBObject) resultSimpleObject).isDirty());
-        Assert.assertEquals(Collections.singleton("relatedObjects"), ((DirtyableDBObject) resultSimpleObject).getDirtyKeys());
+        //noinspection unchecked
+        assertKeys(((DirtyableDBObject) resultSimpleObject).getDirtyKeys(), new HashSet(Collections.singleton("relatedObjects")));
 
         simpleObjectDAO.save(resultSimpleObject);
 
-        Assert.assertEquals(123, simpleObjectDAO.findById(simpleObject.getId()).getRelatedObjects().get(
-                0).getRelatedIntValue());
+        Assert.assertEquals(123, simpleObjectDAO.findById(simpleObject.getId()).getRelatedObjects().get(0).getRelatedIntValue());
     }
 
 
@@ -270,8 +272,8 @@ public class DirtyableDBObjectTest {
 
         resultSimpleObject.addRelatedObject(relatedObject2);
 
-        Assert.assertTrue(((DirtyableDBObject) resultSimpleObject).isDirty());
-        Assert.assertEquals(Collections.singleton("relatedObjects"), ((DirtyableDBObject) resultSimpleObject).getDirtyKeys());
+        //noinspection unchecked
+        assertKeys(((DirtyableDBObject) resultSimpleObject).getDirtyKeys(), new HashSet(Collections.singleton("relatedObjects")));
 
         simpleObjectDAO.save(resultSimpleObject);
 
@@ -308,4 +310,17 @@ public class DirtyableDBObjectTest {
 //
 //        Assert.assertTrue(((DirtyableDBObject) enhancedSimpleObject).isDirty());
 //    }
+
+
+    //-------------------------------------------------------------
+    // Methods - Private
+    //-------------------------------------------------------------
+
+    private void assertKeys(Iterator iterator, Set objects) {
+        while (iterator.hasNext()) {
+            Assert.assertTrue(objects.remove(iterator.next()));
+        }
+
+        Assert.assertTrue(objects.isEmpty());
+    }
 }
