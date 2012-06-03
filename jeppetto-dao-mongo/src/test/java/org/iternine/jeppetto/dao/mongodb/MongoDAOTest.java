@@ -47,7 +47,7 @@ import static org.junit.Assert.assertTrue;
 public class MongoDAOTest {
 
     //-------------------------------------------------------------
-    // Variables - Private - Static
+    // Variables - Private
     //-------------------------------------------------------------
 
     private TestContext testContext;
@@ -110,6 +110,7 @@ public class MongoDAOTest {
 
         resultObject = simpleObjectDAO.findById(simpleObject.getId());
         assertDirty(resultObject, false);
+        assertEquals(1234, resultObject.getIntValue());
         resultObject.setSimpleEnum(SimpleEnum.EnumValue);
         assertDirty(resultObject, true);
 
@@ -119,12 +120,18 @@ public class MongoDAOTest {
 
         resultObject = simpleObjectDAO.findById(simpleObject.getId());
         assertDirty(resultObject, false);
+        assertEquals(1234, resultObject.getIntValue());
+        assertEquals(SimpleEnum.EnumValue, resultObject.getSimpleEnum());
         resultObject.setIntValue(9876);
         assertDirty(resultObject, true);
 
         simpleObjectDAO.save(resultObject);
 
         assertDirty(resultObject, false);
+
+        resultObject = simpleObjectDAO.findById(simpleObject.getId());
+        assertDirty(resultObject, false);
+        assertEquals(9876, resultObject.getIntValue());
     }
 
 

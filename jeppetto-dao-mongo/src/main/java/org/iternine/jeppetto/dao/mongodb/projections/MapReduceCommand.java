@@ -25,7 +25,6 @@ import com.mongodb.DBObject;
 import com.mongodb.MapReduceOutput;
 
 import java.util.Iterator;
-import java.util.Map;
 
 
 /**
@@ -69,7 +68,7 @@ abstract class MapReduceCommand
 
     @Override
     public String toString() {
-        return new StringBuilder(super.toString()).append(' ').append(DBObjectUtil.toDBObject(Map.class, query.toMap())).toString();
+        return new StringBuilder(super.toString()).append(' ').append(DBObjectUtil.toDBObject(query.toMap())).toString();
     }
 
 

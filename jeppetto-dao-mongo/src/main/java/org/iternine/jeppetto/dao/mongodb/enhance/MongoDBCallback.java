@@ -108,7 +108,7 @@ public class MongoDBCallback extends DefaultDBCallback {
                 return new DirtyableDBObjectList();
             } else {
                 try {
-                    return new DirtyableDBObjectList((List) returnClass.newInstance());
+                    return new DirtyableDBObjectList((List) returnClass.newInstance(), false);
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
@@ -118,7 +118,7 @@ public class MongoDBCallback extends DefaultDBCallback {
                 return new DirtyableDBObjectSet();
             } else {
                 try {
-                    return new DirtyableDBObjectSet((Set) returnClass.newInstance());
+                    return new DirtyableDBObjectSet((Set) returnClass.newInstance(), false);
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }

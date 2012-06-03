@@ -19,6 +19,8 @@ package org.iternine.jeppetto.dao.mongodb.enhance;
 
 import com.mongodb.DBObject;
 
+import java.util.Iterator;
+
 
 public interface DirtyableDBObject extends DBObject {
 
@@ -38,4 +40,16 @@ public interface DirtyableDBObject extends DBObject {
      * @return true if this object has a representation in the underlying store.
      */
     boolean isPersisted();
+
+    
+    /**
+     * @return Set of keys corresponding to changed fields in this DBObject
+     */
+    Iterator<String> getDirtyKeys();
+
+
+//    /**
+//     *
+//     */
+//    void includeNullValuedKeys(boolean saveNulls);
 }

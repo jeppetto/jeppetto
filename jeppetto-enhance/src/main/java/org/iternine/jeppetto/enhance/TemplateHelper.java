@@ -228,17 +228,6 @@ public class TemplateHelper {
     }
 
 
-    public String createConversionMethodBody(Class<?> returnType) {
-        if (returnType.isPrimitive() && PRIMITIVE_WRAPPERS.containsKey(returnType)) {
-            if (Number.class.isAssignableFrom(PRIMITIVE_WRAPPERS.get(returnType))) {
-                return "return ((Number) o)." + returnType.getSimpleName() + "Value();";
-            }
-        }
-
-        return "throw new RuntimeException(\"Not sure how to convert \" + o + \" to a " + returnType.getSimpleName() + "\");";
-    }
-
-
     //-------------------------------------------------------------
     // Override - Object
     //-------------------------------------------------------------

@@ -39,6 +39,8 @@ import org.iternine.jeppetto.dao.annotation.Accessor;
 import org.iternine.jeppetto.dao.annotation.Creator;
 import org.iternine.jeppetto.dao.mongodb.enhance.DBObjectUtil;
 import org.iternine.jeppetto.dao.mongodb.enhance.DirtyableDBObject;
+import org.iternine.jeppetto.dao.mongodb.enhance.DirtyableDBObjectList;
+import org.iternine.jeppetto.dao.mongodb.enhance.DirtyableDBObjectMap;
 import org.iternine.jeppetto.dao.mongodb.enhance.EnhancerHelper;
 import org.iternine.jeppetto.dao.mongodb.enhance.MongoDBDecoder;
 import org.iternine.jeppetto.dao.mongodb.projections.ProjectionCommands;
@@ -468,16 +470,31 @@ public class MongoDBQueryModelDAO<T, ID>
         @SuppressWarnings( { "unchecked" })
         Map<String, String> accessControl = (Map<String, String>) dbo.get(ACCESS_CONTROL_FIELD);
 
+        DBObject accessUpdate;
+
         if (accessControl == null) {
-            accessControl = new HashMap<String, String>();
+            accessUpdate = new BasicDBObject("$set", new BasicDBObject(ACCESS_CONTROL_FIELD,
+                                                                       new BasicDBObject(accessId, accessType.shortName())));
+        } else {
+            accessUpdate = new BasicDBObject("$set", new BasicDBObject(ACCESS_CONTROL_FIELD + "." + accessId,
+                                                                       accessType.shortName()));
         }
 
-        accessControl.put(accessId, accessType.shortName());
+        DBObject identifyingQuery = buildIdentifyingQuery(dbo);
 
-        dbo.put(ACCESS_CONTROL_FIELD, accessControl);
+        for (String shardKey : shardKeys) {
+            identifyingQuery.put(shardKey, dbo.get(shardKey));
+        }
 
-        //noinspection unchecked
-        save((T) dbo);
+        if (queryLogger != null) {
+            queryLogger.info("Granting access to object identified by {} to {}.", identifyingQuery.toMap(), accessId);
+        }
+
+        try {
+            dbCollection.update(identifyingQuery, accessUpdate, true, false, getWriteConcern());
+        } catch (MongoException e) {
+            throw new JeppettoException(e);
+        }
     }
 
 
@@ -499,12 +516,23 @@ public class MongoDBQueryModelDAO<T, ID>
             return;
         }
 
-        accessControl.remove(accessId);
+        DBObject accessUpdate = new BasicDBObject("$pull", new BasicDBObject(ACCESS_CONTROL_FIELD, accessId));
+        DBObject identifyingQuery = buildIdentifyingQuery(dbo);
 
-        dbo.put(ACCESS_CONTROL_FIELD, accessControl);
+        for (String shardKey : shardKeys) {
+            identifyingQuery.put(shardKey, dbo.get(shardKey));
+        }
 
-        //noinspection unchecked
-        save((T) dbo);
+        if (queryLogger != null) {
+            // TODO: What happens if revoke happens and another thread already has object in memory and tries to save()?
+            queryLogger.info("Revoking access to object identified by {} to {}.", identifyingQuery.toMap(), accessId);
+        }
+
+        try {
+            dbCollection.update(identifyingQuery, accessUpdate, true, false, getWriteConcern());
+        } catch (MongoException e) {
+            throw new JeppettoException(e);
+        }
     }
 
 
@@ -634,6 +662,15 @@ public class MongoDBQueryModelDAO<T, ID>
         }
 
         final DBObject optimalDbo = determineOptimalDBObject(dbo);
+
+        if (optimalDbo.keySet().size() == 0) {
+            if (queryLogger != null) {
+                queryLogger.debug("Bypassing save on object identified by {}; optimization rendered no changes.",
+                                  identifyingQuery.toMap());
+            }
+
+            return;
+        }
 
         if (queryLogger != null) {
             queryLogger.debug("Saving {} identified by {} with document {}",
@@ -867,7 +904,7 @@ public class MongoDBQueryModelDAO<T, ID>
             // examples of "unsafe" things are: Sets, Enum, POJOs.
             Object rawConstraint = condition.getConstraint();
             Object constraint = (rawConstraint == null) ? null
-                                                        : DBObjectUtil.toDBObject(rawConstraint.getClass(), rawConstraint);
+                                                        : DBObjectUtil.toDBObject(rawConstraint);
 
             // XXX : if annotation specifies multiple conditions on single field the
             // first condition will be overwritten here
@@ -888,16 +925,83 @@ public class MongoDBQueryModelDAO<T, ID>
     }
 
 
-    private DBObject determineOptimalDBObject(DBObject dbo) {
-        // TODO: handle saveNulls...
+    private DBObject determineOptimalDBObject(DirtyableDBObject dirtyableDBObject) {
+        if (!dirtyableDBObject.isPersisted()) {
+//            dirtyableDBObject.includeNullValuedKeys(saveNulls);
 
-        return dbo;
+            return dirtyableDBObject;
+        }
+
+        DBObject settableItems = new BasicDBObject();
+        DBObject unsettableItems = new BasicDBObject();
+
+        walkDirtyableDBObject("", dirtyableDBObject, settableItems, unsettableItems);
+
+        if (optimisticLockEnabled) {
+            // TODO: Don't like re-reading this value here, when handled in calling method
+            settableItems.put(OPTIMISTIC_LOCK_VERSION_FIELD, dirtyableDBObject.get(OPTIMISTIC_LOCK_VERSION_FIELD));
+        }
+
+        DBObject optimalDBObject = new BasicDBObject();
+
+        if (settableItems.keySet().size() > 0) {
+            optimalDBObject.put("$set", settableItems);
+        }
+
+        if (unsettableItems.keySet().size() > 0) {
+            optimalDBObject.put("$unset", unsettableItems);
+        }
+
+        return optimalDBObject;
+    }
+
+
+    private void walkDirtyableDBObject(String prefix, DirtyableDBObject dirtyableDBObject,
+                                       DBObject settableItems, DBObject unsettableItems) {
+        for (Iterator<String> dirtyKeys = dirtyableDBObject.getDirtyKeys(); dirtyKeys.hasNext(); ) {
+            String dirtyKey = dirtyKeys.next();
+            Object dirtyObject = dirtyableDBObject.get(dirtyKey);
+
+            if (dirtyObject instanceof DirtyableDBObjectList) {   // NB: encompasses DirtyableDBObjectSet
+                DirtyableDBObjectList dirtyableDBObjectList = (DirtyableDBObjectList) dirtyObject;
+
+                if (!dirtyableDBObjectList.isPersisted() || dirtyableDBObjectList.isRewrite()) {
+                    settableItems.put(prefix + dirtyKey, dirtyableDBObjectList);
+
+                    continue;
+                }
+
+                walkDirtyableDBObject(prefix + dirtyKey + ".", dirtyableDBObjectList, settableItems, unsettableItems);
+            } else if (dirtyObject instanceof DirtyableDBObjectMap) {
+                DirtyableDBObjectMap dirtyableDBObjectMap = (DirtyableDBObjectMap) dirtyObject;
+
+                if (!dirtyableDBObjectMap.isPersisted()) {
+                    settableItems.put(prefix + dirtyKey, dirtyableDBObjectMap);
+
+                    continue;
+                }
+
+                for (Object removedKey : dirtyableDBObjectMap.getRemovedKeys()) {
+                    unsettableItems.put(prefix + dirtyKey + "." + removedKey, 1);
+                }
+
+                walkDirtyableDBObject(prefix + dirtyKey + ".", dirtyableDBObjectMap, settableItems, unsettableItems);
+            } else if (dirtyObject instanceof DirtyableDBObject) {
+                if (!((DirtyableDBObject) dirtyObject).isPersisted()) {
+                    settableItems.put(prefix + dirtyKey, dirtyObject);
+                } else {
+                    walkDirtyableDBObject(prefix + dirtyKey + ".", (DirtyableDBObject) dirtyObject, settableItems, unsettableItems);
+                }
+            } else {
+                settableItems.put(prefix + dirtyKey, DBObjectUtil.toDBObject(dirtyObject));
+            }
+        }
     }
 
 
     private WriteConcern getWriteConcern() {
         // TODO: Add ability to swap a concern out on a per-call basis...if nothing overwrites/changes, then
-        // return the default.
+        // return the default.  Keep in mind session semantics (e.g. delayed saves).
 
         return defaultWriteConcern;
     }
