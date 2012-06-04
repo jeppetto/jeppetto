@@ -1083,7 +1083,7 @@ public class MongoDBQueryModelDAO<T, ID>
             return false;
         }
 
-        Set<String> roles = accessControlContext.getRoles();
+        Set<String> roles = accessControlContext == null ? Collections.<String>emptySet() : accessControlContext.getRoles();
 
         for (Accessor accessor : accessControl.accessors()) {
             if (accessor.access().allows(accessType)
