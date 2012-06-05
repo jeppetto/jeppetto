@@ -17,8 +17,17 @@
 package org.iternine.jeppetto.test.accesscontrol;
 
 
+import org.iternine.jeppetto.dao.ConditionType;
 import org.iternine.jeppetto.dao.GenericDAO;
+import org.iternine.jeppetto.dao.annotation.Condition;
+import org.iternine.jeppetto.dao.annotation.DataAccessMethod;
 
 
 public interface RoleCreatableObjectDAO extends GenericDAO<RoleCreatableObject, String> {
+
+    @DataAccessMethod(
+        conditions = { @Condition(field = "id", type = ConditionType.Equal) },
+        invokeWithRole = "Accessors"
+    )
+    RoleCreatableObject privilegedFindById(String id);
 }

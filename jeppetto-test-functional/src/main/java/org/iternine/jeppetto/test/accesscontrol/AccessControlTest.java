@@ -29,6 +29,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import javax.management.relation.Role;
 import java.util.Collections;
 import java.util.Map;
 
@@ -350,6 +351,23 @@ public abstract class AccessControlTest {
         }
 
         getObjectWithContext(userWithAccessorsRole, id, getRoleCreatableObjectDAO());
+    }
+
+
+    @Test
+    public void creatorCanAccessObjectWhenUsingAnnotation() {
+        String id = saveObjectWithContext(userWithCreatorsRole, new RoleCreatableObject(), getRoleCreatableObjectDAO());
+
+        try {
+            getObjectWithContext(userWithCreatorsRole, id, getRoleCreatableObjectDAO());
+
+            throw new RuntimeException("Creator should be able to access this object (grantedAccess of None prohibits)");
+        } catch (NoSuchItemException ignore) {
+        }
+
+        RoleCreatableObject roleCreatableObject = getRoleCreatableObjectDAO().privilegedFindById(id);
+
+        Assert.assertEquals(id, roleCreatableObject.getId());
     }
 
 
