@@ -451,11 +451,13 @@ public abstract class AccessControlTest {
     private String saveObjectWithContext(AccessControlContext context, IdentifiableObject object, GenericDAO dao) {
         accessControlContextProvider.setCurrent(context);
 
-        dao.save(object);
+        try {
+            dao.save(object);
 
-        accessControlContextProvider.setCurrent(null);
-
-        return object.getId();
+            return object.getId();
+        } finally {
+            accessControlContextProvider.setCurrent(null);
+        }
     }
 
 
@@ -464,12 +466,14 @@ public abstract class AccessControlTest {
             throws AccessControlException, NoSuchItemException {
         accessControlContextProvider.setCurrent(context);
 
-        T resultObject = dao.findById(id);
+        try {
+            T resultObject = dao.findById(id);
 
-        Assert.assertEquals(resultObject.getId(), id);
+            Assert.assertEquals(resultObject.getId(), id);
 
-        accessControlContextProvider.setCurrent(null);
-
-        return resultObject;
+            return resultObject;
+        } finally {
+            accessControlContextProvider.setCurrent(null);
+        }
     }
 }
