@@ -1125,17 +1125,13 @@ public class MongoDBQueryModelDAO<T, ID>
 
 
     private AccessControl getAccessControlAnnotation() {
-        Class collectionClass = getCollectionClass();
-
-        while (collectionClass != null) {
+        for (Class daoInterface : getClass().getInterfaces()) {
             // noinspection unchecked
-            AccessControl accessControl = (AccessControl) collectionClass.getAnnotation(AccessControl.class);
+            AccessControl accessControl = (AccessControl) daoInterface.getAnnotation(AccessControl.class);
 
             if (accessControl != null) {
                 return accessControl;
             }
-
-            collectionClass = collectionClass.getSuperclass();
         }
 
         return null;

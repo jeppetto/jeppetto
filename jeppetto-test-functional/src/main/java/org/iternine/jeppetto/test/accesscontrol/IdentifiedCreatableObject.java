@@ -17,16 +17,6 @@
 package org.iternine.jeppetto.test.accesscontrol;
 
 
-import org.iternine.jeppetto.dao.AccessType;
-import org.iternine.jeppetto.dao.annotation.AccessControl;
-import org.iternine.jeppetto.dao.annotation.Accessor;
-import org.iternine.jeppetto.dao.annotation.Creator;
-
-
-@AccessControl(
-    creators = { @Creator( type = Creator.Type.Identified, grantedAccess = AccessType.ReadWrite ) },
-    accessors = { @Accessor( type = Accessor.Type.Role, typeValue = "Administrator", access = AccessType.ReadWrite ) }
-)
 public class IdentifiedCreatableObject
         implements IdentifiableObject {
 

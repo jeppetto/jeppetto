@@ -18,13 +18,6 @@
 package org.iternine.jeppetto.test.accesscontrol;
 
 
-/**
- * Is equivalent to:
- *
- * @AccessControl(
- *     creators = { @Creator( type = Creator.Type.Identified, grantedAccess = AccessType.ReadWrite ),
- *                  @Creator( type = Creator.Type.Anonymous, grantedAccess = **ignored** ) } )
- */
 public class DefaultAccessObject
         implements IdentifiableObject {
 

@@ -104,6 +104,8 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
         this.sessionFactory = (SessionFactory) daoProperties.get("sessionFactory");
         this.accessControlHelper = (AccessControlHelper) daoProperties.get("accessControlHelper");
         this.accessControlContextProvider = accessControlContextProvider;
+
+        accessControlHelper.registerDAO(persistentClass, this);
     }
 
 
