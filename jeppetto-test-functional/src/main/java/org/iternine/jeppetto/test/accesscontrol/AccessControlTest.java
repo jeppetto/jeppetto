@@ -21,15 +21,15 @@ import org.iternine.jeppetto.dao.AccessControlContext;
 import org.iternine.jeppetto.dao.AccessControlException;
 import org.iternine.jeppetto.dao.AccessType;
 import org.iternine.jeppetto.dao.GenericDAO;
+import org.iternine.jeppetto.dao.JeppettoException;
 import org.iternine.jeppetto.dao.NoSuchItemException;
 import org.iternine.jeppetto.dao.SimpleAccessControlContext;
-import org.iternine.jeppetto.test.SettableAccessControlContextProvider;
+import org.iternine.jeppetto.dao.SettableAccessControlContextProvider;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import javax.management.relation.Role;
 import java.util.Collections;
 import java.util.Map;
 
@@ -346,7 +346,7 @@ public abstract class AccessControlTest {
         try {
             getObjectWithContext(userWithCreatorsRole, id, getRoleCreatableObjectDAO());
 
-            throw new RuntimeException("Creator should be able to access this object (grantedAccess of None prohibits)");
+            throw new RuntimeException("Creator should not be able to access this object (grantedAccess of None prohibits)");
         } catch (NoSuchItemException ignore) {
         }
 
@@ -355,19 +355,47 @@ public abstract class AccessControlTest {
 
 
     @Test
-    public void creatorCanAccessObjectWhenUsingAnnotation() {
+    public void accessObjectUsingAsQueries() {
         String id = saveObjectWithContext(userWithCreatorsRole, new RoleCreatableObject(), getRoleCreatableObjectDAO());
 
         try {
             getObjectWithContext(userWithCreatorsRole, id, getRoleCreatableObjectDAO());
 
-            throw new RuntimeException("Creator should be able to access this object (grantedAccess of None prohibits)");
+            throw new RuntimeException("Creator should not be able to access this object (grantedAccess of None prohibits)");
         } catch (NoSuchItemException ignore) {
         }
 
-        RoleCreatableObject roleCreatableObject = getRoleCreatableObjectDAO().privilegedFindById(id);
+        RoleCreatableObject roleCreatableObject = getRoleCreatableObjectDAO().findByIdAs(id, userWithAccessorsRole);
 
         Assert.assertEquals(id, roleCreatableObject.getId());
+
+        try {
+            getRoleCreatableObjectDAO().findByIdAs(id, anotherUser);
+
+            throw new RuntimeException("User should not be able to access this object");
+        } catch (NoSuchItemException ignore) {
+        }
+    }
+
+
+    @Test
+    public void saveAndUpdateObjectWithExplicitAccessControlContext() {
+        RoleCreatableObject roleCreatableObject1 = new RoleCreatableObject();
+        RoleCreatableObject roleCreatableObject2;
+
+        getRoleCreatableObjectDAO().save(roleCreatableObject1, userWithCreatorsRole);
+
+        roleCreatableObject2 = getRoleCreatableObjectDAO().findByIdAs(roleCreatableObject1.getId(), userWithAccessorsRole);
+
+        try {
+            getRoleCreatableObjectDAO().save(roleCreatableObject2, userWithCreatorsRole);
+
+            throw new RuntimeException("Creator can only create, not update");
+        } catch (JeppettoException e) {
+            Assert.assertEquals(AccessControlException.class, e.getClass());
+        }
+
+        getRoleCreatableObjectDAO().save(roleCreatableObject2, userWithAccessorsRole);
     }
 
 

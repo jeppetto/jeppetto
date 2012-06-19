@@ -21,10 +21,14 @@ import java.util.Map;
 
 
 /**
- *
+ * @param <T> Persistent Class
  * @param <ID> ID type of the persistent class.
  */
-public interface AccessControllable<ID> {
+public interface AccessControllable<T, ID> {
+
+    void save(T object, AccessControlContext accessControlContext)
+            throws OptimisticLockException, AccessControlException, JeppettoException;
+
 
     void grantAccess(ID id, String accessId, AccessType accessType)
             throws NoSuchItemException, AccessControlException;

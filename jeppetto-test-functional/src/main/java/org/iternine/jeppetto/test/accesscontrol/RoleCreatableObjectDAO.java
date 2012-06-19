@@ -17,17 +17,15 @@
 package org.iternine.jeppetto.test.accesscontrol;
 
 
-import org.iternine.jeppetto.dao.ConditionType;
+import org.iternine.jeppetto.dao.AccessControlContext;
+import org.iternine.jeppetto.dao.AccessControllable;
 import org.iternine.jeppetto.dao.GenericDAO;
-import org.iternine.jeppetto.dao.annotation.Condition;
-import org.iternine.jeppetto.dao.annotation.DataAccessMethod;
+import org.iternine.jeppetto.dao.NoSuchItemException;
 
 
-public interface RoleCreatableObjectDAO extends GenericDAO<RoleCreatableObject, String> {
+public interface RoleCreatableObjectDAO extends GenericDAO<RoleCreatableObject, String>,
+                                                AccessControllable<RoleCreatableObject, String> {
 
-    @DataAccessMethod(
-        conditions = { @Condition(field = "id", type = ConditionType.Equal) },
-        invokeWithRole = "Accessors"
-    )
-    RoleCreatableObject privilegedFindById(String id);
+    RoleCreatableObject findByIdAs(String id, AccessControlContext accessControlContext)
+            throws NoSuchItemException;
 }

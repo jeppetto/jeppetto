@@ -176,10 +176,6 @@ public class DAOBuilder {
             if (accessControlEnabled) {
                 if (dataAccessMethod.useAccessControlContextArgument()) {
                     sb.append("    queryModel.setAccessControlContext((org.iternine.jeppetto.dao.AccessControlContext) argsIterator.next());\n\n");
-                } else if (!dataAccessMethod.invokeWithRole().isEmpty()) {
-                    sb.append("    org.iternine.jeppetto.dao.SimpleAccessControlContext accessControlContext = new org.iternine.jeppetto.dao.SimpleAccessControlContext();\n");
-                    sb.append("    accessControlContext.addRole(\"").append(dataAccessMethod.invokeWithRole()).append("\");\n");
-                    sb.append("    queryModel.setAccessControlContext(accessControlContext);\n\n");
                 } else {
                     sb.append("    queryModel.setAccessControlContext(getAccessControlContextProvider().getCurrent());\n\n");
                 }
@@ -316,15 +312,18 @@ public class DAOBuilder {
         OperationType operationType;
 
         if (methodName.startsWith("findBy")) {
-            queryString = methodName.substring("findBy".length());
+            queryString = methodName.substring("findBy".length(),
+                                               methodName.length() - (methodName.endsWith("As") ? "As".length() : 0));
             operationType = OperationType.Read;
         } else if (methodName.startsWith("countBy")) {
             sb.append("    queryModel.setProjection(buildProjection(null, org.iternine.jeppetto.dao.ProjectionType.RowCount, argsIterator));\n\n");
 
-            queryString = methodName.substring("countBy".length());
+            queryString = methodName.substring("countBy".length(),
+                                               methodName.length() - (methodName.endsWith("As") ? "As".length() : 0));
             operationType = OperationType.Read;
         } else if (methodName.startsWith("deleteBy")) {
-            queryString = methodName.substring("deleteBy".length());
+            queryString = methodName.substring("deleteBy".length(),
+                                               methodName.length() - (methodName.endsWith("As") ? "As".length() : 0));
             operationType = OperationType.Delete;
         } else {
             throw new UnsupportedOperationException("Don't know how to handle '" + methodName + "'");

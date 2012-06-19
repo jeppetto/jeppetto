@@ -137,7 +137,7 @@ import java.util.regex.Pattern;
 // TODO: support per-call WriteConcerns (keep in mind session semantics)
 // TODO: investigate usage of ClassLoader so new instances are already enhanced
 public class MongoDBQueryModelDAO<T, ID>
-        implements QueryModelDAO<T, ID>, AccessControllable<ID> {
+        implements QueryModelDAO<T, ID>, AccessControllable<T, ID> {
 
     //-------------------------------------------------------------
     // Constants
@@ -249,7 +249,7 @@ public class MongoDBQueryModelDAO<T, ID>
 
         if (dbo.isPersisted()) {
             if (accessControlContextProvider != null) {
-                verifyWriteAllowed(dbo); // TODO: should access control check be added to identifyingQuery?
+                verifyWriteAllowed(dbo, accessControlContextProvider.getCurrent()); // TODO: should access control check be added to identifyingQuery?
             }
         } else {
             if (dbo.get(ID_FIELD) == null) {
@@ -257,7 +257,7 @@ public class MongoDBQueryModelDAO<T, ID>
             }
 
             if (accessControlContextProvider != null) {
-                assessAndAssignAccessControl(dbo);
+                assessAndAssignAccessControl(dbo, accessControlContextProvider.getCurrent());
             }
         }
 
@@ -451,6 +451,36 @@ public class MongoDBQueryModelDAO<T, ID>
     //-------------------------------------------------------------
 
     @Override
+    public void save(T object, AccessControlContext accessControlContext)
+            throws OptimisticLockException, AccessControlException, JeppettoException {
+        T enhancedEntity = enhancer.enhance(object);
+        DirtyableDBObject dbo = (DirtyableDBObject) enhancedEntity;
+
+        if (dbo.isPersisted()) {
+            if (accessControlContextProvider != null) {
+                verifyWriteAllowed(dbo, accessControlContext); // TODO: should access control check be added to identifyingQuery?
+            }
+        } else {
+            if (dbo.get(ID_FIELD) == null) {
+                dbo.put(ID_FIELD, new ObjectId());  // If the id isn't explicitly set, assume intent is for mongo ids
+            }
+
+            if (accessControlContextProvider != null) {
+                assessAndAssignAccessControl(dbo, accessControlContext);
+            }
+        }
+
+        DBObject identifyingQuery = buildIdentifyingQuery(dbo);
+
+        if (MongoDBSession.isActive()) {
+            MongoDBSession.trackForSave(this, identifyingQuery, enhancedEntity, createIdentifyingQueries(dbo));
+        } else {
+            trueSave(identifyingQuery, dbo);
+        }
+    }
+
+
+    @Override
     public void grantAccess(ID id, String accessId, AccessType accessType)
             throws NoSuchItemException, AccessControlException {
         if (accessControlContextProvider == null) {
@@ -465,7 +495,7 @@ public class MongoDBQueryModelDAO<T, ID>
 
         DBObject dbo = (DBObject) findById(id);
 
-        verifyWriteAllowed(dbo);
+        verifyWriteAllowed(dbo, accessControlContextProvider.getCurrent());
 
         @SuppressWarnings( { "unchecked" })
         Map<String, String> accessControl = (Map<String, String>) dbo.get(ACCESS_CONTROL_FIELD);
@@ -507,7 +537,7 @@ public class MongoDBQueryModelDAO<T, ID>
 
         DBObject dbo = (DBObject) findById(id);
 
-        verifyWriteAllowed(dbo);
+        verifyWriteAllowed(dbo, accessControlContextProvider.getCurrent());
 
         @SuppressWarnings("unchecked")
         Map<String, String> accessControl = (Map<String, String>)  dbo.get(ACCESS_CONTROL_FIELD);
@@ -553,7 +583,7 @@ public class MongoDBQueryModelDAO<T, ID>
         DBObject dbo = (DBObject) findById(id);
 
         // Should this list be limited based on caller?  For now we'll limit it to writers.
-        verifyWriteAllowed(dbo);
+        verifyWriteAllowed(dbo, accessControlContextProvider.getCurrent());
 
         @SuppressWarnings("unchecked")
         Map<String, String> accessControl = (Map<String, String>) dbo.get(ACCESS_CONTROL_FIELD);
@@ -1008,9 +1038,8 @@ public class MongoDBQueryModelDAO<T, ID>
 
 
     // TODO: ensure this is called by all update paths (e.g. other callers to trueSave())
-    private void verifyWriteAllowed(DBObject dbo)
+    private void verifyWriteAllowed(DBObject dbo, AccessControlContext accessControlContext)
             throws AccessControlException {
-        AccessControlContext accessControlContext = accessControlContextProvider.getCurrent();
         @SuppressWarnings( { "unchecked" })
         Map<String, String> accessControl = (Map<String, String>) dbo.get(ACCESS_CONTROL_FIELD);
 
@@ -1022,10 +1051,8 @@ public class MongoDBQueryModelDAO<T, ID>
     }
 
 
-    private void assessAndAssignAccessControl(DBObject dbo)
+    private void assessAndAssignAccessControl(DBObject dbo, AccessControlContext accessControlContext)
             throws AccessControlException {
-        AccessControlContext accessControlContext = accessControlContextProvider.getCurrent();
-
         AccessControl accessControl = getAccessControlAnnotation();
         if (accessControl != null) {
             for (Creator creator : accessControl.creators()) {

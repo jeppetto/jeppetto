@@ -69,7 +69,7 @@ import java.util.Set;
  * @param <ID> ID type for the persistent class.
  */
 public class HibernateQueryModelDAO<T, ID extends Serializable>
-        implements QueryModelDAO<T, ID>, AccessControllable<ID> {
+        implements QueryModelDAO<T, ID>, AccessControllable<T, ID> {
 
     //-------------------------------------------------------------
     // Constants
@@ -373,6 +373,31 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
     //-------------------------------------------------------------
     // Implementation - AccessControllable
     //-------------------------------------------------------------
+
+    @Override
+    public void save(T object, AccessControlContext accessControlContext)
+            throws OptimisticLockException, AccessControlException, JeppettoException {
+        if (accessControlContextProvider == null) {
+            throw new AccessControlException("Access Control is not enabled. No AccessControlContextProvider specified.");
+        }
+
+        try {
+            AccessControlContextOverride.set(accessControlContext);
+
+            getCurrentSession().saveOrUpdate(object);
+
+            // flush() here because we want the AccessControlInterceptor to perform its onSave()/onFlushDirty()
+            // checks while the override is in place.
+            flush();
+        } catch (org.hibernate.OptimisticLockException e) {
+            throw new OptimisticLockException(e);
+        } catch (HibernateException e) {
+            throw new JeppettoException(e);
+        } finally {
+            AccessControlContextOverride.clear();
+        }
+    }
+
 
     @Override
     public void grantAccess(ID id, String accessId, AccessType accessType)

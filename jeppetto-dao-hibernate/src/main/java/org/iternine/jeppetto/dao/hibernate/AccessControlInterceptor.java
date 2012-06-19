@@ -51,7 +51,10 @@ public class AccessControlInterceptor extends EmptyInterceptor {
             return false;
         }
 
-        accessControlHelper.validateContextAllows(entity.getClass(), id, accessControlContextProvider.getCurrent(), AccessType.ReadWrite);
+        AccessControlContext accessControlContext = AccessControlContextOverride.exists() ? AccessControlContextOverride.get()
+                                                                                          : accessControlContextProvider.getCurrent();
+
+        accessControlHelper.validateContextAllows(entity.getClass(), id, accessControlContext, AccessType.ReadWrite);
 
         return false;
     }
@@ -64,7 +67,8 @@ public class AccessControlInterceptor extends EmptyInterceptor {
             return false;
         }
 
-        AccessControlContext accessControlContext = accessControlContextProvider.getCurrent();
+        AccessControlContext accessControlContext = AccessControlContextOverride.exists() ? AccessControlContextOverride.get()
+                                                                                          : accessControlContextProvider.getCurrent();
 
         AccessControl accessControl = accessControlHelper.getAccessControlAnnotation(entity.getClass());
         if (accessControl != null) {

@@ -20,7 +20,7 @@
 
     <!-- =================== Mongo DAOs =================== -->
 
-    <bean id="accessControlContextProvider" class="org.iternine.jeppetto.test.SettableAccessControlContextProvider"/>
+    <bean id="accessControlContextProvider" class="org.iternine.jeppetto.dao.SettableAccessControlContextProvider"/>
 
     <bean id="defaultAccessObjectDAO" class="org.iternine.jeppetto.dao.DAOBuilder" factory-method="buildDAO">
         <constructor-arg index="0" value="org.iternine.jeppetto.test.accesscontrol.DefaultAccessObject"/>

@@ -14,11 +14,7 @@
  * limitations under the License.
  */
 
-package org.iternine.jeppetto.test;
-
-
-import org.iternine.jeppetto.dao.AccessControlContext;
-import org.iternine.jeppetto.dao.AccessControlContextProvider;
+package org.iternine.jeppetto.dao;
 
 
 public class SettableAccessControlContextProvider

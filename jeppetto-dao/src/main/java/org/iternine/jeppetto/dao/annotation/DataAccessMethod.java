@@ -44,6 +44,4 @@ public @interface DataAccessMethod {
     public abstract boolean skipResults() default false;
 
     public abstract boolean useAccessControlContextArgument() default false;
-
-    public abstract String invokeWithRole() default "";
 }

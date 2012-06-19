@@ -21,5 +21,6 @@ import org.iternine.jeppetto.dao.AccessControllable;
 import org.iternine.jeppetto.dao.GenericDAO;
 
 
-public interface DefaultAccessObjectDAO extends GenericDAO<DefaultAccessObject, String>, AccessControllable<String> {
+public interface DefaultAccessObjectDAO extends GenericDAO<DefaultAccessObject, String>,
+                                                AccessControllable<DefaultAccessObject, String> {
 }

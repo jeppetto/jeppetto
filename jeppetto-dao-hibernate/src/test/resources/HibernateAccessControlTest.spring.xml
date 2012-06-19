@@ -28,7 +28,7 @@
         <property name="sessionFactory" ref="sessionFactory"/>
     </bean>
 
-    <bean id="accessControlContextProvider" class="org.iternine.jeppetto.test.SettableAccessControlContextProvider"/>
+    <bean id="accessControlContextProvider" class="org.iternine.jeppetto.dao.SettableAccessControlContextProvider"/>
 
     <bean id="sessionFactory" class="org.springframework.orm.hibernate3.LocalSessionFactoryBean" depends-on="liquibase">
         <property name="dataSource" ref="dataSource"/>
