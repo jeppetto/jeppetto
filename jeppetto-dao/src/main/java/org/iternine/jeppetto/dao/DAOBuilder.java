@@ -64,22 +64,22 @@ public class DAOBuilder {
                                                                   Class<? extends QueryModelDAO<T, ID>> partialDAOClass,
                                                                   Map<String, Object> daoProperties,
                                                                   AccessControlContextProvider accessControlContextProvider) {
-        if (AccessControllable.class.isAssignableFrom(daoInterface)) {
-            // Verify the DAO implementation can support AccessControllable...
+        if (AccessControlDAO.class.isAssignableFrom(daoInterface)) {
+            // Verify the DAO implementation can support AccessControlDAO...
 
-            // ...if not assignable from AccessControllable, then fail...
-            if (!AccessControllable.class.isAssignableFrom(partialDAOClass)) {
-                throw new RuntimeException("Concrete DAO doesn't support AccessControllable (which is expected by DAO interface)");
+            // ...if not assignable from AccessControlDAO, then fail...
+            if (!AccessControlDAO.class.isAssignableFrom(partialDAOClass)) {
+                throw new RuntimeException("Concrete DAO doesn't support AccessControlDAO (expected by the DAO interface)");
             }
 
             // ...if no matching constructor, then fail...
             try {
                 partialDAOClass.getDeclaredConstructor(Class.class, Map.class, AccessControlContextProvider.class);
             } catch (Exception e) {
-                throw new RuntimeException("Concrete DAO doesn't support AccessControllable (which is expected by DAO interface)");
+                throw new RuntimeException("Concrete DAO doesn't support AccessControlDAO (expected by the DAO interface)");
             }
 
-            // TODO: validate AccessControllable methods exist
+            // TODO: validate AccessControlDAO methods exist
 
             if (accessControlContextProvider == null) {
                 throw new RuntimeException("No AccessControlContextProvider specified.");

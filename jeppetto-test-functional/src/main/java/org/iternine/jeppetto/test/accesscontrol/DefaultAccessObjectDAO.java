@@ -17,10 +17,8 @@
 package org.iternine.jeppetto.test.accesscontrol;
 
 
-import org.iternine.jeppetto.dao.AccessControllable;
-import org.iternine.jeppetto.dao.GenericDAO;
+import org.iternine.jeppetto.dao.AccessControlDAO;
 
 
-public interface DefaultAccessObjectDAO extends GenericDAO<DefaultAccessObject, String>,
-                                                AccessControllable<DefaultAccessObject, String> {
+public interface DefaultAccessObjectDAO extends AccessControlDAO<DefaultAccessObject, String> {
 }

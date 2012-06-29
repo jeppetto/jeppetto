@@ -20,7 +20,7 @@ package org.iternine.jeppetto.dao.mongodb;
 import org.iternine.jeppetto.dao.AccessControlContext;
 import org.iternine.jeppetto.dao.AccessControlContextProvider;
 import org.iternine.jeppetto.dao.AccessControlException;
-import org.iternine.jeppetto.dao.AccessControllable;
+import org.iternine.jeppetto.dao.AccessControlDAO;
 import org.iternine.jeppetto.dao.AccessType;
 import org.iternine.jeppetto.dao.Condition;
 import org.iternine.jeppetto.dao.ConditionType;
@@ -137,7 +137,7 @@ import java.util.regex.Pattern;
 // TODO: support per-call WriteConcerns (keep in mind session semantics)
 // TODO: investigate usage of ClassLoader so new instances are already enhanced
 public class MongoDBQueryModelDAO<T, ID>
-        implements QueryModelDAO<T, ID>, AccessControllable<T, ID> {
+        implements QueryModelDAO<T, ID>, AccessControlDAO<T, ID> {
 
     //-------------------------------------------------------------
     // Constants
@@ -447,7 +447,7 @@ public class MongoDBQueryModelDAO<T, ID>
 
 
     //-------------------------------------------------------------
-    // Implementation - AccessControllable
+    // Implementation - AccessControlDAO
     //-------------------------------------------------------------
 
     @Override

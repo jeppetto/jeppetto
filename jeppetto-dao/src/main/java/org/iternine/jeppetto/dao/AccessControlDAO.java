@@ -24,7 +24,7 @@ import java.util.Map;
  * @param <T> Persistent Class
  * @param <ID> ID type of the persistent class.
  */
-public interface AccessControllable<T, ID> {
+public interface AccessControlDAO<T, ID> extends GenericDAO<T, ID> {
 
     void save(T object, AccessControlContext accessControlContext)
             throws OptimisticLockException, AccessControlException, JeppettoException;

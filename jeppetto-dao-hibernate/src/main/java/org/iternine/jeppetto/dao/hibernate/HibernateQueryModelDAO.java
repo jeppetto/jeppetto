@@ -19,8 +19,8 @@ package org.iternine.jeppetto.dao.hibernate;
 
 import org.iternine.jeppetto.dao.AccessControlContext;
 import org.iternine.jeppetto.dao.AccessControlContextProvider;
+import org.iternine.jeppetto.dao.AccessControlDAO;
 import org.iternine.jeppetto.dao.AccessControlException;
-import org.iternine.jeppetto.dao.AccessControllable;
 import org.iternine.jeppetto.dao.AccessType;
 import org.iternine.jeppetto.dao.Condition;
 import org.iternine.jeppetto.dao.ConditionType;
@@ -69,7 +69,7 @@ import java.util.Set;
  * @param <ID> ID type for the persistent class.
  */
 public class HibernateQueryModelDAO<T, ID extends Serializable>
-        implements QueryModelDAO<T, ID>, AccessControllable<T, ID> {
+        implements QueryModelDAO<T, ID>, AccessControlDAO<T, ID> {
 
     //-------------------------------------------------------------
     // Constants
@@ -371,7 +371,7 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
 
 
     //-------------------------------------------------------------
-    // Implementation - AccessControllable
+    // Implementation - AccessControlDAO
     //-------------------------------------------------------------
 
     @Override
