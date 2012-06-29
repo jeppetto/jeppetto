@@ -105,7 +105,9 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
         this.accessControlHelper = (AccessControlHelper) daoProperties.get("accessControlHelper");
         this.accessControlContextProvider = accessControlContextProvider;
 
-        accessControlHelper.registerDAO(persistentClass, this);
+        if (accessControlHelper != null) {
+            accessControlHelper.registerDAO(persistentClass, this);
+        }
     }
 
 
