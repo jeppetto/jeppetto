@@ -20,5 +20,12 @@ package org.iternine.jeppetto.test.accesscontrol;
 import org.iternine.jeppetto.dao.AccessControlDAO;
 
 
+/**
+ * Is equivalent to:
+ *
+ * @AccessControl(
+ *     creators = { @Creator( type = Creator.Type.Identified, grantedAccess = AccessType.ReadWrite ),
+ *                  @Creator( type = Creator.Type.Anonymous, grantedAccess = **ignored** ) } )
+ */
 public interface DefaultAccessObjectDAO extends AccessControlDAO<DefaultAccessObject, String> {
 }

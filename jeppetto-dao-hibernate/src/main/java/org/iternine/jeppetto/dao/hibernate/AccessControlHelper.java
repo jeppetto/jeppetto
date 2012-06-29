@@ -46,6 +46,7 @@ public class AccessControlHelper {
     //-------------------------------------------------------------
 
     private SessionFactory sessionFactory;
+    private Map<Class, HibernateQueryModelDAO> daos = new HashMap<Class, HibernateQueryModelDAO>();
 
 
     //-------------------------------------------------------------
@@ -60,6 +61,11 @@ public class AccessControlHelper {
     //-------------------------------------------------------------
     // Methods - Package
     //-------------------------------------------------------------
+
+    void registerDAO(Class<?> objectType, HibernateQueryModelDAO hibernateQueryModelDAO) {
+        daos.put(objectType, hibernateQueryModelDAO);
+    }
+
 
     // TODO: check if object already exists -- if yes, modify accessType
     void createEntry(Class<?> objectType, Serializable id, String accessId, AccessType accessType) {
@@ -207,15 +213,13 @@ public class AccessControlHelper {
 
 
     AccessControl getAccessControlAnnotation(Class<?> objectType) {
-        while (objectType != null) {
+        for (Class daoInterface : daos.get(objectType).getClass().getInterfaces()) {
             // noinspection unchecked
-            AccessControl accessControl = objectType.getAnnotation(AccessControl.class);
+            AccessControl accessControl = (AccessControl) daoInterface.getAnnotation(AccessControl.class);
 
             if (accessControl != null) {
                 return accessControl;
             }
-
-            objectType = objectType.getSuperclass();
         }
 
         return null;
