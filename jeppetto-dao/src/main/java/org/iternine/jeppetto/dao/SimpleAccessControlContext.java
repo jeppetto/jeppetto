@@ -32,6 +32,30 @@ public class SimpleAccessControlContext
 
 
     //-------------------------------------------------------------
+    // Constructors
+    //-------------------------------------------------------------
+
+    public SimpleAccessControlContext() {
+    }
+
+
+    public SimpleAccessControlContext(String accessId) {
+        this.accessId = accessId;
+    }
+
+
+    public SimpleAccessControlContext(Set<String> roles) {
+        this.roles = roles;
+    }
+
+
+    public SimpleAccessControlContext(String accessId, Set<String> roles) {
+        this.accessId = accessId;
+        this.roles = roles;
+    }
+
+
+    //-------------------------------------------------------------
     // Implementation - AccessControlContext
     //-------------------------------------------------------------
 

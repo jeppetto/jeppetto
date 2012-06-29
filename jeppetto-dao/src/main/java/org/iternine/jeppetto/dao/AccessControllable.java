@@ -34,15 +34,23 @@ public interface AccessControllable<T, ID> {
             throws NoSuchItemException, AccessControlException;
 
 
+    void grantAccess(ID id, String accessId, AccessType accessType, AccessControlContext accessControlContext)
+            throws NoSuchItemException, AccessControlException;
+
+
     void revokeAccess(ID id, String accessId)
             throws NoSuchItemException, AccessControlException;
 
-    
-    AccessType getGrantedAccess(ID id, String accessId)
+
+    void revokeAccess(ID id, String accessId, AccessControlContext accessControlContext)
             throws NoSuchItemException, AccessControlException;
 
 
     Map<String, AccessType> getGrantedAccesses(ID id)
+            throws NoSuchItemException, AccessControlException;
+
+
+    Map<String, AccessType> getGrantedAccesses(ID id, AccessControlContext accessControlContext)
             throws NoSuchItemException, AccessControlException;
 
 

@@ -377,9 +377,7 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
     @Override
     public void save(T object, AccessControlContext accessControlContext)
             throws OptimisticLockException, AccessControlException, JeppettoException {
-        if (accessControlContextProvider == null) {
-            throw new AccessControlException("Access Control is not enabled. No AccessControlContextProvider specified.");
-        }
+        ensureAccessControlEnabled();
 
         try {
             AccessControlContextOverride.set(accessControlContext);
@@ -402,17 +400,24 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
     @Override
     public void grantAccess(ID id, String accessId, AccessType accessType)
             throws NoSuchItemException, AccessControlException {
-        if (accessControlContextProvider == null) {
-            throw new AccessControlException("Access Control is not enabled. No AccessControlContextProvider specified.");
-        }
+        ensureAccessControlEnabled();
+
+        grantAccess(id, accessId, accessType, accessControlContextProvider.getCurrent());
+    }
+
+
+    @Override
+    public void grantAccess(ID id, String accessId, AccessType accessType, AccessControlContext accessControlContext)
+            throws NoSuchItemException, AccessControlException {
+        ensureAccessControlEnabled();
 
         if (accessType == AccessType.None) {
-            revokeAccess(id, accessId);
+            revokeAccess(id, accessId, accessControlContext);
 
             return;
         }
 
-        accessControlHelper.validateContextAllows(persistentClass, id, accessControlContextProvider.getCurrent(), AccessType.ReadWrite);
+        accessControlHelper.validateContextAllowsWrite(persistentClass, id, accessControlContext, true);
 
         accessControlHelper.createEntry(persistentClass, id, accessId, accessType);
     }
@@ -421,31 +426,38 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
     @Override
     public void revokeAccess(ID id, String accessId)
             throws NoSuchItemException, AccessControlException {
-        if (accessControlContextProvider == null) {
-            throw new AccessControlException("Access Control is not enabled. No AccessControlContextProvider specified.");
-        }
+        ensureAccessControlEnabled();
 
-        accessControlHelper.validateContextAllows(persistentClass, id, accessControlContextProvider.getCurrent(), AccessType.ReadWrite);
+        revokeAccess(id, accessId, accessControlContextProvider.getCurrent());
+    }
+
+
+    @Override
+    public void revokeAccess(ID id, String accessId, AccessControlContext accessControlContext)
+            throws NoSuchItemException, AccessControlException {
+        ensureAccessControlEnabled();
+
+        accessControlHelper.validateContextAllowsWrite(persistentClass, id, accessControlContext, true);
 
         accessControlHelper.deleteEntry(persistentClass, id, accessId);
     }
 
 
     @Override
-    public AccessType getGrantedAccess(ID id, String accessId)
+    public Map<String, AccessType> getGrantedAccesses(ID id)
             throws NoSuchItemException, AccessControlException {
-        return getGrantedAccesses(id).get(accessId);
+        ensureAccessControlEnabled();
+
+        return getGrantedAccesses(id, accessControlContextProvider.getCurrent());
     }
 
 
     @Override
-    public Map<String, AccessType> getGrantedAccesses(ID id)
+    public Map<String, AccessType> getGrantedAccesses(ID id, AccessControlContext accessControlContext)
             throws NoSuchItemException, AccessControlException {
-        if (accessControlContextProvider == null) {
-            throw new AccessControlException("Access Control is not enabled. No AccessControlContextProvider specified.");
-        }
+        ensureAccessControlEnabled();
 
-        accessControlHelper.validateContextAllows(persistentClass, id, accessControlContextProvider.getCurrent(), AccessType.ReadWrite);
+        accessControlHelper.validateContextAllowsWrite(persistentClass, id, accessControlContext, true);
 
         return accessControlHelper.getEntries(persistentClass, id);
     }
@@ -658,5 +670,12 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
         }
 
         query.setParameter(position, accessControlContext.getAccessId(), STRING_TYPE);
+    }
+
+
+    private void ensureAccessControlEnabled() {
+        if (accessControlContextProvider == null) {
+            throw new AccessControlException("Access Control is not enabled. No AccessControlContextProvider specified.");
+        }
     }
 }

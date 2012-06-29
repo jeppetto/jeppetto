@@ -453,21 +453,19 @@ public class MongoDBQueryModelDAO<T, ID>
     @Override
     public void save(T object, AccessControlContext accessControlContext)
             throws OptimisticLockException, AccessControlException, JeppettoException {
+        ensureAccessControlEnabled();
+
         T enhancedEntity = enhancer.enhance(object);
         DirtyableDBObject dbo = (DirtyableDBObject) enhancedEntity;
 
         if (dbo.isPersisted()) {
-            if (accessControlContextProvider != null) {
-                verifyWriteAllowed(dbo, accessControlContext); // TODO: should access control check be added to identifyingQuery?
-            }
+            verifyWriteAllowed(dbo, accessControlContext); // TODO: should access control check be added to identifyingQuery?
         } else {
             if (dbo.get(ID_FIELD) == null) {
                 dbo.put(ID_FIELD, new ObjectId());  // If the id isn't explicitly set, assume intent is for mongo ids
             }
 
-            if (accessControlContextProvider != null) {
-                assessAndAssignAccessControl(dbo, accessControlContext);
-            }
+            assessAndAssignAccessControl(dbo, accessControlContext);
         }
 
         DBObject identifyingQuery = buildIdentifyingQuery(dbo);
@@ -483,19 +481,30 @@ public class MongoDBQueryModelDAO<T, ID>
     @Override
     public void grantAccess(ID id, String accessId, AccessType accessType)
             throws NoSuchItemException, AccessControlException {
-        if (accessControlContextProvider == null) {
-            throw new AccessControlException("Access Control is not enabled. No AccessControlContextProvider specified.");
-        }
+        ensureAccessControlEnabled();
+
+        grantAccess(id, accessId, accessType, accessControlContextProvider.getCurrent());
+    }
+
+
+    @Override
+    public void grantAccess(ID id, String accessId, AccessType accessType, AccessControlContext accessControlContext)
+            throws NoSuchItemException, AccessControlException {
+        ensureAccessControlEnabled();
 
         if (accessType == AccessType.None) {
-            revokeAccess(id, accessId);
+            revokeAccess(id, accessId, accessControlContext);
 
             return;
         }
 
-        DBObject dbo = (DBObject) findById(id);
+        QueryModel queryModel = new QueryModel();
+        queryModel.addCondition(buildIdCondition(id));
+        queryModel.setAccessControlContext(accessControlContext);
 
-        verifyWriteAllowed(dbo, accessControlContextProvider.getCurrent());
+        DBObject dbo = (DBObject) findUniqueUsingQueryModel(queryModel);
+
+        verifyWriteAllowed(dbo, accessControlContext);
 
         @SuppressWarnings( { "unchecked" })
         Map<String, String> accessControl = (Map<String, String>) dbo.get(ACCESS_CONTROL_FIELD);
@@ -531,13 +540,24 @@ public class MongoDBQueryModelDAO<T, ID>
     @Override
     public void revokeAccess(ID id, String accessId)
             throws NoSuchItemException, AccessControlException {
-        if (accessControlContextProvider == null) {
-            throw new AccessControlException("Access Control is not enabled. No AccessControlContextProvider specified.");
-        }
+        ensureAccessControlEnabled();
 
-        DBObject dbo = (DBObject) findById(id);
+        revokeAccess(id, accessId, accessControlContextProvider.getCurrent());
+    }
 
-        verifyWriteAllowed(dbo, accessControlContextProvider.getCurrent());
+
+    @Override
+    public void revokeAccess(ID id, String accessId, AccessControlContext accessControlContext)
+            throws NoSuchItemException, AccessControlException {
+        ensureAccessControlEnabled();
+
+        QueryModel queryModel = new QueryModel();
+        queryModel.addCondition(buildIdCondition(id));
+        queryModel.setAccessControlContext(accessControlContext);
+
+        DBObject dbo = (DBObject) findUniqueUsingQueryModel(queryModel);
+
+        verifyWriteAllowed(dbo, accessControlContext);
 
         @SuppressWarnings("unchecked")
         Map<String, String> accessControl = (Map<String, String>)  dbo.get(ACCESS_CONTROL_FIELD);
@@ -567,38 +587,46 @@ public class MongoDBQueryModelDAO<T, ID>
 
 
     @Override
-    public AccessType getGrantedAccess(ID id, String accessId)
+    public Map<String, AccessType> getGrantedAccesses(ID id)
             throws NoSuchItemException, AccessControlException {
-        return getGrantedAccesses(id).get(accessId);
+        ensureAccessControlEnabled();
+
+        return getGrantedAccesses(id, accessControlContextProvider.getCurrent());
     }
 
 
     @Override
-    public Map<String, AccessType> getGrantedAccesses(ID id)
+    public Map<String, AccessType> getGrantedAccesses(ID id, AccessControlContext accessControlContext)
             throws NoSuchItemException, AccessControlException {
-        if (accessControlContextProvider == null) {
-            throw new AccessControlException("Access Control is not enabled. No AccessControlContextProvider specified.");
-        }
+        ensureAccessControlEnabled();
 
-        DBObject dbo = (DBObject) findById(id);
+        QueryModel queryModel = new QueryModel();
+        queryModel.addCondition(buildIdCondition(id));
+        queryModel.setAccessControlContext(accessControlContext);
 
-        // Should this list be limited based on caller?  For now we'll limit it to writers.
-        verifyWriteAllowed(dbo, accessControlContextProvider.getCurrent());
+        DBObject dbo = (DBObject) findUniqueUsingQueryModel(queryModel);
+
+        // We limit it to writers.
+        verifyWriteAllowed(dbo, accessControlContext);
 
         @SuppressWarnings("unchecked")
         Map<String, String> accessControl = (Map<String, String>) dbo.get(ACCESS_CONTROL_FIELD);
 
         if (accessControl == null || accessControl.size() == 0) {
             return Collections.emptyMap();
-        }
+        } else if (accessControl.size() == 1) {
+            Map.Entry<String, String> entry = accessControl.entrySet().iterator().next();
 
-        // TODO: consider replacing with map that transforms on demand and/or singletonMap for 1 entry
-        Map<String, AccessType> result = new HashMap<String, AccessType>();
-        for (Map.Entry<String, String> entry : accessControl.entrySet()) {
-            result.put(entry.getKey(), AccessType.getAccessTypeFromShortName(entry.getValue()));
+            return Collections.singletonMap(entry.getKey(), AccessType.getAccessTypeFromShortName(entry.getValue()));
+        } else {
+            Map<String, AccessType> result = new HashMap<String, AccessType>();
+
+            for (Map.Entry<String, String> entry : accessControl.entrySet()) {
+                result.put(entry.getKey(), AccessType.getAccessTypeFromShortName(entry.getValue()));
+            }
+
+            return result;
         }
-        
-        return result;
     }
 
 
@@ -1034,6 +1062,13 @@ public class MongoDBQueryModelDAO<T, ID>
         // return the default.  Keep in mind session semantics (e.g. delayed saves).
 
         return defaultWriteConcern;
+    }
+
+
+    private void ensureAccessControlEnabled() {
+        if (accessControlContextProvider == null) {
+            throw new AccessControlException("Access Control is not enabled. No AccessControlContextProvider specified.");
+        }
     }
 
 

@@ -21,7 +21,6 @@ import org.iternine.jeppetto.dao.AccessControlContext;
 import org.iternine.jeppetto.dao.AccessControlException;
 import org.iternine.jeppetto.dao.AccessType;
 import org.iternine.jeppetto.dao.GenericDAO;
-import org.iternine.jeppetto.dao.JeppettoException;
 import org.iternine.jeppetto.dao.NoSuchItemException;
 import org.iternine.jeppetto.dao.SimpleAccessControlContext;
 import org.iternine.jeppetto.dao.SettableAccessControlContextProvider;
@@ -55,26 +54,11 @@ public abstract class AccessControlTest {
     //-------------------------------------------------------------
 
     static {
-        identifiedUser = new SimpleAccessControlContext();
-        identifiedUser.setAccessId("001");
-        // no role specified
-
-        userWithCreatorsRole = new SimpleAccessControlContext();
-        userWithCreatorsRole.setAccessId("002");
-        userWithCreatorsRole.setRoles(Collections.singleton("Creators"));
-
-        userWithAccessorsRole = new SimpleAccessControlContext();
-        userWithAccessorsRole.setAccessId("002");
-        userWithAccessorsRole.setRoles(Collections.singleton("Accessors"));
-
-        administrator = new SimpleAccessControlContext();
-        administrator.setAccessId("003");
-        administrator.setRoles(Collections.singleton("Administrator"));
-
-        anotherUser = new SimpleAccessControlContext();
-        anotherUser.setAccessId("004");
-        anotherUser.setRoles(Collections.singleton("Administrator"));
-
+        identifiedUser = new SimpleAccessControlContext("001" /* no roles specified */);
+        userWithCreatorsRole = new SimpleAccessControlContext("002", Collections.singleton("Creators"));
+        userWithAccessorsRole = new SimpleAccessControlContext("003", Collections.singleton("Accessors"));
+        administrator = new SimpleAccessControlContext("004", Collections.singleton("Administrator"));
+        anotherUser = new SimpleAccessControlContext("005", Collections.singleton("Administrator"));
         anonymousUser = new SimpleAccessControlContext();
     }
 
@@ -391,11 +375,51 @@ public abstract class AccessControlTest {
             getRoleCreatableObjectDAO().save(roleCreatableObject2, userWithCreatorsRole);
 
             throw new RuntimeException("Creator can only create, not update");
-        } catch (JeppettoException e) {
-            Assert.assertEquals(AccessControlException.class, e.getClass());
+        } catch (AccessControlException ignore) {
         }
 
         getRoleCreatableObjectDAO().save(roleCreatableObject2, userWithAccessorsRole);
+    }
+
+
+    @Test
+    public void grantObjectAccessWithExplicitAccessControlContext() {
+        RoleCreatableObject roleCreatableObject1 = new RoleCreatableObject();
+
+        getRoleCreatableObjectDAO().save(roleCreatableObject1, userWithCreatorsRole);
+
+        try {
+            getObjectWithContext(userWithCreatorsRole, roleCreatableObject1.getId(), getRoleCreatableObjectDAO());
+
+            throw new RuntimeException("Creator should not be able to access this object (grantedAccess of None prohibits)");
+        } catch (NoSuchItemException ignore) {
+        }
+
+        try {
+            getRoleCreatableObjectDAO().grantAccess(roleCreatableObject1.getId(), userWithCreatorsRole.getAccessId(),
+                                                    AccessType.ReadWrite, userWithCreatorsRole);
+
+            throw new RuntimeException("Creator can't grant himself access");
+        } catch (NoSuchItemException ignore) {
+        }
+
+        // userWithAccessorsRole context can grant access
+        getRoleCreatableObjectDAO().grantAccess(roleCreatableObject1.getId(), userWithCreatorsRole.getAccessId(),
+                                                AccessType.ReadWrite, userWithAccessorsRole);
+
+        getObjectWithContext(userWithCreatorsRole, roleCreatableObject1.getId(), getRoleCreatableObjectDAO());
+    }
+
+
+    @Test
+    public void verifyGrantedAccessesContainExpectedValues() {
+        String id = saveObjectWithContext(userWithCreatorsRole, new DefaultAccessObject(), getDefaultAccessObjectDAO());
+
+        Map<String, AccessType> grantedAccesses = getDefaultAccessObjectDAO().getGrantedAccesses(id, userWithCreatorsRole);
+
+        Assert.assertEquals(1, grantedAccesses.size());
+        Assert.assertEquals(userWithCreatorsRole.getAccessId(), grantedAccesses.keySet().iterator().next());
+        Assert.assertEquals(AccessType.ReadWrite, grantedAccesses.values().iterator().next());
     }
 
 

@@ -21,6 +21,7 @@ import org.hibernate.HibernateException;
 import org.iternine.jeppetto.dao.AccessControlContext;
 import org.iternine.jeppetto.dao.AccessControlException;
 import org.iternine.jeppetto.dao.AccessType;
+import org.iternine.jeppetto.dao.NoSuchItemException;
 import org.iternine.jeppetto.dao.annotation.AccessControl;
 import org.iternine.jeppetto.dao.annotation.Accessor;
 
@@ -31,6 +32,7 @@ import org.hibernate.criterion.Restrictions;
 
 import java.io.Serializable;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -105,7 +107,6 @@ public class AccessControlHelper {
 
 
     Map<String, AccessType> getEntries(Class<?> objectType, Serializable id) {
-        Map<String, AccessType> result = new HashMap<String, AccessType>();
         Session session = sessionFactory.getCurrentSession();
         Criteria criteria = session.createCriteria(AccessControlEntry.class);
 
@@ -113,21 +114,40 @@ public class AccessControlHelper {
         criteria.add(Restrictions.eq("objectId", id.toString()));
 
         //noinspection unchecked
-        for (AccessControlEntry accessControlEntry : (List<AccessControlEntry>) criteria.list()) {
-            result.put(accessControlEntry.getAccessibleBy(), AccessType.getAccessTypeFromShortName(accessControlEntry.getAccessType()));
-        }
+        List<AccessControlEntry> accessControlEntries = (List<AccessControlEntry>) criteria.list();
 
-        return result;
+        if (accessControlEntries == null || accessControlEntries.size() == 0) {
+            return Collections.emptyMap();
+        } else if (accessControlEntries.size() == 1) {
+            AccessControlEntry accessControlEntry = accessControlEntries.iterator().next();
+
+            return Collections.singletonMap(accessControlEntry.getAccessibleBy(),
+                                            AccessType.getAccessTypeFromShortName(accessControlEntry.getAccessType()));
+        } else {
+            Map<String, AccessType> result = new HashMap<String, AccessType>();
+
+            for (AccessControlEntry accessControlEntry : accessControlEntries) {
+                result.put(accessControlEntry.getAccessibleBy(),
+                           AccessType.getAccessTypeFromShortName(accessControlEntry.getAccessType()));
+            }
+
+            return result;
+        }
     }
 
     
-    void validateContextAllows(Class<?> objectType, Serializable id, AccessControlContext accessControlContext, AccessType accessType) {
-        if (annotationAllowsAccess(objectType, accessControlContext, accessType)
-            || accessControlEntryAllows(objectType, id, accessControlContext.getAccessId(), accessType)) {
+    void validateContextAllowsWrite(Class<?> objectType, Serializable id, AccessControlContext accessControlContext,
+                                    boolean checkIfReadable) {
+        if (annotationAllowsAccess(objectType, accessControlContext, AccessType.ReadWrite)
+            || accessControlEntryAllowsAccess(objectType, id, accessControlContext.getAccessId(), AccessType.ReadWrite)) {
             return;
         }
 
-        throw new AccessControlException("Can't access object [" + id + "] for " + accessType + " with " + accessControlContext);
+        if (checkIfReadable && !accessControlEntryAllowsAccess(objectType, id, accessControlContext.getAccessId(), AccessType.Read)) {
+            throw new NoSuchItemException(objectType.getSimpleName(), id.toString());
+        }
+
+        throw new AccessControlException("Can't access object [" + id + "] for ReadWrite with " + accessControlContext);
     }
 
 
@@ -155,7 +175,7 @@ public class AccessControlHelper {
     }
 
 
-    boolean accessControlEntryAllows(Class<?> objectType, Serializable id, String accessId, AccessType accessType) {
+    boolean accessControlEntryAllowsAccess(Class<?> objectType, Serializable id, String accessId, AccessType accessType) {
         if (accessType == AccessType.None) {
             return false;
         }

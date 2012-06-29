@@ -54,7 +54,7 @@ public class AccessControlInterceptor extends EmptyInterceptor {
         AccessControlContext accessControlContext = AccessControlContextOverride.exists() ? AccessControlContextOverride.get()
                                                                                           : accessControlContextProvider.getCurrent();
 
-        accessControlHelper.validateContextAllows(entity.getClass(), id, accessControlContext, AccessType.ReadWrite);
+        accessControlHelper.validateContextAllowsWrite(entity.getClass(), id, accessControlContext, false);
 
         return false;
     }
