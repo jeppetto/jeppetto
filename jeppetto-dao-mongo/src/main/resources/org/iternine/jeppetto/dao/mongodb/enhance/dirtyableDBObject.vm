@@ -12,7 +12,7 @@ public $_.cls("${baseName}$DirtyableDBObject").ext($base).impl("org.iternine.jep
     //-------------------------------------------------------------
 
     $_.field("private final $baseName __delegate;")
-    $_.field("private boolean __persisted;")
+    $_.field("private com.mongodb.DBCollection __persistentCollection;")
     $_.field("private final java.util.Set __dirtyKeys = new java.util.HashSet();")
     $_.field("private final java.util.Map __extraValues = new java.util.HashMap();")
     $_.field("private java.util.Set __keys = new java.util.HashSet(java.util.Arrays.asList(new String[] {
@@ -36,13 +36,11 @@ public $_.cls("${baseName}$DirtyableDBObject").ext($base).impl("org.iternine.jep
     $_.ctor("
     public $thisName() {
         __delegate = null;
-        __persisted = true;
     }")
 
     $_.ctor("
     public $thisName($baseName delegate) {
         __delegate = delegate;
-        __persisted = false;
     }")
 
 
@@ -270,7 +268,7 @@ public $_.cls("${baseName}$DirtyableDBObject").ext($base).impl("org.iternine.jep
     }")
 
     $_.method("
-    public void markPersisted() {
+    public void markPersisted(com.mongodb.DBCollection dbCollection) {
         __dirtyKeys.clear();
 
         #foreach ( $getter in $getters )
@@ -283,17 +281,17 @@ public $_.cls("${baseName}$DirtyableDBObject").ext($base).impl("org.iternine.jep
         Object __$variableName = $getterName();
 
         if (__$variableName instanceof org.iternine.jeppetto.dao.mongodb.enhance.DirtyableDBObject) {
-            ((org.iternine.jeppetto.dao.mongodb.enhance.DirtyableDBObject) __$variableName).markPersisted();
+            ((org.iternine.jeppetto.dao.mongodb.enhance.DirtyableDBObject) __$variableName).markPersisted(dbCollection);
         }
         #end
         #end
 
-        __persisted = true;
+        __persistentCollection = dbCollection;
     }")
 
     $_.method("
-    public boolean isPersisted() {
-        return __persisted;
+    public boolean isPersisted(com.mongodb.DBCollection dbCollection) {
+        return dbCollection.equals(__persistentCollection); ## null __persistentCollection will return false
     }")
 
     $_.method("

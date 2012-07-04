@@ -19,7 +19,6 @@ package org.iternine.jeppetto.dao.mongodb;
 
 import org.iternine.jeppetto.dao.NoSuchItemException;
 import org.iternine.jeppetto.dao.TooManyItemsException;
-import org.iternine.jeppetto.dao.mongodb.enhance.DirtyableDBObject;
 
 import com.mongodb.BasicDBObject;
 import com.mongodb.DBCollection;
@@ -72,8 +71,6 @@ public class BasicDBObjectCommand extends MongoDBCommand {
         if (cursor.hasNext()) {
             throw new TooManyItemsException(dbCollection.getName(), query.toString());
         }
-
-        ((DirtyableDBObject) result).markPersisted();
 
         return result;
     }

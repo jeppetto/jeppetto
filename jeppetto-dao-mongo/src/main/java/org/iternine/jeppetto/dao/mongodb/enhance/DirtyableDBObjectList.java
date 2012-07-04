@@ -19,6 +19,7 @@ package org.iternine.jeppetto.dao.mongodb.enhance;
 
 import org.iternine.jeppetto.dao.JeppettoException;
 
+import com.mongodb.DBCollection;
 import org.bson.BSONObject;
 import org.bson.util.StringRangeSet;
 
@@ -46,7 +47,7 @@ public class DirtyableDBObjectList
     private Set<Integer> modifiedIndexes = new HashSet<Integer>();
     private int firstAppendedIndex;
     private boolean modifiableDelegate;
-    private boolean persisted;
+    private DBCollection persistentCollection;
 
 
     //-------------------------------------------------------------
@@ -355,9 +356,7 @@ public class DirtyableDBObjectList
 
 
     @Override
-    public void markPersisted() {
-        int i = 0;
-
+    public void markPersisted(DBCollection dbCollection) {
         for (Object object : delegate) {
             if (!(object instanceof DirtyableDBObject)) {
                 continue;
@@ -365,19 +364,19 @@ public class DirtyableDBObjectList
 
             DirtyableDBObject dirtyableDBObject = (DirtyableDBObject) object;
 
-            dirtyableDBObject.markPersisted();
+            dirtyableDBObject.markPersisted(dbCollection);
         }
 
         rewrite = false;
         modifiedIndexes.clear();
         firstAppendedIndex = delegate.size();
-        persisted = true;
+        persistentCollection = dbCollection;
     }
 
 
     @Override
-    public boolean isPersisted() {
-        return persisted;
+    public boolean isPersisted(DBCollection dbCollection) {
+        return dbCollection.equals(persistentCollection);
     }
 
 

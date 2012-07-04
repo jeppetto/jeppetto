@@ -19,6 +19,7 @@ package org.iternine.jeppetto.dao.mongodb.enhance;
 
 import org.iternine.jeppetto.dao.JeppettoException;
 
+import com.mongodb.DBCollection;
 import org.bson.BSONObject;
 
 import java.util.AbstractSet;
@@ -45,7 +46,7 @@ public class DirtyableDBObjectMap
     private Map<String, Object> delegate;
     private Set<String> addedOrUpdatedKeys = new HashSet<String>();
     private Set<String> removedKeys = new HashSet<String>();
-    private boolean persisted;
+    private DBCollection persistentCollection;
 
 
     //-------------------------------------------------------------
@@ -251,7 +252,7 @@ public class DirtyableDBObjectMap
 
 
     @Override
-    public void markPersisted() {
+    public void markPersisted(DBCollection dbCollection) {
         addedOrUpdatedKeys.clear();
         removedKeys.clear();
 
@@ -266,17 +267,17 @@ public class DirtyableDBObjectMap
             if (entry.getValue() instanceof DirtyableDBObject) {
                 DirtyableDBObject dirtyableDBObject = (DirtyableDBObject) entry.getValue();
 
-                dirtyableDBObject.markPersisted();
+                dirtyableDBObject.markPersisted(dbCollection);
             }
         }
 
-        persisted = true;
+        persistentCollection = dbCollection;
     }
 
 
     @Override
-    public boolean isPersisted() {
-        return persisted;
+    public boolean isPersisted(DBCollection dbCollection) {
+        return dbCollection.equals(persistentCollection);
     }
 
 
@@ -296,7 +297,8 @@ public class DirtyableDBObjectMap
                     // we don't know if it changed, so we'll assume it's dirty.
                     if (addedOrUpdatedKeys.contains(entry.getKey())
                         || (entry.getValue() instanceof DirtyableDBObject
-                            && (((DirtyableDBObject) entry.getValue()).isDirty() || !((DirtyableDBObject) entry.getValue()).isPersisted()))
+                            && (((DirtyableDBObject) entry.getValue()).isDirty()
+                                || !((DirtyableDBObject) entry.getValue()).isPersisted(persistentCollection)))
                         || entry.getValue() instanceof byte[]) {
                         return true;
                     }

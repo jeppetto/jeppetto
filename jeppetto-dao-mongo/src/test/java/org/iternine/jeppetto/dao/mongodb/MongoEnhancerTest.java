@@ -17,6 +17,10 @@
 package org.iternine.jeppetto.dao.mongodb;
 
 
+import com.mongodb.DBCollection;
+import com.mongodb.MongoException;
+import com.mongodb.WriteConcern;
+import com.mongodb.WriteResult;
 import org.iternine.jeppetto.dao.mongodb.enhance.DBObjectUtil;
 import org.iternine.jeppetto.dao.mongodb.enhance.DirtyableDBObject;
 import org.iternine.jeppetto.dao.mongodb.enhance.EnhancerHelper;
@@ -29,6 +33,7 @@ import org.junit.Test;
 
 import java.math.BigDecimal;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
@@ -103,7 +108,7 @@ public class MongoEnhancerTest {
         Circular c1 = enhancer.newInstance();
         c1.setParent(enhancer.newInstance());
         Circular c2 = c1.getParent();
-        ((DirtyableDBObject) c2).markPersisted();
+        ((DirtyableDBObject) c2).markPersisted(null);
         assertDirty(c1);
         assertNotDirty(c2);
     }

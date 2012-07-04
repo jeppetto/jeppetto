@@ -247,7 +247,7 @@ public class MongoDBQueryModelDAO<T, ID>
         T enhancedEntity = enhancer.enhance(entity);
         DirtyableDBObject dbo = (DirtyableDBObject) enhancedEntity;
 
-        if (dbo.isPersisted()) {
+        if (dbo.isPersisted(dbCollection)) {
             if (accessControlContextProvider != null) {
                 verifyWriteAllowed(dbo, accessControlContextProvider.getCurrent()); // TODO: should access control check be added to identifyingQuery?
             }
@@ -330,6 +330,8 @@ public class MongoDBQueryModelDAO<T, ID>
         // noinspection unchecked
         T result = (T) command.singleResult(dbCollection);
 
+        ((DirtyableDBObject) result).markPersisted(dbCollection);
+
         if (MongoDBSession.isActive()) {
             DBObject identifyingQuery = buildIdentifyingQuery((DBObject) result);
 
@@ -374,7 +376,7 @@ public class MongoDBQueryModelDAO<T, ID>
                     public T next() {
                         DBObject result = finalDbCursor.next();
 
-                        ((DirtyableDBObject) result).markPersisted();
+                        ((DirtyableDBObject) result).markPersisted(dbCollection);
 
                         if (MongoDBSession.isActive()) {
                             MongoDBSession.trackForSave(MongoDBQueryModelDAO.this,
@@ -458,7 +460,7 @@ public class MongoDBQueryModelDAO<T, ID>
         T enhancedEntity = enhancer.enhance(object);
         DirtyableDBObject dbo = (DirtyableDBObject) enhancedEntity;
 
-        if (dbo.isPersisted()) {
+        if (dbo.isPersisted(dbCollection)) {
             verifyWriteAllowed(dbo, accessControlContext); // TODO: should access control check be added to identifyingQuery?
         } else {
             if (dbo.get(ID_FIELD) == null) {
@@ -768,7 +770,7 @@ public class MongoDBQueryModelDAO<T, ID>
             throw new JeppettoException(e);
         }
 
-        dbo.markPersisted();
+        dbo.markPersisted(dbCollection);
     }
 
 
@@ -984,7 +986,7 @@ public class MongoDBQueryModelDAO<T, ID>
 
 
     private DBObject determineOptimalDBObject(DirtyableDBObject dirtyableDBObject) {
-        if (!dirtyableDBObject.isPersisted()) {
+        if (!dirtyableDBObject.isPersisted(dbCollection)) {
 //            dirtyableDBObject.includeNullValuedKeys(saveNulls);
 
             return dirtyableDBObject;
@@ -1023,7 +1025,7 @@ public class MongoDBQueryModelDAO<T, ID>
             if (dirtyObject instanceof DirtyableDBObjectList) {   // NB: encompasses DirtyableDBObjectSet
                 DirtyableDBObjectList dirtyableDBObjectList = (DirtyableDBObjectList) dirtyObject;
 
-                if (!dirtyableDBObjectList.isPersisted() || dirtyableDBObjectList.isRewrite()) {
+                if (!dirtyableDBObjectList.isPersisted(dbCollection) || dirtyableDBObjectList.isRewrite()) {
                     settableItems.put(prefix + dirtyKey, dirtyableDBObjectList);
 
                     continue;
@@ -1033,7 +1035,7 @@ public class MongoDBQueryModelDAO<T, ID>
             } else if (dirtyObject instanceof DirtyableDBObjectMap) {
                 DirtyableDBObjectMap dirtyableDBObjectMap = (DirtyableDBObjectMap) dirtyObject;
 
-                if (!dirtyableDBObjectMap.isPersisted()) {
+                if (!dirtyableDBObjectMap.isPersisted(dbCollection)) {
                     settableItems.put(prefix + dirtyKey, dirtyableDBObjectMap);
 
                     continue;
@@ -1045,7 +1047,7 @@ public class MongoDBQueryModelDAO<T, ID>
 
                 walkDirtyableDBObject(prefix + dirtyKey + ".", dirtyableDBObjectMap, settableItems, unsettableItems);
             } else if (dirtyObject instanceof DirtyableDBObject) {
-                if (!((DirtyableDBObject) dirtyObject).isPersisted()) {
+                if (!((DirtyableDBObject) dirtyObject).isPersisted(dbCollection)) {
                     settableItems.put(prefix + dirtyKey, dirtyObject);
                 } else {
                     walkDirtyableDBObject(prefix + dirtyKey + ".", (DirtyableDBObject) dirtyObject, settableItems, unsettableItems);

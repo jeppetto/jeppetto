@@ -17,6 +17,7 @@
 package org.iternine.jeppetto.dao.mongodb.enhance;
 
 
+import com.mongodb.DBCollection;
 import com.mongodb.DBObject;
 
 import java.util.Iterator;
@@ -33,13 +34,13 @@ public interface DirtyableDBObject extends DBObject {
     /**
      * Consider the current state of the object to be in sync with the persisted state.
      */
-    void markPersisted();
+    void markPersisted(DBCollection dbCollection);
 
 
     /**
      * @return true if this object has a representation in the underlying store.
      */
-    boolean isPersisted();
+    boolean isPersisted(DBCollection dbCollection);
 
     
     /**
