@@ -74,7 +74,7 @@ import java.util.regex.Pattern;
  * Provides a QueryModelDAO implementation for Mongo.
  * <p/>
  * This QueryModelDAO implementation for MongoDB provides bi-directional ODM (Object to Document Mapping) as well
- * as the rich query capabilities found in the core org.iternine.jeppetto.dao package.  It requires that the ID be a String.
+ * as the rich query capabilities found in the core org.iternine.jeppetto.dao package.
  *
  * Instantiation requires a daoProperties Map<String, Object> that will look for the following keys (and expected
  * values):
@@ -89,6 +89,11 @@ import java.util.regex.Pattern;
  *     <td>db</td>
  *     <td>Yes</td>
  *     <td>Instance of a configured com.mongodb.DB</td>
+ *   </tr>
+ *   <tr>
+ *     <td>collection</td>
+ *     <td>No</td>
+ *     <td>Name of the backing collection for this object.  Defaults to the name of the persistent
  *   </tr>
  *   <tr>
  *     <td>uniqueIndexes</td>
@@ -133,7 +138,6 @@ import java.util.regex.Pattern;
 // TODO: support createdDate/lastModifiedDate (createdDate from get("_id").getTime()?)
 // TODO: Implement determineOptimalDBObject
 //          - understand saveNulls
-//          - understand field-level deltas
 // TODO: support per-call WriteConcerns (keep in mind session semantics)
 // TODO: investigate usage of ClassLoader so new instances are already enhanced
 public class MongoDBQueryModelDAO<T, ID>
@@ -176,7 +180,10 @@ public class MongoDBQueryModelDAO<T, ID>
     @SuppressWarnings( { "unchecked" })
     protected MongoDBQueryModelDAO(Class<T> entityClass, Map<String, Object> daoProperties,
                                    AccessControlContextProvider accessControlContextProvider) {
-        this.dbCollection = ((DB) daoProperties.get("db")).getCollection(entityClass.getSimpleName());
+        String collectionName = daoProperties.containsKey("collection") ? (String) daoProperties.get("collection")
+                                                                        : entityClass.getSimpleName();
+
+        this.dbCollection = ((DB) daoProperties.get("db")).getCollection(collectionName);
         this.enhancer = EnhancerHelper.getDirtyableDBObjectEnhancer(entityClass);
 
         dbCollection.setObjectClass(enhancer.getEnhancedClass());
