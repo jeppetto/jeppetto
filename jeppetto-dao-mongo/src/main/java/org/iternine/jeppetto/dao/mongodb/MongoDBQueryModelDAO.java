@@ -236,7 +236,7 @@ public class MongoDBQueryModelDAO<T, ID>
 
 
     @Override
-    public final Iterable<T> findAll()
+    public Iterable<T> findAll()
             throws JeppettoException {
         QueryModel queryModel = new QueryModel();
 
@@ -249,7 +249,7 @@ public class MongoDBQueryModelDAO<T, ID>
 
 
     @Override
-    public final void save(T entity)
+    public void save(T entity)
             throws OptimisticLockException, JeppettoException {
         T enhancedEntity = enhancer.enhance(entity);
         DirtyableDBObject dbo = (DirtyableDBObject) enhancedEntity;
@@ -279,7 +279,7 @@ public class MongoDBQueryModelDAO<T, ID>
 
 
     @Override
-    public final void delete(T entity)
+    public void delete(T entity)
             throws JeppettoException {
         // TODO: Probably don't want to enhance this object as we may need a previously retrieved object so
         // we can construct an appropriate identifying query w/ __olv
@@ -296,14 +296,14 @@ public class MongoDBQueryModelDAO<T, ID>
 
 
     @Override
-    public final void deleteById(ID id)
+    public void deleteById(ID id)
             throws JeppettoException {
         deleteByIdentifyingQuery(buildIdentifyingQuery(id));
     }
 
 
     @Override
-    public final void flush()
+    public void flush()
             throws JeppettoException {
         if (MongoDBSession.isActive()) {
             MongoDBSession.flush(this);

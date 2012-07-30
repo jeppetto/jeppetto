@@ -20,10 +20,12 @@ package org.iternine.jeppetto.dao;
 import org.iternine.jeppetto.dao.annotation.DataAccessMethod;
 import org.iternine.jeppetto.enhance.ClassLoadingUtil;
 
+import com.yammer.metrics.core.TimerContext;
 import javassist.CannotCompileException;
 import javassist.ClassClassPath;
 import javassist.ClassPool;
 import javassist.CtClass;
+import javassist.CtField;
 import javassist.CtMethod;
 import javassist.CtNewConstructor;
 import javassist.CtNewMethod;
@@ -31,6 +33,7 @@ import javassist.NotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Modifier;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -86,15 +89,19 @@ public class DAOBuilder {
             }
         }
 
-        Class<? extends I> fullDAOClass = completeDAO(modelClass, daoInterface, partialDAOClass, accessControlContextProvider != null);
+        Class<? extends I> fullDAOClass = completeDAO(modelClass, daoInterface, partialDAOClass, accessControlContextProvider != null,
+                                                      daoProperties != null && Boolean.parseBoolean((String) daoProperties.get("enableMetrics")));
 
         try {
             if (accessControlContextProvider != null) {
-                return fullDAOClass.getDeclaredConstructor(Class.class, Map.class, AccessControlContextProvider.class).newInstance(modelClass,
-                                                                                                                                   daoProperties,
-                                                                                                                                   accessControlContextProvider);
+                Constructor<? extends I> constructor = fullDAOClass.getDeclaredConstructor(Class.class, Map.class,
+                                                                                           AccessControlContextProvider.class);
+
+                return constructor.newInstance(modelClass, daoProperties, accessControlContextProvider);
             } else {
-                return fullDAOClass.getDeclaredConstructor(Class.class, Map.class).newInstance(modelClass, daoProperties);
+                Constructor<? extends I> constructor = fullDAOClass.getDeclaredConstructor(Class.class, Map.class);
+
+                return constructor.newInstance(modelClass, daoProperties);
             }
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -109,60 +116,142 @@ public class DAOBuilder {
     private static <T, ID, I extends GenericDAO<T, ID>> Class<? extends I> completeDAO(Class<T> modelClass,
                                                                                        Class<I> daoInterface,
                                                                                        Class<? extends QueryModelDAO<T, ID>> partialDAOClass,
-                                                                                       boolean accessControlEnabled) {
+                                                                                       boolean accessControlEnabled,
+                                                                                       boolean metricsEnabled) {
         try {
             ClassPool pool = ClassPool.getDefault();
 
             pool.insertClassPath(new ClassClassPath(daoInterface));
 
-            CtClass daoInterfaceCtClass = pool.get(daoInterface.getName());
+            CtClass fullDAOCtClass = pool.makeClass(String.format("%s$%d", daoInterface.getName(), count.incrementAndGet()));
             CtClass partialDAOCtClass = pool.get(partialDAOClass.getName());
-            CtClass concrete = pool.makeClass(String.format("%s$%d", daoInterface.getName(), count.incrementAndGet()));
+            CtClass daoInterfaceCtClass = pool.get(daoInterface.getName());
 
-            concrete.setSuperclass(partialDAOCtClass);
-            concrete.addInterface(daoInterfaceCtClass);
+            fullDAOCtClass.setSuperclass(partialDAOCtClass);
+            fullDAOCtClass.addInterface(daoInterfaceCtClass);
 
-            String constructorCode;
+            buildConstructor(fullDAOCtClass, accessControlEnabled);
+            buildNeededMethods(fullDAOCtClass, partialDAOCtClass, daoInterfaceCtClass, modelClass, accessControlEnabled, metricsEnabled);
 
-            if (accessControlEnabled) {
-                constructorCode = String.format("public %s(Class entityClass, java.util.Map daoProperties, org.iternine.jeppetto.dao.AccessControlContextProvider accessControlContextProvider) { " +
-                                                "    super(entityClass, daoProperties, accessControlContextProvider); " +
-                                                "}",
-                                                concrete.getSimpleName());
-            } else {
-                constructorCode = String.format("public %s(Class entityClass, java.util.Map daoProperties) { " +
-                                                "    super(entityClass, daoProperties); " +
-                                                "}",
-                                                concrete.getSimpleName());
-            }
-
-            concrete.addConstructor(CtNewConstructor.make(constructorCode, concrete));
-
-            // implement all abstract methods to call the delegate dynamic dao
-            for (CtMethod interfaceMethod : daoInterfaceCtClass.getMethods()) {
-                try {
-                    CtMethod daoMethod = partialDAOCtClass.getMethod(interfaceMethod.getName(), interfaceMethod.getSignature());
-
-                    if (!Modifier.isAbstract(daoMethod.getModifiers())) {
-                        continue;  // If the method has been implemented, we bypass.
-                    }
-                } catch (NotFoundException ignore) {
-                    // If the method is not declared in the partial class, we fall through to implementation
-                }
-
-                implementMethod(concrete, interfaceMethod, modelClass, accessControlEnabled);
-            }
-
-            return ClassLoadingUtil.toClass(concrete);
+            return ClassLoadingUtil.toClass(fullDAOCtClass);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
 
-    private static <T> void implementMethod(CtClass concrete, CtMethod interfaceMethod, Class<T> modelClass, boolean accessControlEnabled)
+    private static void buildConstructor(CtClass fullDAOCtClass, boolean accessControlEnabled)
+            throws CannotCompileException {
+        String constructorCode;
+
+        if (accessControlEnabled) {
+            constructorCode = String.format("public %s(Class entityClass, java.util.Map daoProperties, org.iternine.jeppetto.dao.AccessControlContextProvider accessControlContextProvider) { " +
+                                            "    super(entityClass, daoProperties, accessControlContextProvider); " +
+                                            "}",
+                                            fullDAOCtClass.getSimpleName());
+        } else {
+            constructorCode = String.format("public %s(Class entityClass, java.util.Map daoProperties) { " +
+                                            "    super(entityClass, daoProperties); " +
+                                            "}",
+                                            fullDAOCtClass.getSimpleName());
+        }
+
+        fullDAOCtClass.addConstructor(CtNewConstructor.make(constructorCode, fullDAOCtClass));
+    }
+
+
+    private static <T> void buildNeededMethods(CtClass fullDAOCtClass, CtClass partialDAOCtClass, CtClass daoInterfaceCtClass,
+                                               Class<T> modelClass, boolean accessControlEnabled, boolean metricsEnabled)
+            throws CannotCompileException, ClassNotFoundException, NotFoundException {
+        // Look through all methods to find which ones need to be implemented.
+        for (CtMethod interfaceMethod : daoInterfaceCtClass.getMethods()) {
+            try {
+                CtMethod daoMethod = partialDAOCtClass.getMethod(interfaceMethod.getName(), interfaceMethod.getSignature());
+
+                // The method is present in the partial class.
+                if (!Modifier.isAbstract(daoMethod.getModifiers())) {
+                    if (metricsEnabled && shouldAddMetricsToMethod(interfaceMethod, daoInterfaceCtClass)) {
+                        logger.debug("Generating metrics delegate for method " + daoMethod.getName() + "()");
+
+                        CtMethod delegator = CtNewMethod.delegator(daoMethod, fullDAOCtClass);
+
+                        insertMetrics(fullDAOCtClass, delegator, daoInterfaceCtClass);
+
+                        fullDAOCtClass.addMethod(delegator);
+                    }
+
+                    continue;
+                }
+
+                // If we're here, the method does not have a concrete implementation.  Fall through to implement it.
+            } catch (NotFoundException ignore) {
+                // If we're here, the method is not present in the partial class.  Fall through to implement it.
+            }
+
+            CtMethod daoMethod = implementMethod(fullDAOCtClass, interfaceMethod, modelClass, accessControlEnabled);
+
+            if (metricsEnabled) {
+                insertMetrics(fullDAOCtClass, daoMethod, daoInterfaceCtClass);
+            }
+        }
+    }
+
+
+    private static boolean shouldAddMetricsToMethod(CtMethod interfaceMethod, CtClass daoInterfaceCtClass) {
+        // Check if the method is directly declared in the interface.  If yes, it was likely implemented for
+        // performance or to accomplish something Jeppetto doesn't offer and we should add metrics.
+        try {
+            daoInterfaceCtClass.getDeclaredMethod(interfaceMethod.getName(), interfaceMethod.getParameterTypes());
+
+            return true;
+        } catch (NotFoundException ignore) {
+        }
+
+        // Check if the method is directly declared in the GenericDAO interface.  If yes, it is in the set of
+        // common DAO methods that we want metrics for.
+        try {
+            ClassPool.getDefault().get(GenericDAO.class.getName()).getDeclaredMethod(interfaceMethod.getName(),
+                                                                                     interfaceMethod.getParameterTypes());
+
+            return true;
+        } catch (NotFoundException ignore) {
+        }
+
+        return false;
+    }
+
+
+    private static void insertMetrics(CtClass fullDAOCtClass, CtMethod daoMethod, CtClass daoInterfaceCtClass)
+            throws CannotCompileException, NotFoundException {
+        final String timerField = createTimerField(fullDAOCtClass, daoMethod, daoInterfaceCtClass);
+
+        logger.debug("Adding metrics to method " + daoMethod.getName() + "()");
+
+        daoMethod.addLocalVariable("__tc", ClassPool.getDefault().get(TimerContext.class.getName()));
+        daoMethod.insertBefore("__tc = this." + timerField + ".time();");
+        daoMethod.insertAfter("__tc.stop();", false);
+    }
+
+
+    private static String createTimerField(CtClass fullCtClass, CtMethod daoMethod, CtClass daoInterfaceCtClass)
+            throws CannotCompileException {
+        String timerField = "__" + daoMethod.getName() + "Timer";
+        String timerDeclaration = "private final com.yammer.metrics.core.Timer " + timerField
+                                  + "  = com.yammer.metrics.Metrics.newTimer(" + daoInterfaceCtClass.getName() + ".class, "
+                                  +                                          "\"" + daoMethod.getName() + "\");";
+
+        logger.debug("Adding Timer field: " + timerField);
+
+        fullCtClass.addField(CtField.make(timerDeclaration, fullCtClass));
+
+        return timerField;
+    }
+
+
+    private static <T> CtMethod implementMethod(CtClass fullDAOCtClass, CtMethod interfaceMethod,
+                                                Class<T> modelClass, boolean accessControlEnabled)
             throws CannotCompileException, ClassNotFoundException {
-        CtMethod concreteMethod = CtNewMethod.copy(interfaceMethod, concrete, null);
+        CtMethod daoMethod = CtNewMethod.copy(interfaceMethod, fullDAOCtClass, null);
         StringBuilder sb = new StringBuilder();
         DataAccessMethod dataAccessMethod;
 
@@ -212,12 +301,14 @@ public class DAOBuilder {
         }
 
         try {
-            concreteMethod.setBody(sb.toString());
+            daoMethod.setBody(sb.toString());
         } catch (CannotCompileException e) {
             throw new RuntimeException("Unable to add method:\n" + sb.toString(), e);
         }
 
-        concrete.addMethod(concreteMethod);
+        fullDAOCtClass.addMethod(daoMethod);
+
+        return daoMethod;
     }
 
 
