@@ -89,6 +89,19 @@ public abstract class SimpleObjectDAOTest {
 
 
     @Test
+    public void findByLongValue()
+            throws NoSuchItemException {
+        SimpleObject simpleObject = new SimpleObject();
+        simpleObject.setLongValue(1409040442249560600L);
+        getSimpleObjectDAO().save(simpleObject);
+
+        SimpleObject resultObject = getSimpleObjectDAO().findByLongValue(1409040442249560600L);
+
+        assertEquals(resultObject.getLongValue(), simpleObject.getLongValue());
+    }
+
+
+    @Test
     public void findSimpleObject()
             throws NoSuchItemException {
         SimpleObject simpleObject = new SimpleObject();

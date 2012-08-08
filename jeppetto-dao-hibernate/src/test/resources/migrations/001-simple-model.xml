@@ -9,6 +9,7 @@
                 <constraints nullable="false" primaryKey="true"/>
             </column>
             <column name="intValue" type="INT"/>
+            <column name="longValue" type="BIGINT"/>
         </createTable>
 
         <createTable tableName="RelatedObject">

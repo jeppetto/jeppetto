@@ -200,6 +200,7 @@ public class MongoDAOTest {
                                         "relatedObjectSet",
                                         "simpleEnum",
                                         "intValue",
+                                        "longValue",
                                         "anotherIntValue");
         assertEquals(knownFields, dbo.keySet());
         ObjectId newId = ObjectId.get();

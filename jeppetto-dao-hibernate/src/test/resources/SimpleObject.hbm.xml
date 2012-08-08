@@ -10,6 +10,7 @@
         </id>
 
         <property name="intValue"/>
+        <property name="longValue"/>
 
         <bag name="relatedObjects" cascade="all">
             <key column="simpleObjectId"/>

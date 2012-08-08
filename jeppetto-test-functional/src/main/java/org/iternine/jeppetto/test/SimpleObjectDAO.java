@@ -38,6 +38,10 @@ public interface SimpleObjectDAO extends GenericDAO<SimpleObject, String> {
             throws NoSuchItemException;
 
 
+    SimpleObject findByLongValue(long longValue)
+            throws NoSuchItemException;
+
+
     int countByIntValue(int intValue);
 
 
