@@ -359,8 +359,8 @@ public class DAOBuilder {
     /**
      * We build 'findBy', 'countBy', and 'deleteBy' QueryModels in the following way:
      * <p/>
-     *      findBy<query part>*[OrderBy<order part>*]
-     *      countBy<query part>*[OrderBy<order part>*]
+     *      findBy<query part>*[OrderBy<order part>*][AndLimit][AndSkip]
+     *      countBy<query part>*[OrderBy<order part>*][AndLimit][AndSkip]
      *      deleteBy<query part>*
      * <p/>
      * Query parts are of the following forms:
@@ -392,6 +392,12 @@ public class DAOBuilder {
      *      <PropertyName>Asc :          order by the column value ascending
      *      <PropertyName>Desc :         order by the column value descending
      *      <PropertyName> :             order by the column value ascending
+     * <p/>
+     * Limiting the result size and pagination are indicated by the AndLimit and AndSkip phrases.  These must be
+     * at the end of the DAO method name, and be in that order.  It is acceptable to omit one or the other if it
+     * isn't needed.  Both clauses expect to find an integer value in the parameter list after all the other
+     * parameters are specified.  For example, to paginate through a potentially long list of people with the same last
+     * name, one could declare a method findBySurnameAndLimitAndSkip(String surname, int limitCount, int skipCount)
      *
      * @param methodName of the method to construct a QueryModel from
      * @param sb the StringBuilder to place the resulting logic into
@@ -421,6 +427,16 @@ public class DAOBuilder {
         }
 
         int orderByIndex = queryString.indexOf("OrderBy");
+        boolean limitResults;
+        boolean skipResults;
+
+        if (skipResults = queryString.endsWith("AndSkip")) {
+            queryString = queryString.substring(0, queryString.length() - "AndSkip".length());
+        }
+
+        if (limitResults = queryString.endsWith("AndLimit")) {
+            queryString = queryString.substring(0, queryString.length() - "AndLimit".length());
+        }
 
         String[] queryParts;
         String orderParts;
@@ -430,7 +446,7 @@ public class DAOBuilder {
             orderParts = null;
         } else {
             queryParts = queryString.substring(0, orderByIndex).split("Having");
-            orderParts = queryString.substring(orderByIndex + "OrderBy".length(), queryString.length());
+            orderParts = queryString.substring(orderByIndex + "OrderBy".length());
         }
 
         if (queryParts != null) {
@@ -482,6 +498,14 @@ public class DAOBuilder {
             }
 
             sb.append('\n');
+        }
+
+        if (limitResults) {
+            sb.append("    queryModel.setMaxResults(((Integer) argsIterator.next()).intValue());\n\n");
+        }
+
+        if (skipResults) {
+            sb.append("    queryModel.setFirstResult(((Integer) argsIterator.next()).intValue());\n\n");
         }
 
         return operationType;

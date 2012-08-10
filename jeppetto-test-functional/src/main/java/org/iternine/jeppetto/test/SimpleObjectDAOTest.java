@@ -310,6 +310,17 @@ public abstract class SimpleObjectDAOTest {
     }
 
 
+    @Test
+    public void limitAndSkipDSL() {
+        createData();
+
+        List<SimpleObject> results = getSimpleObjectDAO().findByHavingRelatedObjectsWithRelatedIntValueLessThanOrderByIntValueAndLimitAndSkip(19, 1, 1);
+
+        assertEquals(1, results.size());
+        assertEquals(3, results.get(0).getIntValue());
+    }
+
+
     //-------------------------------------------------------------
     // Methods - Protected
     //-------------------------------------------------------------

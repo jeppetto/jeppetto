@@ -104,6 +104,10 @@ public interface SimpleObjectDAO extends GenericDAO<SimpleObject, String> {
     List<SimpleObject> limitAndSkipRelatedItems(int relatedIntValueMax, int limit, int skipCount);
 
 
+    // DSL-style of above method -- wow this is long!
+    List<SimpleObject> findByHavingRelatedObjectsWithRelatedIntValueLessThanOrderByIntValueAndLimitAndSkip(int relatedIntValueMax, int limit, int skipCount);
+
+
     @DataAccessMethod( // countByIntValueGreaterThan
             conditions = { @Condition(field = "intValue", type = ConditionType.GreaterThan) },
             projections = { @Projection(type = ProjectionType.RowCount) }
