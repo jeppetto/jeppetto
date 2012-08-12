@@ -43,7 +43,7 @@ public class MongoDBCallback extends DefaultDBCallback {
     // Variables - Private
     //-------------------------------------------------------------
 
-    private static Map<String, Class> classCache = new HashMap<String, Class>();
+    private static final Map<String, Class> classCache = new HashMap<String, Class>();
     private DBCollection dbCollection;
 
     private static Logger logger = LoggerFactory.getLogger(MongoDBCallback.class);
@@ -165,6 +165,20 @@ public class MongoDBCallback extends DefaultDBCallback {
     }
 
 
+    private Class deriveClass(String path, String lastPathPart, boolean array) {
+        synchronized (classCache) {
+            // Re-check the cache in case it was set in another thread.
+            Class cachedClass = getClassFromCache(path);
+
+            if (cachedClass != null) {
+                return cachedClass;
+            }
+
+            return deriveClass1(path, lastPathPart, array);
+        }
+    }
+
+
     /* tests:
      *   names at different depths
      *   maps w/ other objects as keys
@@ -176,7 +190,7 @@ public class MongoDBCallback extends DefaultDBCallback {
      * nestedSimpleMongoObject.relatedMongoObjectMap            nestedSimpleMongoObject.relatedObjectMap    Map<>
      * nestedSimpleMongoObject.relatedMongoObjectMap.bar        nestedSimpleMongoObject.relatedObjectMap.   RelatedObject
      */
-    private Class deriveClass(String path, String lastPathPart, boolean array) {
+    private Class deriveClass1(String path, String lastPathPart, boolean array) {
         Class containerClass;
 
         if (path.equals(lastPathPart)) {
