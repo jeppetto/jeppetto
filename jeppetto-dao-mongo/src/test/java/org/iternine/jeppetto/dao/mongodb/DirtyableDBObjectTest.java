@@ -227,6 +227,34 @@ public class DirtyableDBObjectTest {
 
 
     @Test
+    public void testDeleteRelatedObjectFromList()
+            throws NoSuchItemException {
+        RelatedObject relatedObject = new RelatedObject();
+        relatedObject.setRelatedIntValue(999);
+
+        RelatedObject relatedObject2 = new RelatedObject();
+        relatedObject2.setRelatedIntValue(123);
+
+        SimpleObject simpleObject = new SimpleObject();
+        simpleObject.addRelatedObject(relatedObject);
+        simpleObject.addRelatedObject(relatedObject2);
+
+        simpleObjectDAO.save(simpleObject);
+
+        SimpleObject resultSimpleObject = simpleObjectDAO.findById(simpleObject.getId());
+
+        resultSimpleObject.getRelatedObjects().remove(0);
+
+        //noinspection unchecked
+        assertKeys(((DirtyableDBObject) resultSimpleObject).getDirtyKeys(), new HashSet(Collections.singleton("relatedObjects")));
+
+        simpleObjectDAO.save(resultSimpleObject);
+
+        Assert.assertEquals(1, simpleObjectDAO.findById(simpleObject.getId()).getRelatedObjects().size());
+    }
+
+
+    @Test
     public void testUpdateRelatedObjectInList()
             throws NoSuchItemException {
         RelatedObject relatedObject = new RelatedObject();

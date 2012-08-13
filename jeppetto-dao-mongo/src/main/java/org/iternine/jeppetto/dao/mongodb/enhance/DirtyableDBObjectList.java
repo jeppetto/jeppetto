@@ -101,7 +101,7 @@ public class DirtyableDBObjectList
     public Object remove(int index) {
         Object removed = delegate.remove(index);
 
-        rewrite |= index >= firstAppendedIndex;
+        rewrite |= index < firstAppendedIndex;
 
         return removed;
     }
