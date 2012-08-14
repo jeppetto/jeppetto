@@ -34,6 +34,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Set;
 
 
@@ -271,11 +272,13 @@ public class DirtyableDBObjectTest {
         resultRelatedObject.setRelatedIntValue(123);
 
         //noinspection unchecked
-        assertKeys(((DirtyableDBObject) resultSimpleObject).getDirtyKeys(), new HashSet(Collections.singleton("relatedObjects")));
+        assertKeys(((DirtyableDBObject) resultSimpleObject).getDirtyKeys(), new HashSet(Collections.singleton(
+                "relatedObjects")));
 
         simpleObjectDAO.save(resultSimpleObject);
 
-        Assert.assertEquals(123, simpleObjectDAO.findById(simpleObject.getId()).getRelatedObjects().get(0).getRelatedIntValue());
+        Assert.assertEquals(123, simpleObjectDAO.findById(simpleObject.getId()).getRelatedObjects().get(
+                0).getRelatedIntValue());
     }
 
 
@@ -310,6 +313,89 @@ public class DirtyableDBObjectTest {
         Assert.assertEquals(2, relatedObjectList.size());
         Assert.assertEquals(123, relatedObjectList.get(0).getRelatedIntValue());
         Assert.assertEquals(456, relatedObjectList.get(1).getRelatedIntValue());
+    }
+
+
+    @Test
+    public void testRemoveFromIterator()
+            throws NoSuchItemException {
+        RelatedObject relatedObject = new RelatedObject();
+        relatedObject.setRelatedIntValue(999);
+
+        RelatedObject relatedObject2 = new RelatedObject();
+        relatedObject2.setRelatedIntValue(123);
+
+        SimpleObject simpleObject = new SimpleObject();
+        simpleObject.addRelatedObject(relatedObject);
+        simpleObject.addRelatedObject(relatedObject2);
+
+        simpleObjectDAO.save(simpleObject);
+
+        SimpleObject resultSimpleObject = simpleObjectDAO.findById(simpleObject.getId());
+
+        int iteratedItemCount = 0;
+        for (Iterator<RelatedObject> roIterator = resultSimpleObject.getRelatedObjects().iterator(); roIterator.hasNext(); ) {
+            iteratedItemCount++;
+            RelatedObject ro = roIterator.next();
+
+            if (ro.getRelatedIntValue() > 500) {
+                roIterator.remove();
+            }
+        }
+
+        Assert.assertEquals(2, iteratedItemCount);
+
+        //noinspection unchecked
+        assertKeys(((DirtyableDBObject) resultSimpleObject).getDirtyKeys(), new HashSet(Collections.singleton("relatedObjects")));
+
+        simpleObjectDAO.save(resultSimpleObject);
+
+        Assert.assertEquals(1, simpleObjectDAO.findById(simpleObject.getId()).getRelatedObjects().size());
+    }
+
+
+    @Test
+    public void testSetInIterator()
+            throws NoSuchItemException {
+        RelatedObject relatedObject = new RelatedObject();
+        relatedObject.setRelatedIntValue(999);
+
+        RelatedObject relatedObject2 = new RelatedObject();
+        relatedObject2.setRelatedIntValue(123);
+
+        SimpleObject simpleObject = new SimpleObject();
+        simpleObject.addRelatedObject(relatedObject);
+        simpleObject.addRelatedObject(relatedObject2);
+
+        simpleObjectDAO.save(simpleObject);
+
+        SimpleObject resultSimpleObject = simpleObjectDAO.findById(simpleObject.getId());
+
+        int iteratedItemCount = 0;
+        for (ListIterator<RelatedObject> roIterator = resultSimpleObject.getRelatedObjects().listIterator(); roIterator.hasNext(); ) {
+            iteratedItemCount++;
+            RelatedObject ro = roIterator.next();
+
+            if (ro.getRelatedIntValue() < 500) {
+                RelatedObject relatedObject3 = new RelatedObject();
+                relatedObject3.setRelatedIntValue(ro.getRelatedIntValue() + 1);
+
+                roIterator.set(relatedObject3);
+            }
+        }
+
+        Assert.assertEquals(2, iteratedItemCount);
+
+        //noinspection unchecked
+        assertKeys(((DirtyableDBObject) resultSimpleObject).getDirtyKeys(), new HashSet(Collections.singleton("relatedObjects")));
+
+        simpleObjectDAO.save(resultSimpleObject);
+
+        List<RelatedObject> relatedObjectList = simpleObjectDAO.findById(simpleObject.getId()).getRelatedObjects();
+
+        Assert.assertEquals(2, relatedObjectList.size());
+        Assert.assertEquals(999, relatedObjectList.get(0).getRelatedIntValue());
+        Assert.assertEquals(124, relatedObjectList.get(1).getRelatedIntValue());
     }
 
 

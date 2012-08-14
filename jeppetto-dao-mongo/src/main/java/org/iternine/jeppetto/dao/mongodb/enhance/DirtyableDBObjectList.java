@@ -309,25 +309,19 @@ public class DirtyableDBObjectList
 
             @Override
             public void remove() {
-                if (modifiableIndex < 0) {
-                    throw new IllegalStateException("Iterator is not in a modifiable state.  Did you call next()/previous()?");
-                }
+                delegateIterator.remove();
 
-                DirtyableDBObjectList.this.remove(modifiableIndex);
-
-                modifiableIndex = -1;
+                rewrite |= modifiableIndex < firstAppendedIndex;
             }
 
 
             @Override
             public void set(Object o) {
-                if (modifiableIndex < 0) {
-                    throw new IllegalStateException("Iterator is not in a modifiable state.  Did you call next()/previous()?");
-                }
+                delegateIterator.set(o);
 
-                DirtyableDBObjectList.this.set(modifiableIndex, o);
-
-                modifiableIndex = -1;
+                // If items >= firstAppendedIndex are removed, the modifiedIndexes value will still be correct.
+                // If items below it are removed, rewrite will be set to true and this will be ignored.
+                modifiedIndexes.add(modifiableIndex);
             }
 
 
