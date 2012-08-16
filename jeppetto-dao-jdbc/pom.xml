@@ -8,7 +8,7 @@
 
     <parent>
         <groupId>org.iternine</groupId>
-        <artifactId>jeppetto-parent</artifactId>
+        <artifactId>jeppetto</artifactId>
         <version>0.8-SNAPSHOT</version>
     </parent>
 

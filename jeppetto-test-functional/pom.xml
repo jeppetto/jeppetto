@@ -8,7 +8,7 @@
     <packaging>jar</packaging>
 
     <parent>
-        <artifactId>jeppetto-parent</artifactId>
+        <artifactId>jeppetto</artifactId>
         <groupId>org.iternine</groupId>
         <version>0.8-SNAPSHOT</version>
     </parent>
