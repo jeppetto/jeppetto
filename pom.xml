@@ -4,8 +4,8 @@
 
     <name>Jeppetto</name>
     <groupId>org.iternine</groupId>
-    <artifactId>jeppetto-parent</artifactId>
-    <version>0.8-SNAPSHOT</version>
+    <artifactId>jeppetto</artifactId>
+    <version>0.7.1</version>
     <packaging>pom</packaging>
     <url>http://iternine.org/jeppetto.html</url>
 
@@ -75,6 +75,8 @@
                 <artifactId>maven-release-plugin</artifactId>
                 <configuration>
                     <preparationGoals>clean verify install</preparationGoals>
+                    <pushChanges>false</pushChanges>
+                    <localCheckout>true</localCheckout>
                 </configuration>
             </plugin>
         </plugins>
@@ -85,7 +87,7 @@
             <name>The Apache Software License, Version 2.0</name>
             <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
             <distribution>repo</distribution>
-            <comments>Copyright 2011 (c) Jeppetto and Jonathan Thompson</comments>
+            <comments>Copyright 2011-2012 (c) Jeppetto and Jonathan Thompson</comments>
         </license>
     </licenses>
 

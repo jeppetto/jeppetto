@@ -3,13 +3,13 @@
 
     <name>Jeppetto Object Enhancement</name>
     <artifactId>jeppetto-enhance</artifactId>
-    <version>0.8-SNAPSHOT</version>
+    <version>0.7.1</version>
     <packaging>jar</packaging>
 
     <parent>
         <groupId>org.iternine</groupId>
-        <artifactId>jeppetto-parent</artifactId>
-        <version>0.8-SNAPSHOT</version>
+        <artifactId>jeppetto</artifactId>
+        <version>0.7.1</version>
     </parent>
 
     <dependencies>
@@ -35,7 +35,7 @@
         <dependency>
             <groupId>org.iternine</groupId>
             <artifactId>jeppetto-test-support</artifactId>
-            <version>0.8-SNAPSHOT</version>
+            <version>0.7.1</version>
             <scope>test</scope>
         </dependency>
 

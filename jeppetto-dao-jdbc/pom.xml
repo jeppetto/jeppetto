@@ -3,13 +3,13 @@
 
     <name>Jeppetto DAO for JDBC</name>
     <artifactId>jeppetto-dao-jdbc</artifactId>
-    <version>0.8-SNAPSHOT</version>
+    <version>0.7.1</version>
     <packaging>jar</packaging>
 
     <parent>
         <groupId>org.iternine</groupId>
-        <artifactId>jeppetto-parent</artifactId>
-        <version>0.8-SNAPSHOT</version>
+        <artifactId>jeppetto</artifactId>
+        <version>0.7.1</version>
     </parent>
 
     <dependencies>
@@ -17,7 +17,7 @@
         <dependency>
             <groupId>org.iternine</groupId>
             <artifactId>jeppetto-dao</artifactId>
-            <version>0.8-SNAPSHOT</version>
+            <version>0.7.1</version>
         </dependency>
 
         <dependency>
@@ -64,7 +64,7 @@
         <dependency>
             <groupId>org.iternine</groupId>
             <artifactId>jeppetto-test-support</artifactId>
-            <version>0.8-SNAPSHOT</version>
+            <version>0.7.1</version>
             <scope>test</scope>
         </dependency>
 
