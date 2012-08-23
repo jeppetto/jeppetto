@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC
+        "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+        "http://www.hibernate.org/dtd/hibernate-mapping-3.0.dtd">
+<hibernate-mapping package="org.iternine.jeppetto">
+
+    <class name="org.iternine.jeppetto.test.NoIdObject">
+        <!-- Even though it's called NoIdObject, there is an implicit id. -->
+        <id type="string" length="32">
+            <generator class="org.iternine.jeppetto.dao.hibernate.UUIDIdentifierGenerator"/>
+        </id>
+
+        <property name="intValue"/>
+    </class>
+
+</hibernate-mapping>
