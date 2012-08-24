@@ -24,6 +24,7 @@ import org.bson.BSONObject;
 
 import java.util.AbstractSet;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -73,6 +74,10 @@ public class DirtyableDBObjectMap
 
         addedOrUpdatedKeys.add(stringKey);
 
+        if (removedKeys.size() > 0) {
+            removedKeys.remove(stringKey);
+        }
+
         return delegate.put(stringKey, value);
     }
 
@@ -84,6 +89,10 @@ public class DirtyableDBObjectMap
 
         if (result != null) {
             removedKeys.add(stringKey);
+
+            if (addedOrUpdatedKeys.size() > 0) {
+                addedOrUpdatedKeys.remove(stringKey);
+            }
         }
 
         return result;
@@ -150,16 +159,15 @@ public class DirtyableDBObjectMap
 
     @Override
     public Set keySet() {
-        // TODO: handle case when set is modified
-        return delegate.keySet();
+        // TODO: allow key set to be modified
+        return Collections.unmodifiableSet(delegate.keySet());
     }
 
 
     @Override
     public Collection values() {
-        // TODO: convert items to a DirtyableDBObject...
-        // TODO: handle case when set is modified
-        return delegate.values();
+        // TODO: allow values to be modified
+        return Collections.unmodifiableCollection(delegate.values());
     }
 
 

@@ -31,6 +31,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -396,6 +397,67 @@ public class DirtyableDBObjectTest {
         Assert.assertEquals(2, relatedObjectList.size());
         Assert.assertEquals(999, relatedObjectList.get(0).getRelatedIntValue());
         Assert.assertEquals(124, relatedObjectList.get(1).getRelatedIntValue());
+    }
+
+
+    @Test
+    public void testClearAndReAddSameKey() {
+        final RelatedObject relatedObject1 = new RelatedObject();
+        relatedObject1.setRelatedIntValue(1);
+
+        SimpleObject simpleObject = new SimpleObject();
+        simpleObject.setRelatedObjectMap(new HashMap<String, RelatedObject>() {{
+            put("first", relatedObject1);
+        }});
+
+        simpleObjectDAO.save(simpleObject);
+
+        SimpleObject resultSimpleObject = simpleObjectDAO.findById(simpleObject.getId());
+
+        resultSimpleObject.getRelatedObjectMap().clear();
+
+        RelatedObject relatedObject2 = new RelatedObject();
+        relatedObject2.setRelatedIntValue(2);
+
+        resultSimpleObject.getRelatedObjectMap().put("first", relatedObject2);
+
+        simpleObjectDAO.save(resultSimpleObject);
+
+        resultSimpleObject = simpleObjectDAO.findById(simpleObject.getId());
+
+        Assert.assertEquals(1, resultSimpleObject.getRelatedObjectMap().size());
+        Assert.assertTrue(resultSimpleObject.getRelatedObjectMap().containsKey("first"));
+        Assert.assertEquals(2, resultSimpleObject.getRelatedObjectMap().get("first").getRelatedIntValue());
+    }
+
+
+    @Test
+    public void testAddThenRemoveSameKey() {
+        final RelatedObject relatedObject1 = new RelatedObject();
+        relatedObject1.setRelatedIntValue(1);
+
+        SimpleObject simpleObject = new SimpleObject();
+        simpleObject.setRelatedObjectMap(new HashMap<String, RelatedObject>() {{
+            put("first", relatedObject1);
+        }});
+
+        simpleObjectDAO.save(simpleObject);
+
+        SimpleObject resultSimpleObject = simpleObjectDAO.findById(simpleObject.getId());
+
+        RelatedObject relatedObject2 = new RelatedObject();
+        relatedObject2.setRelatedIntValue(2);
+
+        resultSimpleObject.getRelatedObjectMap().put("second", relatedObject2);
+        resultSimpleObject.getRelatedObjectMap().remove("second");
+
+        simpleObjectDAO.save(resultSimpleObject);
+
+        resultSimpleObject = simpleObjectDAO.findById(simpleObject.getId());
+
+        Assert.assertEquals(1, resultSimpleObject.getRelatedObjectMap().size());
+        Assert.assertTrue(resultSimpleObject.getRelatedObjectMap().containsKey("first"));
+        Assert.assertEquals(1, resultSimpleObject.getRelatedObjectMap().get("first").getRelatedIntValue());
     }
 
 
