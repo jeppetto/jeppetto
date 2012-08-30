@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd">
+
+    <!-- =================== Mongo Server =================== -->
+
+    <bean id="mongo" class="com.mongodb.Mongo">
+        <constructor-arg index="0" value="${mongodb.host}"/>
+        <constructor-arg index="1" value="${mongodb.port}"/>
+    </bean>
+
+
+    <!-- =================== Mongo DBs =================== -->
+
+    <bean id="mongoDb" class="com.mongodb.DB" factory-bean="mongo" factory-method="getDB">
+        <constructor-arg index="0" value="${mongodb.dbname}"/>
+    </bean>
+
+
+    <!-- =================== Mongo DAOs =================== -->
+
+    <bean id="noIdObjectDAO" class="org.iternine.jeppetto.dao.DAOBuilder" factory-method="buildDAO">
+        <constructor-arg index="0" value="org.iternine.jeppetto.test.NoIdObject"/>
+        <constructor-arg index="1" value="org.iternine.jeppetto.test.NoIdObjectDAO"/>
+        <constructor-arg index="2" value="org.iternine.jeppetto.dao.mongodb.MongoDBQueryModelDAO"/>
+        <constructor-arg index="3">
+            <map>
+                <entry key="db" value-ref="mongoDb"/>
+                <entry key="optimisticLockEnabled" value="true"/>
+                <entry key="showQueries" value="true"/>
+            </map>
+        </constructor-arg>
+    </bean>
+</beans>
