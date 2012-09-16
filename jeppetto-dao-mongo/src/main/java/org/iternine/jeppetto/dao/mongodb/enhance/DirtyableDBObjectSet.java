@@ -19,6 +19,11 @@ package org.iternine.jeppetto.dao.mongodb.enhance;
 
 import org.iternine.jeppetto.dao.JeppettoException;
 
+import org.bson.BSON;
+import org.bson.Transformer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -42,6 +47,8 @@ public class DirtyableDBObjectSet extends DirtyableDBObjectList
 
     private Set delegate;
 
+    private static Logger logger = LoggerFactory.getLogger(DirtyableDBObjectSet.class);
+
 
     //-------------------------------------------------------------
     // Constructors
@@ -56,7 +63,7 @@ public class DirtyableDBObjectSet extends DirtyableDBObjectList
 
     /**
      *
-     * @param delegate
+     * @param delegate Set instance this object should delegate responsibility to
      * @param modifiableDelegate true if access is possible to the delegate by non-Jeppetto code
      */
     // TODO: Determine who calls and if we should have a DirtyableDBObjectSet(List delegate, boolean modi...)
@@ -202,6 +209,16 @@ public class DirtyableDBObjectSet extends DirtyableDBObjectList
 
 
     //-------------------------------------------------------------
+    // Implementation - DirtyableDBObject
+    //-------------------------------------------------------------
+
+    @Override
+    public Object getDelegate() {
+        return delegate;
+    }
+
+
+    //-------------------------------------------------------------
     // Implementation - DBObject
     //-------------------------------------------------------------
 
@@ -217,12 +234,70 @@ public class DirtyableDBObjectSet extends DirtyableDBObjectList
     }
 
 
+    //-------------------------------------------------------------
+    // Methods - Public
+    //-------------------------------------------------------------
+
+    public Transformer getDecodingTransformer() {
+        return new DecodingTransformer();
+    }
+
+
     @Override
-    public Object put(String s, Object v) {
-        super.put(s, v);
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
 
-        delegate.add(v);
+        if (!(o instanceof Set)) {
+            return false;
+        }
 
-        return v;
+        Set thatSet = o instanceof DirtyableDBObjectSet ? ((DirtyableDBObjectSet) o).delegate : (Set) o;
+
+        return delegate.equals(thatSet);
+    }
+
+
+    @Override
+    public int hashCode() {
+        return delegate.hashCode();
+    }
+
+
+    //-------------------------------------------------------------
+    // Inner Class - DecodingTransformer
+    //-------------------------------------------------------------
+
+    class DecodingTransformer
+            implements Transformer {
+
+        //-------------------------------------------------------------
+        // Implementation - Transformer
+        //-------------------------------------------------------------
+
+        @Override
+        public Object transform(Object o) {
+            if (o != DirtyableDBObjectSet.this) {
+                return o;
+            }
+
+            Iterator iterator = iterator();
+
+            while (iterator.hasNext()) {
+                Object next = iterator.next();
+
+                if (!delegate.add(next)) {
+                    logger.error("Dropping object because it is already a member of the set.  Did you change the"
+                                 + " equals() method and/or collection type?  Object = " + next);
+
+                    DirtyableDBObjectSet.super.remove(next);
+                }
+            }
+
+            BSON.removeDecodingHook(DirtyableDBObjectSet.class, this);
+
+            return DirtyableDBObjectSet.this;
+        }
     }
 }

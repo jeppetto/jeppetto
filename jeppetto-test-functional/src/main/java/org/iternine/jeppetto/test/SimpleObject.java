@@ -211,4 +211,26 @@ public class SimpleObject {
         sb.append('}');
         return sb.toString();
     }
+
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+
+        if (!(o instanceof SimpleObject)) {
+            return false;
+        }
+
+        SimpleObject that = (SimpleObject) o;
+
+        return id != null && id.equals(that.id);
+    }
+
+
+    @Override
+    public int hashCode() {
+        return id != null ? id.hashCode() : 0;
+    }
 }

@@ -461,6 +461,64 @@ public class DirtyableDBObjectTest {
     }
 
 
+    @Test
+    public void testEquals() {
+        SimpleObject simpleObject = new SimpleObject();
+        simpleObject.setIntValue(1234);
+
+        Assert.assertTrue(simpleObject.equals(simpleObject));
+
+        simpleObjectDAO.save(simpleObject);
+
+        SimpleObject resultSimpleObject1 = simpleObjectDAO.findById(simpleObject.getId());
+
+        Assert.assertTrue(simpleObject.equals(resultSimpleObject1));
+        Assert.assertTrue(resultSimpleObject1.equals(simpleObject));
+
+        SimpleObject resultSimpleObject2 = simpleObjectDAO.findById(simpleObject.getId());
+
+        Assert.assertTrue(resultSimpleObject1.equals(resultSimpleObject2));
+        Assert.assertTrue(resultSimpleObject2.equals(resultSimpleObject1));
+    }
+
+
+    @Test
+    public void testCollectionsEquals() {
+        RelatedObject relatedObject1 = new RelatedObject();
+        relatedObject1.setRelatedIntValue(1);
+        RelatedObject relatedObject2 = new RelatedObject();
+        relatedObject2.setRelatedIntValue(2);
+
+        SimpleObject simpleObject = new SimpleObject();
+        simpleObject.addRelatedObject(relatedObject1);
+        simpleObject.addRelatedObject(relatedObject2);
+        simpleObject.addToRelatedObjectSet(relatedObject1);
+        simpleObject.addToRelatedObjectSet(relatedObject2);
+        simpleObject.addRelatedObject("one", relatedObject1);
+        simpleObject.addRelatedObject("two", relatedObject2);
+
+        simpleObjectDAO.save(simpleObject);
+
+        SimpleObject resultSimpleObject1 = simpleObjectDAO.findById(simpleObject.getId());
+
+        Assert.assertTrue(simpleObject.getRelatedObjects().equals(resultSimpleObject1.getRelatedObjects()));
+        Assert.assertTrue(resultSimpleObject1.getRelatedObjects().equals(simpleObject.getRelatedObjects()));
+        Assert.assertTrue(simpleObject.getRelatedObjectSet().equals(resultSimpleObject1.getRelatedObjectSet()));
+        Assert.assertTrue(resultSimpleObject1.getRelatedObjectSet().equals(simpleObject.getRelatedObjectSet()));
+        Assert.assertTrue(simpleObject.getRelatedObjectMap().equals(resultSimpleObject1.getRelatedObjectMap()));
+        Assert.assertTrue(resultSimpleObject1.getRelatedObjectMap().equals(simpleObject.getRelatedObjectMap()));
+
+        SimpleObject resultSimpleObject2 = simpleObjectDAO.findById(simpleObject.getId());
+
+        Assert.assertTrue(resultSimpleObject2.getRelatedObjects().equals(resultSimpleObject1.getRelatedObjects()));
+        Assert.assertTrue(resultSimpleObject1.getRelatedObjects().equals(resultSimpleObject2.getRelatedObjects()));
+        Assert.assertTrue(resultSimpleObject2.getRelatedObjectSet().equals(resultSimpleObject1.getRelatedObjectSet()));
+        Assert.assertTrue(resultSimpleObject1.getRelatedObjectSet().equals(resultSimpleObject2.getRelatedObjectSet()));
+        Assert.assertTrue(resultSimpleObject2.getRelatedObjectMap().equals(resultSimpleObject1.getRelatedObjectMap()));
+        Assert.assertTrue(resultSimpleObject1.getRelatedObjectMap().equals(resultSimpleObject2.getRelatedObjectMap()));
+    }
+
+
 //    @Test
 //    public void test2() {
 //        SimpleObject enhancedSimpleObject = simpleObjectEnhancer.newInstance();

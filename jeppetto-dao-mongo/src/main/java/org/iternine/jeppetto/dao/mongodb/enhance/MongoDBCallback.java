@@ -22,6 +22,7 @@ import com.mongodb.BasicDBObject;
 import com.mongodb.DBCollection;
 import com.mongodb.DBObject;
 import com.mongodb.DefaultDBCallback;
+import org.bson.BSON;
 import org.bson.BSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -114,15 +115,24 @@ public class MongoDBCallback extends DefaultDBCallback {
                 }
             }
         } else if (Set.class.isAssignableFrom(returnClass)) {
+            DirtyableDBObjectSet dirtyableDBObjectSet;
+
             if (Modifier.isAbstract(returnClass.getModifiers()) || Modifier.isInterface(returnClass.getModifiers())) {
-                return new DirtyableDBObjectSet();
+                dirtyableDBObjectSet = new DirtyableDBObjectSet();
             } else {
                 try {
-                    return new DirtyableDBObjectSet((Set) returnClass.newInstance(), false);
+                    dirtyableDBObjectSet = new DirtyableDBObjectSet((Set) returnClass.newInstance(), false);
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
             }
+
+            // The MongoDB Java Driver adds objects to the container before populating them.  To maintain
+            // set semantics (which may require using the objects' values), we run a decoding hook to
+            // properly configure the set.
+            BSON.addDecodingHook(DirtyableDBObjectSet.class, dirtyableDBObjectSet.getDecodingTransformer());
+
+            return dirtyableDBObjectSet;
         } else {
             return new BasicDBObject();
         }
