@@ -71,4 +71,19 @@
             </map>
         </constructor-arg>
     </bean>
+
+    <bean id="summarySimpleObjectDAO" class="org.iternine.jeppetto.dao.DAOBuilder" factory-method="buildDAO">
+        <constructor-arg index="0" value="org.iternine.jeppetto.test.SummarySimpleObject"/>
+        <constructor-arg index="1" value="org.iternine.jeppetto.test.SummarySimpleObjectDAO"/>
+        <constructor-arg index="2" value="org.iternine.jeppetto.dao.mongodb.MongoDBQueryModelDAO"/>
+        <constructor-arg index="3">
+            <map>
+                <entry key="db" value-ref="mongoDb"/>
+                <entry key="optimisticLockEnabled" value="true"/>
+                <entry key="showQueries" value="true"/>
+                <entry key="viewOf" value="org.iternine.jeppetto.test.SimpleObject"/>
+                <entry key="collection" value="SimpleObject"/>
+            </map>
+        </constructor-arg>
+    </bean>
 </beans>

@@ -59,6 +59,8 @@ import org.bson.types.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -78,7 +80,7 @@ import java.util.regex.Pattern;
  *
  * Instantiation requires a daoProperties Map<String, Object> that will look for the following keys (and expected
  * values):
- * <p/>
+ *
  * <table>
  *   <tr>
  *     <td>Key</td>
@@ -93,7 +95,12 @@ import java.util.regex.Pattern;
  *   <tr>
  *     <td>collection</td>
  *     <td>No</td>
- *     <td>Name of the backing collection for this object.  Defaults to the name of the persistent
+ *     <td>Name of the backing collection for this object.  Defaults to the name of the entity class.</td>
+ *   </tr>
+ *   <tr>
+ *     <td>viewOf</td>
+ *     <td>No</td>
+ *     <td>Name of the a class of which this DAO's entity class is a view.</td>
  *   </tr>
  *   <tr>
  *     <td>uniqueIndexes</td>
@@ -133,13 +140,7 @@ import java.util.regex.Pattern;
  *         the DAO's package as well.</td>
  *   </tr>
  * </table>
- * @param <T> the type of persistent object this DAO will manage.
  */
-// TODO: support createdDate/lastModifiedDate (createdDate from get("_id").getTime()?)
-// TODO: Implement determineOptimalDBObject
-//          - understand saveNulls
-// TODO: support per-call WriteConcerns (keep in mind session semantics)
-// TODO: investigate usage of ClassLoader so new instances are already enhanced
 public class MongoDBQueryModelDAO<T, ID>
         implements QueryModelDAO<T, ID>, AccessControlDAO<T, ID> {
 
@@ -159,6 +160,8 @@ public class MongoDBQueryModelDAO<T, ID>
 
     private DBCollection dbCollection;
     private Enhancer<T> enhancer;
+    private BasicDBObject fieldsToRetrieve;
+    private DBDecoderFactory decoderFactory;
     private AccessControlContextProvider accessControlContextProvider;
     private Map<String, Set<String>> uniqueIndexes;
     private boolean optimisticLockEnabled;
@@ -185,21 +188,19 @@ public class MongoDBQueryModelDAO<T, ID>
 
         this.dbCollection = ((DB) daoProperties.get("db")).getCollection(collectionName);
         this.enhancer = EnhancerHelper.getDirtyableDBObjectEnhancer(entityClass);
-
-        dbCollection.setObjectClass(enhancer.getEnhancedClass());
-        dbCollection.setDBDecoderFactory(new DBDecoderFactory() {
+        this.decoderFactory = new DBDecoderFactory() {
             @Override
             public DBDecoder create() {
-                return new MongoDBDecoder();
+                return new MongoDBDecoder(enhancer.getEnhancedClass());
             }
-        });
-
+        };
         this.accessControlContextProvider = accessControlContextProvider;
         this.uniqueIndexes = ensureIndexes((List<String>) daoProperties.get("uniqueIndexes"), true);
         ensureIndexes((List<String>) daoProperties.get("nonUniqueIndexes"), false);
         this.optimisticLockEnabled = Boolean.parseBoolean((String) daoProperties.get("optimisticLockEnabled"));
         this.shardKeys = extractShardKeys((String) daoProperties.get("shardKeyPattern"));
         this.saveNulls = Boolean.parseBoolean((String) daoProperties.get("saveNulls"));
+        this.fieldsToRetrieve = identifyFieldsToRetrieve(entityClass, (String) daoProperties.get("viewOf"));
 
         if (daoProperties.containsKey("writeConcern")) {
             this.defaultWriteConcern = WriteConcern.valueOf((String) daoProperties.get("writeConcern"));
@@ -809,6 +810,98 @@ public class MongoDBQueryModelDAO<T, ID>
     // Methods - Private
     //-------------------------------------------------------------
 
+    private BasicDBObject identifyFieldsToRetrieve(Class<T> entityClass, String viewOfClassName) {
+        if (viewOfClassName == null) {
+            return null;     // Null is equivalent to retrieving all fields
+        }
+
+        BasicDBObject fields = new BasicDBObject();
+
+        try {
+            determineFieldsToRetrieve(entityClass, Class.forName(viewOfClassName), "", fields);
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+
+        if (optimisticLockEnabled) {
+            fields.put(OPTIMISTIC_LOCK_VERSION_FIELD, 1);
+        }
+        
+        if (accessControlContextProvider != null) {
+            fields.put(ACCESS_CONTROL_FIELD, 1);
+        }
+        
+        if (fields.containsField("id")) {
+            fields.remove("id"); // Included by default, no need to specify
+        } else {
+            fields.put(ID_FIELD, 0); // Need to explicitly exclude it
+        }
+
+        return fields;
+    }
+
+
+    private void determineFieldsToRetrieve(Class entityClass, Class viewOfClass, String fieldPrefix, BasicDBObject fields) {
+        Map<String, Class> entityFieldMap = getFieldMap(entityClass, fieldPrefix);
+        Map<String, Class> viewOfFieldMap = getFieldMap(viewOfClass, fieldPrefix);
+
+        for (Map.Entry<String, Class> entry : entityFieldMap.entrySet()) {
+            String fieldName = entry.getKey();
+            Class fieldClass = entry.getValue();
+
+            if (DBObjectUtil.needsNoConversion(fieldClass)
+                || Collection.class.isAssignableFrom(fieldClass)
+                || fieldClass.equals(viewOfFieldMap.get(fieldName))) {
+                fields.put(fieldName, 1);
+            } else {
+                determineFieldsToRetrieve(fieldClass, viewOfFieldMap.get(fieldName), fieldName + ".", fields);
+            }
+        }
+    }
+
+
+    private Map<String, Class> getFieldMap(Class clazz, String fieldPrefix) {
+        Map<String, Class> fieldMap = new HashMap<String, Class>();
+
+        List<Method> methods = new ArrayList<Method>();
+        Collections.addAll(methods, clazz.getDeclaredMethods());
+        Collections.addAll(methods, clazz.getMethods());
+
+        for (Method method : methods) {
+            if (method.getDeclaringClass().equals(Object.class)
+                || method.getReturnType().equals(void.class)
+                || Modifier.isFinal(method.getModifiers())
+                || Modifier.isAbstract(method.getModifiers())
+                || method.getParameterTypes().length != 0) {
+                continue;
+            }
+
+            String methodName = method.getName();
+            String upperCaseFieldName;
+
+            if (methodName.startsWith("get")) {
+                upperCaseFieldName = methodName.substring(3);
+            } else if (methodName.startsWith("is")) {
+                upperCaseFieldName = methodName.substring(2);
+            } else {
+                continue;
+            }
+
+            try {
+                clazz.getMethod("set".concat(upperCaseFieldName), method.getReturnType());
+            } catch (NoSuchMethodException e) {
+                continue;
+            }
+
+            String fieldName = upperCaseFieldName.substring(0, 1).toLowerCase().concat(upperCaseFieldName.substring(1));
+
+            fieldMap.put(fieldPrefix.concat(fieldName), method.getReturnType());
+        }
+
+        return fieldMap;
+    }
+
+
     private DBObject processSorts(List<Sort> sorts) {
         DBObject orderBy = new BasicDBObject();
 
@@ -872,7 +965,7 @@ public class MongoDBQueryModelDAO<T, ID>
         MongoDBCommand command;
 
         if (queryModel.getProjection() == null) {
-            command = new BasicDBObjectCommand(query);
+            command = new BasicDBObjectCommand(query, fieldsToRetrieve, decoderFactory);
         } else {
             command = ProjectionCommands.forProjection(queryModel.getProjection(), query);
         }
