@@ -1,9 +1,5 @@
-h1. Jeppetto
+h2. Jeppetto
 
-h3. DAO
+Information and documentation about Jeppetto can be found on the "wiki":https://github.com/jeppetto/jeppetto/wiki.
 
-h3. Mongo 
-
-h3. Enhancement
-
-h3. Test Support
+Jeppetto uses git-flow.  The 'master' branch has the last released code, and 'develop' has the most recently code.
