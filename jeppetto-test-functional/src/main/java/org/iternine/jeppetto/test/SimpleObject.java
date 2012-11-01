@@ -38,8 +38,10 @@ public class SimpleObject {
     private RelatedObject relatedObject;
     private List<RelatedObject> relatedObjects;
     private Map<String, RelatedObject> relatedObjectMap;
-    private Map<String, String> stringMap;
     private Set<RelatedObject> relatedObjectSet;
+    private List<String> stringList;
+    private Map<String, String> stringMap;
+    private Set<String> stringSet;
     private SimpleEnum simpleEnum;
 
 
@@ -168,6 +170,25 @@ public class SimpleObject {
     }
 
 
+    public void addToStringList(String string) {
+        if (stringList == null) {
+            stringList = new ArrayList<String>();
+        }
+
+        stringList.add(string);
+    }
+
+
+    public List<String> getStringList() {
+        return stringList;
+    }
+
+
+    public void setStringList(List<String> stringList) {
+        this.stringList = stringList;
+    }
+
+
     public Map<String, String> getStringMap() {
         return stringMap;
     }
@@ -175,6 +196,25 @@ public class SimpleObject {
 
     public void setStringMap(Map<String, String> stringMap) {
         this.stringMap = stringMap;
+    }
+
+
+    public void addToStringSet(String string) {
+        if (stringSet == null) {
+            stringSet = new HashSet<String>();
+        }
+
+        stringSet.add(string);
+    }
+
+
+    public Set<String> getStringSet() {
+        return stringSet;
+    }
+
+
+    public void setStringSet(Set<String> stringSet) {
+        this.stringSet = stringSet;
     }
 
 
@@ -207,6 +247,7 @@ public class SimpleObject {
         sb.append(", relatedObjects=").append(relatedObjects);
         sb.append(", relatedObjectMap=").append(relatedObjectMap);
         sb.append(", stringMap=").append(stringMap);
+        sb.append(", stringSet=").append(stringSet);
         sb.append(", simpleEnum=").append(simpleEnum);
         sb.append('}');
         return sb.toString();

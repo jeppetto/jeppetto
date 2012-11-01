@@ -27,6 +27,7 @@ import org.iternine.jeppetto.dao.Projection;
 import org.iternine.jeppetto.dao.ProjectionType;
 import org.iternine.jeppetto.dao.QueryModel;
 import org.iternine.jeppetto.dao.QueryModelDAO;
+import org.iternine.jeppetto.dao.ReferenceSet;
 import org.iternine.jeppetto.dao.Sort;
 import org.iternine.jeppetto.dao.SortDirection;
 import org.iternine.jeppetto.dao.TooManyItemsException;
@@ -42,6 +43,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -116,6 +118,17 @@ public class JDBCQueryModelDAO<T, ID>
 
 
     @Override
+    public Iterable<T> findByIds(ID... ids)
+            throws JeppettoException {
+        QueryModel queryModel = new QueryModel();
+
+        queryModel.addCondition(buildCondition("id", ConditionType.Within, Collections.singletonList(Arrays.asList(ids)).iterator()));
+
+        return findUsingQueryModel(queryModel);
+    }
+
+
+    @Override
     public Iterable<T> findAll()
             throws JeppettoException {
         return findUsingQueryModel(new QueryModel());
@@ -170,6 +183,28 @@ public class JDBCQueryModelDAO<T, ID>
         }
 
         delete(entity);
+    }
+
+
+    @Override
+    public void deleteByIds(ID... ids)
+            throws JeppettoException {
+        for (ID id : ids) {
+            deleteById(id);
+        }
+    }
+
+
+    @Override
+    public ReferenceSet<T> referenceByIds(ID... ids) {
+        throw new RuntimeException("referenceByIds not yet implemented");
+    }
+
+
+    @Override
+    public void updateReferences(ReferenceSet<T> referenceSet, T updateObject)
+            throws JeppettoException {
+        throw new RuntimeException("updateReferences not yet implemented");
     }
 
 
@@ -262,6 +297,13 @@ public class JDBCQueryModelDAO<T, ID>
     public void deleteUsingQueryModel(QueryModel queryModel)
             throws JeppettoException {
         throw new RuntimeException("deleteUsingQueryModel not yet implemented");
+    }
+
+
+    @Override
+    public ReferenceSet<T> referenceUsingQueryModel(QueryModel queryModel)
+            throws JeppettoException {
+        throw new RuntimeException("referenceUsingQueryModel not yet implemented");
     }
 
 

@@ -19,5 +19,6 @@ package org.iternine.jeppetto.dao;
 
 public enum OperationType {
     Read,
+    Reference,
     Delete
 }

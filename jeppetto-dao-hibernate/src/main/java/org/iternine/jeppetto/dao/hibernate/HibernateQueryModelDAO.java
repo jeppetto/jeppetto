@@ -31,6 +31,7 @@ import org.iternine.jeppetto.dao.Projection;
 import org.iternine.jeppetto.dao.ProjectionType;
 import org.iternine.jeppetto.dao.QueryModel;
 import org.iternine.jeppetto.dao.QueryModelDAO;
+import org.iternine.jeppetto.dao.ReferenceSet;
 import org.iternine.jeppetto.dao.Sort;
 import org.iternine.jeppetto.dao.SortDirection;
 import org.iternine.jeppetto.dao.TooManyItemsException;
@@ -130,6 +131,20 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
 
 
     @Override
+    public Iterable<T> findByIds(ID... ids)
+            throws JeppettoException {
+        QueryModel queryModel = new QueryModel();
+        queryModel.addCondition(buildIdCondition(Arrays.asList(ids)));
+
+        if (accessControlContextProvider != null) {
+            queryModel.setAccessControlContext(accessControlContextProvider.getCurrent());
+        }
+
+        return findUsingQueryModel(queryModel);
+    }
+
+
+    @Override
     public Iterable<T> findAll()
             throws JeppettoException {
         QueryModel queryModel = new QueryModel();
@@ -176,6 +191,28 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
         } catch (HibernateException e) {
             throw new JeppettoException(e);
         }
+    }
+
+
+    @Override
+    public void deleteByIds(ID... ids)
+            throws JeppettoException {
+        for (ID id : ids) {
+            deleteById(id);
+        }
+    }
+
+
+    @Override
+    public ReferenceSet<T> referenceByIds(ID... ids) {
+        throw new RuntimeException("referenceByIds not yet implemented");
+    }
+
+
+    @Override
+    public void updateReferences(ReferenceSet<T> referenceSet, T updateObject)
+            throws JeppettoException {
+        throw new RuntimeException("updateReferences not yet implemented");
     }
 
 
@@ -268,6 +305,13 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
     public void deleteUsingQueryModel(QueryModel queryModel)
             throws JeppettoException {
         throw new RuntimeException("deleteUsingQueryModel not yet implemented");
+    }
+
+
+    @Override
+    public ReferenceSet<T> referenceUsingQueryModel(QueryModel queryModel)
+            throws JeppettoException {
+        throw new RuntimeException("referenceUsingQueryModel not yet implemented");
     }
 
 
@@ -482,13 +526,12 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
     }
 
 
-    protected Condition buildIdCondition(ID id) {
-        Condition condition = new Condition();
-
-        condition.setField(idField);
-        condition.setConstraint(Restrictions.eq(idField, id));
-
-        return condition;
+    protected Condition buildIdCondition(Object argument) {
+        if (Collection.class.isAssignableFrom(argument.getClass())) {
+            return new Condition(idField, Restrictions.in(idField, (Collection) argument));
+        } else {
+            return new Condition(idField, Restrictions.eq(idField, argument));
+        }
     }
 
 

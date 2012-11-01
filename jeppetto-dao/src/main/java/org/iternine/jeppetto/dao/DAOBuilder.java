@@ -254,13 +254,14 @@ public class DAOBuilder {
         CtMethod daoMethod = CtNewMethod.copy(interfaceMethod, fullDAOCtClass, null);
         StringBuilder sb = new StringBuilder();
         DataAccessMethod dataAccessMethod;
+        OperationType operationType;
 
         sb.append("{\n"
                   + "    java.util.Iterator argsIterator = java.util.Arrays.asList($args).iterator();\n"
                   + "    org.iternine.jeppetto.dao.QueryModel queryModel = new org.iternine.jeppetto.dao.QueryModel();\n\n");
 
         if ((dataAccessMethod = (DataAccessMethod) interfaceMethod.getAnnotation(DataAccessMethod.class)) != null) {
-            buildQueryModelFromAnnotation(dataAccessMethod, sb);
+            operationType = buildQueryModelFromAnnotation(dataAccessMethod, sb);
 
             if (accessControlEnabled) {
                 if (dataAccessMethod.useAccessControlContextArgument()) {
@@ -269,15 +270,9 @@ public class DAOBuilder {
                     sb.append("    queryModel.setAccessControlContext(getAccessControlContextProvider().getCurrent());\n\n");
                 }
             }
-
-            if (dataAccessMethod.operation() == OperationType.Read) {
-                buildReturnClause(interfaceMethod, sb, modelClass);
-            } else {
-                buildDeleteClause(sb);
-            }
         } else {
             // deal w/ '...As()' case
-            OperationType operationType = buildQueryModelFromMethodName(interfaceMethod.getName(), sb);
+            operationType = buildQueryModelFromMethodName(interfaceMethod.getName(), sb);
 
             if (accessControlEnabled) {
                 if (interfaceMethod.getName().endsWith("As")) {
@@ -286,12 +281,15 @@ public class DAOBuilder {
                     sb.append("    queryModel.setAccessControlContext(getAccessControlContextProvider().getCurrent());\n\n");
                 }
             }
+        }
 
-            if (operationType == OperationType.Read) {
-                buildReturnClause(interfaceMethod, sb, modelClass);
-            } else {
-                buildDeleteClause(sb);
-            }
+        switch (operationType) {
+        case Read:
+            buildReturnClause(interfaceMethod, sb, modelClass);
+        case Reference:
+            buildReferenceClause(sb);
+        case Delete:
+            buildDeleteClause(sb);
         }
 
         sb.append('\n').append('}');
@@ -312,7 +310,7 @@ public class DAOBuilder {
     }
 
 
-    private static void buildQueryModelFromAnnotation(DataAccessMethod dataAccessMethod, StringBuilder sb) {
+    private static OperationType buildQueryModelFromAnnotation(DataAccessMethod dataAccessMethod, StringBuilder sb) {
         if (dataAccessMethod.conditions() != null && dataAccessMethod.conditions().length > 0) {
             for (org.iternine.jeppetto.dao.annotation.Condition conditionAnnotation : dataAccessMethod.conditions()) {
                 sb.append(String.format("    queryModel.addCondition(buildCondition(\"%s\", org.iternine.jeppetto.dao.ConditionType.%s, argsIterator));\n",
@@ -353,6 +351,8 @@ public class DAOBuilder {
         if (dataAccessMethod.skipResults()) {
             sb.append("    queryModel.setFirstResult(((Integer) argsIterator.next()).intValue());\n\n");
         }
+
+        return dataAccessMethod.operation();
     }
 
 
@@ -361,6 +361,7 @@ public class DAOBuilder {
      * <p/>
      *      findBy<query part>*[OrderBy<order part>*][AndLimit][AndSkip]
      *      countBy<query part>*[OrderBy<order part>*][AndLimit][AndSkip]
+     *      referenceBy<query part>*
      *      deleteBy<query part>*
      * <p/>
      * Query parts are of the following forms:
@@ -409,18 +410,18 @@ public class DAOBuilder {
         OperationType operationType;
 
         if (methodName.startsWith("findBy")) {
-            queryString = methodName.substring("findBy".length(),
-                                               methodName.length() - (methodName.endsWith("As") ? "As".length() : 0));
+            queryString = methodName.substring("findBy".length(), methodName.length() - (methodName.endsWith("As") ? "As".length() : 0));
             operationType = OperationType.Read;
         } else if (methodName.startsWith("countBy")) {
             sb.append("    queryModel.setProjection(buildProjection(null, org.iternine.jeppetto.dao.ProjectionType.RowCount, argsIterator));\n\n");
 
-            queryString = methodName.substring("countBy".length(),
-                                               methodName.length() - (methodName.endsWith("As") ? "As".length() : 0));
+            queryString = methodName.substring("countBy".length(), methodName.length() - (methodName.endsWith("As") ? "As".length() : 0));
             operationType = OperationType.Read;
+        } else if (methodName.startsWith("referenceBy")) {
+            queryString = methodName.substring("referenceBy".length(), methodName.length() - (methodName.endsWith("As") ? "As".length() : 0));
+            operationType = OperationType.Reference;
         } else if (methodName.startsWith("deleteBy")) {
-            queryString = methodName.substring("deleteBy".length(),
-                                               methodName.length() - (methodName.endsWith("As") ? "As".length() : 0));
+            queryString = methodName.substring("deleteBy".length(), methodName.length() - (methodName.endsWith("As") ? "As".length() : 0));
             operationType = OperationType.Delete;
         } else {
             throw new UnsupportedOperationException("Don't know how to handle '" + methodName + "'");
@@ -579,6 +580,11 @@ public class DAOBuilder {
         } catch (NotFoundException e) {
             throw new RuntimeException(e);
         }
+    }
+
+
+    private static void buildReferenceClause(StringBuilder sb) {
+        sb.append("\n    return referenceUsingQueryModel(queryModel);");
     }
 
 

@@ -184,6 +184,19 @@ public abstract class AccessControlTest {
 
 
     @Test
+    public void cantDeleteOthersObject()
+            throws AccessControlException, NoSuchItemException {
+        String id = saveObjectWithContext(identifiedUser, new DefaultAccessObject(), getDefaultAccessObjectDAO());
+
+        accessControlContextProvider.setCurrent(userWithCreatorsRole);
+        getDefaultAccessObjectDAO().deleteById(id);
+
+        // Make sure object exists and the original user can still get it
+        getObjectWithContext(identifiedUser, id, getDefaultAccessObjectDAO());
+    }
+
+
+    @Test
     public void grantedAccessAttempt()
             throws NoSuchItemException {
         String id = saveObjectWithContext(identifiedUser, new DefaultAccessObject(), getDefaultAccessObjectDAO());

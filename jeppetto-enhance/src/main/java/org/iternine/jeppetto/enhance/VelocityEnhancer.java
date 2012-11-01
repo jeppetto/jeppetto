@@ -34,11 +34,20 @@ import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 
 public abstract class VelocityEnhancer<T> extends Enhancer<T> {
+
+    //-------------------------------------------------------------
+    // Variables - Private
+    //-------------------------------------------------------------
+
+    private Map<String, Object> contextItems;
+
 
     //-------------------------------------------------------------
     // Variables - Private - Static
@@ -78,6 +87,13 @@ public abstract class VelocityEnhancer<T> extends Enhancer<T> {
     }
 
 
+    public VelocityEnhancer(Class<T> baseClass, Map<String, Object> contextItems) {
+        super(baseClass);
+
+        this.contextItems = contextItems;
+    }
+
+
     //-------------------------------------------------------------
     // Methods - Abstract - Protected
     //-------------------------------------------------------------
@@ -105,6 +121,12 @@ public abstract class VelocityEnhancer<T> extends Enhancer<T> {
             velocityContext.put("base", original);
             velocityContext.put("getters", findGetters(original));
             velocityContext.put("abstractMethods", findAbstractMethods(original));
+
+            if (contextItems != null) {
+                for (Map.Entry<String, Object> contextItem : contextItems.entrySet()) {
+                    velocityContext.put(contextItem.getKey(), contextItem.getValue());
+                }
+            }
 
             StringWriter writer = new StringWriter();
             engine.getTemplate(getTemplateLocation()).merge(velocityContext, writer);
