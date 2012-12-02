@@ -53,7 +53,8 @@ public class MongoDBCallback extends DefaultDBCallback {
     // to construct the result object, but these fields do not have a corresponding sub-object.
     private static final List<String> EXPLAIN_PATHS_TO_IGNORE = Arrays.asList("allPlans",
                                                                               "indexBounds",
-                                                                              "shards");
+                                                                              "shards",
+                                                                              "oldPlan");
 
 
     //-------------------------------------------------------------
