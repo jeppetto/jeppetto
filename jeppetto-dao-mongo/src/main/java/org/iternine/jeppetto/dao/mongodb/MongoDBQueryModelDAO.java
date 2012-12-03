@@ -31,6 +31,7 @@ import org.iternine.jeppetto.dao.Projection;
 import org.iternine.jeppetto.dao.ProjectionType;
 import org.iternine.jeppetto.dao.QueryModel;
 import org.iternine.jeppetto.dao.QueryModelDAO;
+import org.iternine.jeppetto.dao.ReferenceSet;
 import org.iternine.jeppetto.dao.Sort;
 import org.iternine.jeppetto.dao.SortDirection;
 import org.iternine.jeppetto.dao.TooManyItemsException;
@@ -43,6 +44,7 @@ import org.iternine.jeppetto.dao.mongodb.enhance.DirtyableDBObjectList;
 import org.iternine.jeppetto.dao.mongodb.enhance.DirtyableDBObjectMap;
 import org.iternine.jeppetto.dao.mongodb.enhance.EnhancerHelper;
 import org.iternine.jeppetto.dao.mongodb.enhance.MongoDBDecoder;
+import org.iternine.jeppetto.dao.mongodb.enhance.UpdateObject;
 import org.iternine.jeppetto.dao.mongodb.projections.ProjectionCommands;
 import org.iternine.jeppetto.enhance.Enhancer;
 
@@ -59,7 +61,10 @@ import org.bson.types.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -78,7 +83,7 @@ import java.util.regex.Pattern;
  *
  * Instantiation requires a daoProperties Map<String, Object> that will look for the following keys (and expected
  * values):
- * <p/>
+ *
  * <table>
  *   <tr>
  *     <td>Key</td>
@@ -93,7 +98,12 @@ import java.util.regex.Pattern;
  *   <tr>
  *     <td>collection</td>
  *     <td>No</td>
- *     <td>Name of the backing collection for this object.  Defaults to the name of the persistent
+ *     <td>Name of the backing collection for this object.  Defaults to the name of the entity class.</td>
+ *   </tr>
+ *   <tr>
+ *     <td>viewOf</td>
+ *     <td>No</td>
+ *     <td>Name of the a class of which this DAO's entity class is a view.</td>
  *   </tr>
  *   <tr>
  *     <td>uniqueIndexes</td>
@@ -133,13 +143,7 @@ import java.util.regex.Pattern;
  *         the DAO's package as well.</td>
  *   </tr>
  * </table>
- * @param <T> the type of persistent object this DAO will manage.
  */
-// TODO: support createdDate/lastModifiedDate (createdDate from get("_id").getTime()?)
-// TODO: Implement determineOptimalDBObject
-//          - understand saveNulls
-// TODO: support per-call WriteConcerns (keep in mind session semantics)
-// TODO: investigate usage of ClassLoader so new instances are already enhanced
 public class MongoDBQueryModelDAO<T, ID>
         implements QueryModelDAO<T, ID>, AccessControlDAO<T, ID> {
 
@@ -158,12 +162,14 @@ public class MongoDBQueryModelDAO<T, ID>
     //-------------------------------------------------------------
 
     private DBCollection dbCollection;
-    private Enhancer<T> enhancer;
+    private Enhancer<T> dirtyableDBObjectEnhancer;
+    private BasicDBObject fieldsToRetrieve;
+    private DBDecoderFactory decoderFactory;
     private AccessControlContextProvider accessControlContextProvider;
     private Map<String, Set<String>> uniqueIndexes;
     private boolean optimisticLockEnabled;
     private List<String> shardKeys;
-    private boolean saveNulls;
+//    private boolean saveNulls;
     private WriteConcern defaultWriteConcern;
     private Logger queryLogger;
 
@@ -184,22 +190,20 @@ public class MongoDBQueryModelDAO<T, ID>
                                                                         : entityClass.getSimpleName();
 
         this.dbCollection = ((DB) daoProperties.get("db")).getCollection(collectionName);
-        this.enhancer = EnhancerHelper.getDirtyableDBObjectEnhancer(entityClass);
-
-        dbCollection.setObjectClass(enhancer.getEnhancedClass());
-        dbCollection.setDBDecoderFactory(new DBDecoderFactory() {
+        this.dirtyableDBObjectEnhancer = EnhancerHelper.getDirtyableDBObjectEnhancer(entityClass);
+        this.decoderFactory = new DBDecoderFactory() {
             @Override
             public DBDecoder create() {
-                return new MongoDBDecoder();
+                return new MongoDBDecoder(dirtyableDBObjectEnhancer.getEnhancedClass());
             }
-        });
-
+        };
         this.accessControlContextProvider = accessControlContextProvider;
         this.uniqueIndexes = ensureIndexes((List<String>) daoProperties.get("uniqueIndexes"), true);
         ensureIndexes((List<String>) daoProperties.get("nonUniqueIndexes"), false);
         this.optimisticLockEnabled = Boolean.parseBoolean((String) daoProperties.get("optimisticLockEnabled"));
         this.shardKeys = extractShardKeys((String) daoProperties.get("shardKeyPattern"));
-        this.saveNulls = Boolean.parseBoolean((String) daoProperties.get("saveNulls"));
+//        this.saveNulls = Boolean.parseBoolean((String) daoProperties.get("saveNulls"));
+        this.fieldsToRetrieve = identifyFieldsToRetrieve(entityClass, (String) daoProperties.get("viewOf"));
 
         if (daoProperties.containsKey("writeConcern")) {
             this.defaultWriteConcern = WriteConcern.valueOf((String) daoProperties.get("writeConcern"));
@@ -236,6 +240,20 @@ public class MongoDBQueryModelDAO<T, ID>
 
 
     @Override
+    public Iterable<T> findByIds(ID... ids)
+            throws JeppettoException {
+        QueryModel queryModel = new QueryModel();
+        queryModel.addCondition(buildIdCondition(Arrays.asList(ids)));
+
+        if (accessControlContextProvider != null) {
+            queryModel.setAccessControlContext(accessControlContextProvider.getCurrent());
+        }
+
+        return findUsingQueryModel(queryModel);
+    }
+
+
+    @Override
     public Iterable<T> findAll()
             throws JeppettoException {
         QueryModel queryModel = new QueryModel();
@@ -251,12 +269,12 @@ public class MongoDBQueryModelDAO<T, ID>
     @Override
     public void save(T entity)
             throws OptimisticLockException, JeppettoException {
-        T enhancedEntity = enhancer.enhance(entity);
+        T enhancedEntity = dirtyableDBObjectEnhancer.enhance(entity);
         DirtyableDBObject dbo = (DirtyableDBObject) enhancedEntity;
 
         if (dbo.isPersisted(dbCollection)) {
             if (accessControlContextProvider != null) {
-                verifyWriteAllowed(dbo, accessControlContextProvider.getCurrent()); // TODO: should access control check be added to identifyingQuery?
+                verifyWriteAllowed(dbo, accessControlContextProvider.getCurrent());
             }
         } else {
             if (dbo.get(ID_FIELD) == null) {
@@ -281,9 +299,11 @@ public class MongoDBQueryModelDAO<T, ID>
     @Override
     public void delete(T entity)
             throws JeppettoException {
-        // TODO: Probably don't want to enhance this object as we may need a previously retrieved object so
-        // we can construct an appropriate identifying query w/ __olv
-        DBObject dbo = (DBObject) enhancer.enhance(entity);
+        DBObject dbo = (DBObject) dirtyableDBObjectEnhancer.enhance(entity);
+
+        if (accessControlContextProvider != null) {
+            verifyWriteAllowed(dbo, accessControlContextProvider.getCurrent());
+        }
 
         DBObject identifyingQuery = buildIdentifyingQuery(dbo);
 
@@ -298,7 +318,73 @@ public class MongoDBQueryModelDAO<T, ID>
     @Override
     public void deleteById(ID id)
             throws JeppettoException {
-        deleteByIdentifyingQuery(buildIdentifyingQuery(id));
+        QueryModel queryModel = new QueryModel();
+        queryModel.addCondition(buildIdCondition(id));
+
+        if (accessControlContextProvider != null) {
+            queryModel.setAccessControlContext(accessControlContextProvider.getCurrent());
+        }
+
+        deleteByIdentifyingQuery(buildQueryObject(queryModel, AccessType.ReadWrite));
+    }
+
+
+    @Override
+    public void deleteByIds(ID... ids)
+            throws JeppettoException {
+        QueryModel queryModel = new QueryModel();
+        queryModel.addCondition(buildIdCondition(Arrays.asList(ids)));
+
+        if (accessControlContextProvider != null) {
+            queryModel.setAccessControlContext(accessControlContextProvider.getCurrent());
+        }
+
+        deleteByIdentifyingQuery(buildQueryObject(queryModel, AccessType.ReadWrite));
+    }
+
+
+    @Override
+    public ReferenceSet<T> referenceByIds(ID... ids) {
+        QueryModel queryModel = new QueryModel();
+        queryModel.addCondition(buildIdCondition(Arrays.asList(ids)));
+
+        if (accessControlContextProvider != null) {
+            queryModel.setAccessControlContext(accessControlContextProvider.getCurrent());
+        }
+
+        return new MongoDBReferenceSet<T>(buildQueryObject(queryModel, AccessType.ReadWrite),
+                                          EnhancerHelper.<T>getUpdateObjectEnhancer(getCollectionClass()));
+    }
+
+
+    @Override
+    public void updateReferences(ReferenceSet<T> referenceSet, T updateObject)
+            throws JeppettoException {
+        if (!UpdateObject.class.isAssignableFrom(updateObject.getClass())) {
+            throw new JeppettoException("updateObject's type is not 'UpdateObject'.  Did it come from referenceSet.getUpdateObject()?");
+        }
+
+        DBObject updateClause = ((UpdateObject) updateObject).getUpdateClause();
+        DBObject identifyingQuery = ((MongoDBReferenceSet<T>) referenceSet).getIdentifyingQuery();
+
+        if (updateClause.keySet().size() == 0) {
+            if (queryLogger != null) {
+                queryLogger.debug("Bypassing update identified by {}; no changes", identifyingQuery.toMap());
+            }
+
+            return;
+        }
+
+        if (queryLogger != null) {
+            queryLogger.debug("Reference-based update of {} identified by {} with document {}",
+                              new Object[] { getCollectionClass().getSimpleName(), identifyingQuery.toMap(), updateClause.toMap() } );
+        }
+
+        try {
+            dbCollection.update(identifyingQuery, updateClause, false, true, getWriteConcern());
+        } catch (MongoException e) {
+            throw new JeppettoException(e);
+        }
     }
 
 
@@ -435,22 +521,25 @@ public class MongoDBQueryModelDAO<T, ID>
 
 
     @Override
-    public Condition buildCondition(String conditionField,
-                                    ConditionType conditionType,
-                                    Iterator argsIterator) {
+    public ReferenceSet<T> referenceUsingQueryModel(QueryModel queryModel)
+            throws JeppettoException {
+        return new MongoDBReferenceSet<T>(buildQueryObject(queryModel, AccessType.ReadWrite),
+                                          EnhancerHelper.<T>getUpdateObjectEnhancer(getCollectionClass()));
+    }
+
+
+    @Override
+    public Condition buildCondition(String conditionField, ConditionType conditionType, Iterator argsIterator) {
         if (conditionField.equals("id")) {
             return buildIdCondition(argsIterator.next());
         } else {
-            return new Condition(conditionField,
-                                 MongoDBOperator.valueOf(conditionType.name()).buildConstraint(argsIterator));
+            return new Condition(conditionField, MongoDBOperator.valueOf(conditionType.name()).buildConstraint(argsIterator));
         }
     }
 
 
     @Override
-    public Projection buildProjection(String projectionField,
-                                      ProjectionType projectionType,
-                                      Iterator argsIterator) {
+    public Projection buildProjection(String projectionField, ProjectionType projectionType, Iterator argsIterator) {
         return new Projection(projectionField, projectionType);
     }
 
@@ -464,11 +553,11 @@ public class MongoDBQueryModelDAO<T, ID>
             throws OptimisticLockException, AccessControlException, JeppettoException {
         ensureAccessControlEnabled();
 
-        T enhancedEntity = enhancer.enhance(object);
+        T enhancedEntity = dirtyableDBObjectEnhancer.enhance(object);
         DirtyableDBObject dbo = (DirtyableDBObject) enhancedEntity;
 
         if (dbo.isPersisted(dbCollection)) {
-            verifyWriteAllowed(dbo, accessControlContext); // TODO: should access control check be added to identifyingQuery?
+            verifyWriteAllowed(dbo, accessControlContext);
         } else {
             if (dbo.get(ID_FIELD) == null) {
                 dbo.put(ID_FIELD, new ObjectId());  // If the id isn't explicitly set, assume intent is for mongo ids
@@ -583,7 +672,7 @@ public class MongoDBQueryModelDAO<T, ID>
         }
 
         if (queryLogger != null) {
-            // TODO: What happens if revoke happens and another thread already has object in memory and tries to save()?
+            // Note: if revoke happens while another thread has object in memory and calls save(), it will succeed.
             queryLogger.info("Revoking access to object identified by {} to {}.", identifyingQuery.toMap(), accessId);
         }
 
@@ -653,7 +742,7 @@ public class MongoDBQueryModelDAO<T, ID>
      * This method allows subclasses an opportunity to add any important data to a cache key, such
      * as the __acl from the AccessControlMongoDAO.
      *
-     * TODO: revsit these methods...
+     * TODO: revisit these methods...
      *
      * @param key key to augment
      * @return augmented key
@@ -693,14 +782,34 @@ public class MongoDBQueryModelDAO<T, ID>
     }
 
 
-    protected final DBObject buildIdentifyingQuery(ID id) {
-        if (id == null) {
-            throw new IllegalArgumentException("Id cannot be null.");
-        } else if (id instanceof String && ObjectId.isValid((String) id)) {
-            return new BasicDBObject(ID_FIELD, new ObjectId((String) id));
-        } else {
-            return new BasicDBObject(ID_FIELD, id);
+    protected final DBObject buildIdentifyingQuery(ID... ids) {
+        if (ids == null || ids.length == 0) {
+            throw new IllegalArgumentException("Invalid 'ids' array: " + (ids == null ? "(null)" : "(empty)"));
         }
+
+        if (ids.length == 1) {
+            if (ids[0] == null) {
+                throw new IllegalArgumentException("Id cannot be null.");
+            } else if (ids[0] instanceof String && ObjectId.isValid((String) ids[0])) {
+                return new BasicDBObject(ID_FIELD, new ObjectId((String) ids[0]));
+            } else {
+                return new BasicDBObject(ID_FIELD, ids[0]);
+            }
+        }
+
+        List<Object> idList = new ArrayList<Object>();
+
+        for (Object id : ids) {
+            if (id == null) {
+                throw new IllegalArgumentException("Id cannot be null.");
+            } else if (id instanceof String && ObjectId.isValid((String) id)) {
+                idList.add(new ObjectId((String) id));
+            } else {
+                idList.add(id);
+            }
+        }
+
+        return new BasicDBObject(ID_FIELD, new BasicDBObject("$in", idList));
     }
 
 
@@ -753,7 +862,7 @@ public class MongoDBQueryModelDAO<T, ID>
                 Integer localOptimisticLockVersion = (Integer) dbo.get(OPTIMISTIC_LOCK_VERSION_FIELD) - 1;
 
                 if (localOptimisticLockVersion == 0) {
-                    throw new JeppettoException(e); // TODO: id reuse...
+                    throw new JeppettoException("New object's id already in use -- review id generation strategy.", e);
                 }
 
                 identifyingQuery.removeField(OPTIMISTIC_LOCK_VERSION_FIELD);
@@ -782,10 +891,6 @@ public class MongoDBQueryModelDAO<T, ID>
 
 
     protected final void trueRemove(final DBObject identifyingQuery) {
-        if (optimisticLockEnabled) {
-            // TODO:
-        }
-
         if (queryLogger != null) {
             queryLogger.debug("Removing {}s matching {}",
                               new Object[] { getCollectionClass().getSimpleName(), identifyingQuery.toMap() } );
@@ -800,14 +905,106 @@ public class MongoDBQueryModelDAO<T, ID>
     }
 
 
-    protected final Class<?> getCollectionClass() {
-        return enhancer.getBaseClass();
+    protected final Class<T> getCollectionClass() {
+        return dirtyableDBObjectEnhancer.getBaseClass();
     }
 
 
     //-------------------------------------------------------------
     // Methods - Private
     //-------------------------------------------------------------
+
+    private BasicDBObject identifyFieldsToRetrieve(Class<T> entityClass, String viewOfClassName) {
+        if (viewOfClassName == null) {
+            return null;     // Null is equivalent to retrieving all fields
+        }
+
+        BasicDBObject fields = new BasicDBObject();
+
+        try {
+            determineFieldsToRetrieve(entityClass, Class.forName(viewOfClassName), "", fields);
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+
+        if (optimisticLockEnabled) {
+            fields.put(OPTIMISTIC_LOCK_VERSION_FIELD, 1);
+        }
+        
+        if (accessControlContextProvider != null) {
+            fields.put(ACCESS_CONTROL_FIELD, 1);
+        }
+        
+        if (fields.containsField("id")) {
+            fields.remove("id"); // Included by default, no need to specify
+        } else {
+            fields.put(ID_FIELD, 0); // Need to explicitly exclude it
+        }
+
+        return fields;
+    }
+
+
+    private void determineFieldsToRetrieve(Class entityClass, Class viewOfClass, String fieldPrefix, BasicDBObject fields) {
+        Map<String, Class> entityFieldMap = getFieldMap(entityClass, fieldPrefix);
+        Map<String, Class> viewOfFieldMap = getFieldMap(viewOfClass, fieldPrefix);
+
+        for (Map.Entry<String, Class> entry : entityFieldMap.entrySet()) {
+            String fieldName = entry.getKey();
+            Class fieldClass = entry.getValue();
+
+            if (DBObjectUtil.needsNoConversion(fieldClass)
+                || Collection.class.isAssignableFrom(fieldClass)
+                || fieldClass.equals(viewOfFieldMap.get(fieldName))) {
+                fields.put(fieldName, 1);
+            } else {
+                determineFieldsToRetrieve(fieldClass, viewOfFieldMap.get(fieldName), fieldName + ".", fields);
+            }
+        }
+    }
+
+
+    private Map<String, Class> getFieldMap(Class clazz, String fieldPrefix) {
+        Map<String, Class> fieldMap = new HashMap<String, Class>();
+
+        List<Method> methods = new ArrayList<Method>();
+        Collections.addAll(methods, clazz.getDeclaredMethods());
+        Collections.addAll(methods, clazz.getMethods());
+
+        for (Method method : methods) {
+            if (method.getDeclaringClass().equals(Object.class)
+                || method.getReturnType().equals(void.class)
+                || Modifier.isFinal(method.getModifiers())
+                || Modifier.isAbstract(method.getModifiers())
+                || method.getParameterTypes().length != 0) {
+                continue;
+            }
+
+            String methodName = method.getName();
+            String upperCaseFieldName;
+
+            if (methodName.startsWith("get")) {
+                upperCaseFieldName = methodName.substring(3);
+            } else if (methodName.startsWith("is")) {
+                upperCaseFieldName = methodName.substring(2);
+            } else {
+                continue;
+            }
+
+            try {
+                clazz.getMethod("set".concat(upperCaseFieldName), method.getReturnType());
+            } catch (NoSuchMethodException e) {
+                continue;
+            }
+
+            String fieldName = upperCaseFieldName.substring(0, 1).toLowerCase().concat(upperCaseFieldName.substring(1));
+
+            fieldMap.put(fieldPrefix.concat(fieldName), method.getReturnType());
+        }
+
+        return fieldMap;
+    }
+
 
     private DBObject processSorts(List<Sort> sorts) {
         DBObject orderBy = new BasicDBObject();
@@ -825,22 +1022,17 @@ public class MongoDBQueryModelDAO<T, ID>
          if (argument instanceof String && ObjectId.isValid((String) argument)) {
              return new Condition(ID_FIELD, new ObjectId((String) argument));
          } else if (Iterable.class.isAssignableFrom(argument.getClass())) {
-             List<ObjectId> objectIds = new ArrayList<ObjectId>();
+             List<Object> objectIds = new ArrayList<Object>();
 
              //noinspection ConstantConditions
              for (Object argumentItem : (Iterable) argument) {
-                 if (argumentItem == null) {
-                     objectIds.add(null);
-                 } else if (argumentItem instanceof ObjectId) {
-                     objectIds.add((ObjectId) argumentItem);
-                 } else if (argumentItem instanceof String) {
+                 if (argumentItem instanceof String && ObjectId.isValid((String) argumentItem)) {
                      objectIds.add(new ObjectId((String) argumentItem));
-                 } else {
-                     throw new IllegalArgumentException("Don't know how to handle class for 'id' mapping: " + argumentItem.getClass());
+                 } else if (argumentItem instanceof ObjectId) {
+                     objectIds.add( argumentItem);
                  }
              }
 
-             // TODO: create getter for MongoDBOperator.operator() ...?
              return new Condition(ID_FIELD, new BasicDBObject("$in", objectIds));
          } else {
              return new Condition(ID_FIELD, argument);
@@ -872,7 +1064,7 @@ public class MongoDBQueryModelDAO<T, ID>
         MongoDBCommand command;
 
         if (queryModel.getProjection() == null) {
-            command = new BasicDBObjectCommand(query);
+            command = new BasicDBObjectCommand(query, fieldsToRetrieve, decoderFactory);
         } else {
             command = ProjectionCommands.forProjection(queryModel.getProjection(), query);
         }
@@ -1029,7 +1221,9 @@ public class MongoDBQueryModelDAO<T, ID>
             String dirtyKey = dirtyKeys.next();
             Object dirtyObject = dirtyableDBObject.get(dirtyKey);
 
-            if (dirtyObject instanceof DirtyableDBObjectList) {   // NB: encompasses DirtyableDBObjectSet
+            if (dirtyObject == null) {
+                unsettableItems.put(prefix + dirtyKey, null);
+            } else if (dirtyObject instanceof DirtyableDBObjectList) {   // NB: encompasses DirtyableDBObjectSet
                 DirtyableDBObjectList dirtyableDBObjectList = (DirtyableDBObjectList) dirtyObject;
 
                 if (!dirtyableDBObjectList.isPersisted(dbCollection) || dirtyableDBObjectList.isRewrite()) {
@@ -1067,9 +1261,6 @@ public class MongoDBQueryModelDAO<T, ID>
 
 
     private WriteConcern getWriteConcern() {
-        // TODO: Add ability to swap a concern out on a per-call basis...if nothing overwrites/changes, then
-        // return the default.  Keep in mind session semantics (e.g. delayed saves).
-
         return defaultWriteConcern;
     }
 
@@ -1081,7 +1272,6 @@ public class MongoDBQueryModelDAO<T, ID>
     }
 
 
-    // TODO: ensure this is called by all update paths (e.g. other callers to trueSave())
     private void verifyWriteAllowed(DBObject dbo, AccessControlContext accessControlContext)
             throws AccessControlException {
         @SuppressWarnings( { "unchecked" })

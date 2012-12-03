@@ -108,6 +108,12 @@ public class DummyQueryModelDAO<T, ID>
 
 
     @Override
+    public Iterable<T> findByIds(ID... ids) {
+        return findUsingQueryModel(null);
+    }
+
+
+    @Override
     public Iterable<T> findAll() {
         return findUsingQueryModel(null);
     }
@@ -126,6 +132,30 @@ public class DummyQueryModelDAO<T, ID>
 
     @Override
     public void deleteById(ID id) {
+    }
+
+
+    @Override
+    public void deleteByIds(ID... ids) {
+    }
+
+
+    @Override
+    public ReferenceSet<T> referenceUsingQueryModel(QueryModel queryModel)
+            throws JeppettoException {
+        return null;
+    }
+
+
+    @Override
+    public ReferenceSet<T> referenceByIds(ID... id) {
+        return null;
+    }
+
+
+    @Override
+    public void updateReferences(ReferenceSet<T> referenceSet, T entityUpdates)
+            throws JeppettoException {
     }
 
 

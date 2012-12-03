@@ -22,6 +22,7 @@ import com.mongodb.BasicDBObject;
 import com.mongodb.DBCollection;
 import com.mongodb.DBObject;
 import com.mongodb.DefaultDBCallback;
+import org.bson.BSON;
 import org.bson.BSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,7 +45,7 @@ public class MongoDBCallback extends DefaultDBCallback {
     //-------------------------------------------------------------
 
     private static final Map<String, Class> classCache = new HashMap<String, Class>();
-    private DBCollection dbCollection;
+    private Class rootClass;
 
     private static Logger logger = LoggerFactory.getLogger(MongoDBCallback.class);
 
@@ -52,18 +53,19 @@ public class MongoDBCallback extends DefaultDBCallback {
     // to construct the result object, but these fields do not have a corresponding sub-object.
     private static final List<String> EXPLAIN_PATHS_TO_IGNORE = Arrays.asList("allPlans",
                                                                               "indexBounds",
-                                                                              "shards");
+                                                                              "shards",
+                                                                              "oldPlan");
 
 
     //-------------------------------------------------------------
     // Constructors
     //-------------------------------------------------------------
 
-    public MongoDBCallback(DBCollection dbCollection) {
+    public MongoDBCallback(DBCollection dbCollection, Class rootClass) {
         super(dbCollection);
 
         if (dbCollection != null && !dbCollection.getName().equals("$cmd")) {
-            this.dbCollection = dbCollection;
+            this.rootClass = rootClass;
         }
     }
 
@@ -74,8 +76,16 @@ public class MongoDBCallback extends DefaultDBCallback {
 
     @Override
     public BSONObject create(boolean array, List<String> pathParts) {
-        if (pathParts == null || dbCollection == null) {
-            return super.create(array, pathParts);
+        if (rootClass == null) {
+            return array ? new BasicDBList() : new BasicDBObject();
+        }
+
+        if (pathParts == null) {
+            try {
+                return (DBObject) rootClass.newInstance();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
         }
 
         String path = buildPath(pathParts);
@@ -114,15 +124,24 @@ public class MongoDBCallback extends DefaultDBCallback {
                 }
             }
         } else if (Set.class.isAssignableFrom(returnClass)) {
+            DirtyableDBObjectSet dirtyableDBObjectSet;
+
             if (Modifier.isAbstract(returnClass.getModifiers()) || Modifier.isInterface(returnClass.getModifiers())) {
-                return new DirtyableDBObjectSet();
+                dirtyableDBObjectSet = new DirtyableDBObjectSet();
             } else {
                 try {
-                    return new DirtyableDBObjectSet((Set) returnClass.newInstance(), false);
+                    dirtyableDBObjectSet = new DirtyableDBObjectSet((Set) returnClass.newInstance(), false);
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
             }
+
+            // The MongoDB Java Driver adds objects to the container before populating them.  To maintain
+            // set semantics (which may require using the objects' values), we run a decoding hook to
+            // properly configure the set.
+            BSON.addDecodingHook(DirtyableDBObjectSet.class, dirtyableDBObjectSet.getDecodingTransformer());
+
+            return dirtyableDBObjectSet;
         } else {
             return new BasicDBObject();
         }
@@ -149,7 +168,7 @@ public class MongoDBCallback extends DefaultDBCallback {
 
 
     private Class getClassFromCache(String path) {
-        Class clazz = classCache.get(dbCollection.getName() + "." + path);
+        Class clazz = classCache.get(rootClass.getSimpleName() + "." + path);
 
         if (clazz != null) {
             return clazz;
@@ -158,7 +177,7 @@ public class MongoDBCallback extends DefaultDBCallback {
         int lastDotIndex = path.lastIndexOf('.');
 
         if (lastDotIndex > 0) {
-            return classCache.get(dbCollection.getName() + "." + path.substring(0, lastDotIndex + 1));
+            return classCache.get(rootClass.getSimpleName() + "." + path.substring(0, lastDotIndex + 1));
         }
 
         return null;
@@ -194,9 +213,9 @@ public class MongoDBCallback extends DefaultDBCallback {
         Class containerClass;
 
         if (path.equals(lastPathPart)) {
-            containerClass = dbCollection.getObjectClass();
+            containerClass = rootClass;
         } else {
-            containerClass = classCache.get(dbCollection.getName() + "." + path.substring(0, path.lastIndexOf('.')));
+            containerClass = classCache.get(rootClass.getSimpleName() + "." + path.substring(0, path.lastIndexOf('.')));
         }
 
         if (containerClass != null && DBObject.class.isAssignableFrom(containerClass)) {
@@ -229,7 +248,7 @@ public class MongoDBCallback extends DefaultDBCallback {
         }
 
         Type returnType = getter.getGenericReturnType();
-        String qualifiedPath = dbCollection.getName() + "." + path;
+        String qualifiedPath = rootClass.getSimpleName() + "." + path;
 
         if (Class.class.isAssignableFrom(returnType.getClass())) {
             // noinspection unchecked

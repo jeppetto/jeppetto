@@ -59,4 +59,30 @@ public class RelatedObject {
     public void setRelatedIntValue(int relatedIntValue) {
         this.relatedIntValue = relatedIntValue;
     }
+
+
+    //-------------------------------------------------------------
+    // Methods - Public
+    //-------------------------------------------------------------
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof RelatedObject)) {
+            return false;
+        }
+
+        RelatedObject that = (RelatedObject) o;
+
+        return relatedIntValue == that.relatedIntValue && (relatedStringValue == null ? that.relatedStringValue == null
+                                                                                      : relatedStringValue.equals(that.relatedStringValue));
+    }
+
+
+    @Override
+    public int hashCode() {
+        return 31 * (relatedStringValue != null ? relatedStringValue.hashCode() : 0) + relatedIntValue;
+    }
 }

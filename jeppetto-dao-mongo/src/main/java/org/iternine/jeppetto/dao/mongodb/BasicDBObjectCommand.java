@@ -23,6 +23,7 @@ import org.iternine.jeppetto.dao.TooManyItemsException;
 import com.mongodb.BasicDBObject;
 import com.mongodb.DBCollection;
 import com.mongodb.DBCursor;
+import com.mongodb.DBDecoderFactory;
 import com.mongodb.DBObject;
 
 
@@ -34,14 +35,18 @@ public class BasicDBObjectCommand extends MongoDBCommand {
     //-------------------------------------------------------------
 
     private BasicDBObject query;
+    private BasicDBObject fieldsToRetrieve;
+    private DBDecoderFactory decoderFactory;
 
 
     //-------------------------------------------------------------
     // Constructor
     //-------------------------------------------------------------
 
-    public BasicDBObjectCommand(BasicDBObject query) {
+    public BasicDBObjectCommand(BasicDBObject query, BasicDBObject fieldsToRetrieve, DBDecoderFactory decoderFactory) {
         this.query = query;
+        this.fieldsToRetrieve = fieldsToRetrieve;
+        this.decoderFactory = decoderFactory;
     }
 
 
@@ -51,7 +56,7 @@ public class BasicDBObjectCommand extends MongoDBCommand {
 
     @Override
     public DBCursor cursor(DBCollection dbCollection) {
-        return dbCollection.find(query);
+        return dbCollection.find(query, fieldsToRetrieve).setDecoderFactory(decoderFactory);
     }
 
 
@@ -88,6 +93,17 @@ public class BasicDBObjectCommand extends MongoDBCommand {
 
     @Override
     public String toString() {
-        return super.toString() + ' ' + query;
+        StringBuilder sb = new StringBuilder();
+
+        sb.append(super.toString());
+        sb.append(' ');
+        sb.append(query);
+
+        if (fieldsToRetrieve != null) {
+            sb.append(" for fields ");
+            sb.append(fieldsToRetrieve);
+        }
+
+        return sb.toString();
     }
 }

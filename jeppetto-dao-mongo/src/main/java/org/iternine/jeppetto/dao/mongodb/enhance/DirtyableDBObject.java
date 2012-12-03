@@ -49,6 +49,12 @@ public interface DirtyableDBObject extends DBObject {
     Iterator<String> getDirtyKeys();
 
 
+    /**
+     * @return The object this DirtyableDBObject is delegating to, or null if it is managing everything itself
+     */
+    Object getDelegate();
+
+
 //    /**
 //     *
 //     */

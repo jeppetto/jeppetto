@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,39 +14,28 @@
  * limitations under the License.
  */
 
-package org.iternine.jeppetto.dao.mongodb.enhance;
+package org.iternine.jeppetto.test;
 
 
-import com.mongodb.DBCallback;
-import com.mongodb.DBCollection;
-import com.mongodb.DefaultDBDecoder;
-
-
-public class MongoDBDecoder extends DefaultDBDecoder {
+public class SummaryRelatedObject {
 
     //-------------------------------------------------------------
     // Variables - Private
     //-------------------------------------------------------------
 
-    private Class rootClass;
+    private int relatedIntValue;
 
 
     //-------------------------------------------------------------
-    // Constructors
+    // Methods - Getter/Setter
     //-------------------------------------------------------------
 
-    public MongoDBDecoder(Class rootClass) {
-        this.rootClass = rootClass;
+    public int getRelatedIntValue() {
+        return relatedIntValue;
     }
 
 
-    //-------------------------------------------------------------
-    // Implementation - DBDecoder
-    //-------------------------------------------------------------
-
-    @Override
-    public DBCallback getDBCallback(DBCollection collection) {
-        // brand new callback every time
-        return new MongoDBCallback(collection, rootClass);
+    public void setRelatedIntValue(int relatedIntValue) {
+        this.relatedIntValue = relatedIntValue;
     }
 }

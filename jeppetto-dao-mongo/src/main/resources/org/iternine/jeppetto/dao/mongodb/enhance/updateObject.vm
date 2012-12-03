@@ -1,0 +1,117 @@
+#* @vtlvariable name="getters" type="javassist.CtMethod[]" *#
+#* @vtlvariable name="base" type="javassist.CtClass" *#
+#* @vtlvariable name="_" type="org.iternine.jeppetto.enhance.TemplateHelper" *#
+#* @vtlvariable name="updateObjectHelper" type="org.iternine.jeppetto.dao.mongodb.enhance.UpdateObjectHelper" *#
+#set( $baseName = $base.getName() )
+#set( $Q = '"')
+public $_.cls("${baseName}$UpdateObject").ext($base).impl("org.iternine.jeppetto.dao.mongodb.enhance.UpdateObject") {
+
+    #set( $thisName = $_.clsName() )
+
+    //-------------------------------------------------------------
+    // Variables - Private
+    //-------------------------------------------------------------
+
+    $_.field("private final String prefix;")
+    $_.field("private final java.util.Map __updates = new java.util.HashMap();")
+
+
+    //-------------------------------------------------------------
+    // Methods - Overrides
+    //-------------------------------------------------------------
+
+    #foreach ( $getter in $getters )
+    #set( $getterName = $getter.getName() )
+    #set( $key = $_.keyFor($getterName) )
+    #set( $setterName = $_.asSetter($getter) )
+    #set ( $returnType = $_.returnTypeOf($getter) )
+    #set ( $returnTypeName = $returnType.getName() )
+
+    #if ( !$updateObjectHelper.needsNoConversion($returnType) )
+    $_.method("
+    public $returnTypeName $getterName() {
+        $returnTypeName value = ($returnTypeName) __updates.get(${Q}$key${Q});
+
+        if (value == null) {
+            #if ( $updateObjectHelper.isAssignableFromList($returnType) )
+            value = new org.iternine.jeppetto.dao.mongodb.enhance.UpdateList();
+            #elseif ( $updateObjectHelper.isAssignableFromMap($returnType) )
+            value = new org.iternine.jeppetto.dao.mongodb.enhance.UpdateMap();
+            #elseif ( $updateObjectHelper.isAssignableFromSet($returnType) )
+            value = new org.iternine.jeppetto.dao.mongodb.enhance.UpdateSet();
+            #else
+            value = ($returnTypeName) org.iternine.jeppetto.dao.mongodb.enhance.EnhancerHelper.getUpdateObjectEnhancer($returnTypeName .class).newInstance();
+            #end
+
+            ((org.iternine.jeppetto.dao.mongodb.enhance.UpdateObject) value).setPrefix(prefix + ${Q}${key}${Q} + '.');
+
+            __updates.put(${Q}$key${Q}, value);
+        }
+
+        return value;
+    }")
+    #end
+
+    $_.method("
+    public void $setterName($returnTypeName value) {
+        // TODO: handle id
+        #if ( $returnType.isPrimitive() )
+        __updates.put(${Q}$key${Q}, org.iternine.jeppetto.enhance.ReferenceUtil.asObject(value));
+        #else
+        __updates.put(${Q}$key${Q}, value);
+        #end
+    }")
+    #end
+
+
+    //-------------------------------------------------------------
+    // Implementation - UpdateObject
+    //-------------------------------------------------------------
+
+    $_.method("
+    public com.mongodb.DBObject getUpdateClause() {
+        com.mongodb.BasicDBObject updateClause = new com.mongodb.BasicDBObject();
+        com.mongodb.BasicDBObject sets = new com.mongodb.BasicDBObject();
+
+        // To simplify the code in the for-loop, we assume we'll have some set values. If we don't, we'll remove it
+        // from updateClause below.
+        updateClause.put(${Q}\$set${Q}, sets);
+
+        for (java.util.Iterator iterator = __updates.entrySet().iterator(); iterator.hasNext(); ) {
+            java.util.Map.Entry entry = (java.util.Map.Entry) iterator.next();
+            Object value = entry.getValue();
+
+            if (value instanceof org.iternine.jeppetto.dao.mongodb.enhance.UpdateObject) {
+                com.mongodb.DBObject innerClause = ((org.iternine.jeppetto.dao.mongodb.enhance.UpdateObject) value).getUpdateClause();
+
+                for (java.util.Iterator innerIterator = innerClause.keySet().iterator(); innerIterator.hasNext(); ) {
+                    String updateOperation = (String) innerIterator.next();
+                    com.mongodb.DBObject updateValue = (com.mongodb.DBObject) updateClause.get(updateOperation);
+
+                    if (updateValue == null) {
+                        updateClause.put(updateOperation, innerClause.get(updateOperation));
+                    } else {
+                        updateValue.putAll((org.bson.BSONObject) innerClause.get(updateOperation));
+                    }
+                }
+            } else {
+                sets.put(prefix + entry.getKey(), org.iternine.jeppetto.dao.mongodb.enhance.DBObjectUtil.toDBObject(entry.getValue()));
+            }
+        }
+
+        if (sets.size() == 0) {
+            updateClause.removeField(${Q}\$set${Q});
+        }
+
+        return updateClause;
+    }
+    ")
+
+
+    $_.method("
+    public void setPrefix(String prefix) {
+        this.prefix = prefix;
+    }")
+
+// declare a "setValue()" method that can be used for extraValues (e.g. __olv)?
+}

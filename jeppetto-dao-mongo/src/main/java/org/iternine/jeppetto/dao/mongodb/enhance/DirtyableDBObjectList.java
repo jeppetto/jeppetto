@@ -262,7 +262,7 @@ public class DirtyableDBObjectList
                 modifiableIndex = delegateIterator.nextIndex();
                 Object next = delegateIterator.next();
 
-                if (next instanceof DirtyableDBObject || DBObjectUtil.needsNoConversion(next.getClass())) {
+                if (next instanceof DirtyableDBObject || next == null || DBObjectUtil.needsNoConversion(next.getClass())) {
                     return next;
                 }
 
@@ -284,7 +284,7 @@ public class DirtyableDBObjectList
                 modifiableIndex = delegateIterator.previousIndex();
                 Object previous = delegateIterator.previous();
 
-                if (previous instanceof DirtyableDBObject || DBObjectUtil.needsNoConversion(previous.getClass())) {
+                if (previous instanceof DirtyableDBObject || previous == null || DBObjectUtil.needsNoConversion(previous.getClass())) {
                     return previous;
                 }
 
@@ -411,6 +411,12 @@ public class DirtyableDBObjectList
     }
 
 
+    @Override
+    public Object getDelegate() {
+        return delegate;
+    }
+
+
     //-------------------------------------------------------------
     // Implementation - DBObject
     //-------------------------------------------------------------
@@ -511,6 +517,28 @@ public class DirtyableDBObjectList
 
     public boolean isRewrite() {
         return rewrite;
+    }
+
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+
+        if (!(o instanceof List)) {
+            return false;
+        }
+
+        List thatList = o instanceof DirtyableDBObjectList ? ((DirtyableDBObjectList) o).delegate : (List) o;
+
+        return delegate.equals(thatList);
+    }
+
+
+    @Override
+    public int hashCode() {
+        return delegate.hashCode();
     }
 
 

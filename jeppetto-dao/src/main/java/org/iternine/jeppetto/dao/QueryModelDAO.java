@@ -86,6 +86,13 @@ public interface QueryModelDAO<T, ID> extends GenericDAO<T, ID> {
 
 
     /**
+     *
+     */
+    ReferenceSet<T> referenceUsingQueryModel(QueryModel queryModel)
+            throws JeppettoException;
+
+
+    /**
      * Construct a Condition object given the passed in arguments.  This is
      * used to build up the resulting QueryModel that will ultimately be
      * passed back to the one of the find/project methods above.

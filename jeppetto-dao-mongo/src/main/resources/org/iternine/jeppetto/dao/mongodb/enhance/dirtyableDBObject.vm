@@ -77,6 +77,28 @@ public $_.cls("${baseName}$DirtyableDBObject").ext($base).impl("org.iternine.jep
     }")
 
 
+    $_.method("
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+
+        if (!${baseName}.class.isInstance(o)) {
+            return false;
+        }
+
+        $baseName that = (o instanceof org.iternine.jeppetto.dao.mongodb.enhance.DirtyableDBObject && ((org.iternine.jeppetto.dao.mongodb.enhance.DirtyableDBObject) o).getDelegate() != null) ? ((org.iternine.jeppetto.dao.mongodb.enhance.DirtyableDBObject) o).getDelegate() : ($baseName) o;
+
+        return (__delegate == null) ? super.equals(that) : __delegate.equals(that);
+    }")
+
+
+    $_.method("
+    public int hashCode() {
+        return (__delegate == null) ? super.hashCode() : __delegate.hashCode();
+    }")
+
+
     //-------------------------------------------------------------
     // Implementation - DBObject
     //-------------------------------------------------------------
@@ -227,16 +249,6 @@ public $_.cls("${baseName}$DirtyableDBObject").ext($base).impl("org.iternine.jep
     }")
 
 
-    $_.method("
-    public boolean equals(Object other) {
-        if (other instanceof com.mongodb.DBObject) {
-            return toMap().equals(((com.mongodb.DBObject) other).toMap());
-        } else {
-            return super.equals(other);
-        }
-    }")
-
-
     //-------------------------------------------------------------
     // Implementation - DirtyableDBObject
     //-------------------------------------------------------------
@@ -316,6 +328,12 @@ public $_.cls("${baseName}$DirtyableDBObject").ext($base).impl("org.iternine.jep
         #end
 
         return dirtyKeys.iterator();
+    }")
+
+
+    $_.method("
+    public Object getDelegate() {
+        return __delegate;
     }")
 
 ##

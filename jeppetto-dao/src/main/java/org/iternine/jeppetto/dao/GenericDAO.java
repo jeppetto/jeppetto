@@ -19,11 +19,11 @@ package org.iternine.jeppetto.dao;
 
 /**
  * A GenericDAO is the root interface for DAOs that fit within the Jeppetto framework.  This
- * defines base functionality such as finding a specific item by its identifier and saving an
- * to the underlying data store.
+ * defines base functionality such as finding a specific entity by its identifier and saving an
+ * entity to the underlying data store.
  *
- * @param <T> Persistent Class
- * @param <ID> ID type for the persistent class.
+ * @param <T> Type of entity
+ * @param <ID> ID type for the entity.
  */
 public interface GenericDAO<T, ID> {
 
@@ -42,6 +42,19 @@ public interface GenericDAO<T, ID> {
 
 
     /**
+     * Find objects of type T with the specified ids.
+     *
+     * @param ids of the desired object.
+     *
+     * @return Iterable of T
+     *
+     * @throws JeppettoException if any other failure occurs
+     */
+    Iterable<T> findByIds(ID... ids)
+            throws JeppettoException;
+
+
+    /**
      * Find all objects of type T.
      *
      * @return Iterable of T
@@ -56,24 +69,24 @@ public interface GenericDAO<T, ID> {
      * Call save to insert a new object into the persistent store or update a preexisting object that has
      * been modified.
      *
-     * @param object to save.
+     * @param entity to save.
      *
      * @throws OptimisticLockException if optimistic locking is enabled and a save is attempted on an already
      *                                 modified object.
      * @throws JeppettoException if any other failure occurs
      */
-    void save(T object)
+    void save(T entity)
             throws OptimisticLockException, JeppettoException;
 
 
     /**
      * Delete the specified object from the persistent store.
      *
-     * @param object to delete.
+     * @param entity to delete.
      *
      * @throws JeppettoException if any underlying failure occurs
      */
-    void delete(T object)
+    void delete(T entity)
             throws JeppettoException;
 
 
@@ -85,6 +98,39 @@ public interface GenericDAO<T, ID> {
      * @throws JeppettoException if any underlying failure occurs
      */
     void deleteById(ID id)
+            throws JeppettoException;
+
+
+    /**
+     * Delete objects from the persistent store based on the passed in id values.
+     *
+     * @param ids of the objects to delete.
+     *
+     * @throws JeppettoException if any underlying failure occurs
+     */
+    void deleteByIds(ID... ids)
+            throws JeppettoException;
+
+
+    /**
+     * Build a ReferenceSet to persisted objects with the passed in id values.
+     *
+     * @param ids of the objects to reference.
+     *
+     * @throws JeppettoException if any underlying failure occurs
+     */
+    ReferenceSet<T> referenceByIds(ID... ids);
+
+
+    /**
+     * Update the objects referenced by the referenceSet with the changes in the updateObject.
+     *
+     * @param referenceSet containing references to stored items
+     * @param updateObject the changes to make on references objects
+     *
+     * @throws JeppettoException if any underlying failure occurs
+     */
+    void updateReferences(ReferenceSet<T> referenceSet, T updateObject)
             throws JeppettoException;
 
 

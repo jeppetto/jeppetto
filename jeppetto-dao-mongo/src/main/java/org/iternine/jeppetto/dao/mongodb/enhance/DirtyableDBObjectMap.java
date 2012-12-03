@@ -192,7 +192,9 @@ public class DirtyableDBObjectMap
                         this.currentKey = current.getKey();
                         final Object currentValue;
 
-                        if (current.getValue() instanceof DirtyableDBObject || DBObjectUtil.needsNoConversion(current.getValue().getClass())) {
+                        if (current.getValue() instanceof DirtyableDBObject
+                            || current.getValue() == null
+                            || DBObjectUtil.needsNoConversion(current.getValue().getClass())) {
                             currentValue = current.getValue();
                         } else {
                             currentValue = DBObjectUtil.toDBObject(current.getValue());
@@ -330,6 +332,12 @@ public class DirtyableDBObjectMap
     }
 
 
+    @Override
+    public Object getDelegate() {
+        return delegate;
+    }
+
+
     //-------------------------------------------------------------
     // Implementation - DBObject
     //-------------------------------------------------------------
@@ -398,5 +406,27 @@ public class DirtyableDBObjectMap
 
     public Set getRemovedKeys() {
         return removedKeys;
+    }
+
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+
+        if (!(o instanceof Map)) {
+            return false;
+        }
+
+        Map thatMap = o instanceof DirtyableDBObjectMap ? ((DirtyableDBObjectMap) o).delegate : (Map) o;
+
+        return delegate.equals(thatMap);
+    }
+
+
+    @Override
+    public int hashCode() {
+        return delegate.hashCode();
     }
 }
