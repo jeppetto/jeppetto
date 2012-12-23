@@ -286,10 +286,16 @@ public class DAOBuilder {
         switch (operationType) {
         case Read:
             buildReturnClause(interfaceMethod, sb, modelClass);
+
+            break;
         case Reference:
             buildReferenceClause(sb);
+
+            break;
         case Delete:
             buildDeleteClause(sb);
+
+            break;
         }
 
         sb.append('\n').append('}');
@@ -413,7 +419,7 @@ public class DAOBuilder {
             queryString = methodName.substring("findBy".length(), methodName.length() - (methodName.endsWith("As") ? "As".length() : 0));
             operationType = OperationType.Read;
         } else if (methodName.startsWith("countBy")) {
-            sb.append("    queryModel.setProjection(buildProjection(null, org.iternine.jeppetto.dao.ProjectionType.RowCount, argsIterator));\n\n");
+            sb.append("    queryModel.setProjection(buildProjection(\"\", org.iternine.jeppetto.dao.ProjectionType.RowCount, argsIterator));\n\n");
 
             queryString = methodName.substring("countBy".length(), methodName.length() - (methodName.endsWith("As") ? "As".length() : 0));
             operationType = OperationType.Read;

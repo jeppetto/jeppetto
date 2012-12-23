@@ -20,25 +20,9 @@
 
     <!-- =================== Mongo DAOs =================== -->
 
-    <bean id="simpleObjectMongoQueryModelDAO" class="org.iternine.jeppetto.dao.mongodb.MongoDBQueryModelDAO">
-        <constructor-arg index="0" value="org.iternine.jeppetto.test.SimpleObject"/>
-        <constructor-arg index="1">
-            <map>
-                <entry key="db" value-ref="mongoDb"/>
-                <entry key="uniqueIndexes">
-                    <list>
-                        <value>intValue</value>
-                    </list>
-                </entry>
-                <entry key="optimisticLockEnabled" value="true"/>
-                <entry key="showQueries" value="true"/>
-            </map>
-        </constructor-arg>
-    </bean>
-
-    <bean id="simpleObjectDSLDAO" class="org.iternine.jeppetto.dao.DAOBuilder" factory-method="buildDAO">
-        <constructor-arg index="0" value="org.iternine.jeppetto.test.SimpleObject"/>
-        <constructor-arg index="1" value="org.iternine.jeppetto.test.SimpleObjectDSLDAO"/>
+    <bean id="mongoDynamicDAO" class="org.iternine.jeppetto.dao.DAOBuilder" factory-method="buildDAO">
+        <constructor-arg index="0" value="org.iternine.jeppetto.dao.test.SimpleObject"/>
+        <constructor-arg index="1" value="org.iternine.jeppetto.dao.test.core.DynamicDAO"/>
         <constructor-arg index="2" value="org.iternine.jeppetto.dao.mongodb.MongoDBQueryModelDAO"/>
         <constructor-arg index="3">
             <map>
@@ -54,34 +38,16 @@
         </constructor-arg>
     </bean>
 
-    <bean id="simpleObjectDAO" class="org.iternine.jeppetto.dao.DAOBuilder" factory-method="buildDAO">
-        <constructor-arg index="0" value="org.iternine.jeppetto.test.SimpleObject"/>
-        <constructor-arg index="1" value="org.iternine.jeppetto.test.SimpleObjectDAO"/>
-        <constructor-arg index="2" value="org.iternine.jeppetto.dao.mongodb.MongoDBQueryModelDAO"/>
-        <constructor-arg index="3">
-            <map>
-                <entry key="db" value-ref="mongoDb"/>
-                <entry key="uniqueIndexes">
-                    <list>
-                        <value>intValue</value>
-                    </list>
-                </entry>
-                <entry key="optimisticLockEnabled" value="true"/>
-                <entry key="showQueries" value="true"/>
-            </map>
-        </constructor-arg>
-    </bean>
-
-    <bean id="summarySimpleObjectDAO" class="org.iternine.jeppetto.dao.DAOBuilder" factory-method="buildDAO">
-        <constructor-arg index="0" value="org.iternine.jeppetto.test.SummarySimpleObject"/>
-        <constructor-arg index="1" value="org.iternine.jeppetto.test.SummarySimpleObjectDAO"/>
+    <bean id="mongoSummaryDAO" class="org.iternine.jeppetto.dao.DAOBuilder" factory-method="buildDAO">
+        <constructor-arg index="0" value="org.iternine.jeppetto.dao.test.view.SummarySimpleObject"/>
+        <constructor-arg index="1" value="org.iternine.jeppetto.dao.test.view.SummaryDAO"/>
         <constructor-arg index="2" value="org.iternine.jeppetto.dao.mongodb.MongoDBQueryModelDAO"/>
         <constructor-arg index="3">
             <map>
                 <entry key="db" value-ref="mongoDb"/>
                 <entry key="optimisticLockEnabled" value="true"/>
                 <entry key="showQueries" value="true"/>
-                <entry key="viewOf" value="org.iternine.jeppetto.test.SimpleObject"/>
+                <entry key="viewOf" value="org.iternine.jeppetto.dao.test.SimpleObject"/>
                 <entry key="collection" value="SimpleObject"/>
             </map>
         </constructor-arg>

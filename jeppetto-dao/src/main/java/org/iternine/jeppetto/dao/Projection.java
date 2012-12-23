@@ -63,4 +63,49 @@ public class Projection {
     public void setDetails(Object details) {
         this.details = details;
     }
+
+
+    //-------------------------------------------------------------
+    // Methods - Object
+    //-------------------------------------------------------------
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        Projection projection = (Projection) o;
+
+        return !(details != null ? !details.equals(projection.details) : projection.details != null)
+               && !(field != null ? !field.equals(projection.field) : projection.field != null);
+
+    }
+
+
+    @Override
+    public int hashCode() {
+        int result = field != null ? field.hashCode() : 0;
+
+        result = 31 * result + (details != null ? details.hashCode() : 0);
+
+        return result;
+    }
+
+
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder();
+
+        sb.append("Projection");
+        sb.append("{ field='").append(field).append('\'');
+        sb.append(", details=").append(details);
+        sb.append(" }");
+
+        return sb.toString();
+    }
 }

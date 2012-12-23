@@ -8,8 +8,12 @@
             <column name="id" type="VARCHAR(32)">
                 <constraints nullable="false" primaryKey="true"/>
             </column>
-            <column name="intValue" type="INT"/>
+            <column name="intValue" type="INT">
+                <constraints unique="true" nullable="false"/>
+            </column>
+            <column name="anotherIntValue" type="INT"/>
             <column name="longValue" type="BIGINT"/>
+            <column name="relatedObjectId" type="VARCHAR(32)"/>
         </createTable>
 
         <createTable tableName="RelatedObject">
@@ -20,6 +24,17 @@
             <column name="relatedStringValue" type="VARCHAR(255)"/>
             <column name="relatedIntValue" type="INT"/>
             <column name="simpleObjectId" type="VARCHAR(32)"/>
+        </createTable>
+
+        <createTable tableName="Strings">
+            <column name="simpleObjectId" type="VARCHAR(32)"/>
+            <column name="item" type="VARCHAR(255)"/>
+        </createTable>
+
+        <createTable tableName="StringMap">
+            <column name="simpleObjectId" type="VARCHAR(32)"/>
+            <column name="key" type="VARCHAR(255)"/>
+            <column name="item" type="VARCHAR(255)"/>
         </createTable>
     </changeSet>
 

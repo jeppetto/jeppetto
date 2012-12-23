@@ -42,6 +42,7 @@ import org.hibernate.NonUniqueObjectException;
 import org.hibernate.Query;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
+import org.hibernate.StaleObjectStateException;
 import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Order;
 import org.hibernate.criterion.ProjectionList;
@@ -162,7 +163,11 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
             throws OptimisticLockException, JeppettoException {
         try {
             getCurrentSession().saveOrUpdate(entity);
+
+            flush();
         } catch (org.hibernate.OptimisticLockException e) {
+            throw new OptimisticLockException(e);
+        } catch (StaleObjectStateException e) {
             throw new OptimisticLockException(e);
         } catch (HibernateException e) {
             throw new JeppettoException(e);

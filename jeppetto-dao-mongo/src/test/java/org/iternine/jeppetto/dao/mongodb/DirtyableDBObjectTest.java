@@ -20,8 +20,8 @@ package org.iternine.jeppetto.dao.mongodb;
 import org.iternine.jeppetto.dao.GenericDAO;
 import org.iternine.jeppetto.dao.NoSuchItemException;
 import org.iternine.jeppetto.dao.mongodb.enhance.DirtyableDBObject;
-import org.iternine.jeppetto.test.RelatedObject;
-import org.iternine.jeppetto.test.SimpleObject;
+import org.iternine.jeppetto.dao.test.RelatedObject;
+import org.iternine.jeppetto.dao.test.SimpleObject;
 import org.iternine.jeppetto.testsupport.MongoDatabaseProvider;
 import org.iternine.jeppetto.testsupport.TestContext;
 
@@ -55,12 +55,12 @@ public class DirtyableDBObjectTest {
 
     @Before
     public void setUp() {
-        testContext = new TestContext("MongoDAOTest.spring.xml",
+        testContext = new TestContext("MongoGenericDAOTest.spring.xml",
                                       "MongoDAOTest.properties",
                                       new MongoDatabaseProvider(false));
 
         //noinspection unchecked
-        simpleObjectDAO = (GenericDAO<SimpleObject, String>) testContext.getBean("simpleObjectMongoQueryModelDAO");
+        simpleObjectDAO = (GenericDAO<SimpleObject, String>) testContext.getBean("mongoGenericDAO");
     }
 
 

@@ -34,7 +34,7 @@
         <property name="dataSource" ref="dataSource"/>
         <property name="mappingResources">
             <list>
-                <value>HibernateAccessControlTest.hbm.xml</value>
+                <value>hbm/HibernateAccessControlTest.hbm.xml</value>
                 <value>AccessControlEntry.hbm.xml</value>
             </list>
         </property>
@@ -56,7 +56,6 @@
         </property>
     </bean>
 
-    <!-- TODO: Verify this transaction manager is appropriate for the service's needs -->
     <bean name="transactionManager" class="org.springframework.orm.hibernate3.HibernateTransactionManager">
         <property name="sessionFactory" ref="sessionFactory"/>
     </bean>
@@ -68,14 +67,14 @@
         <property name="proxyInterfaces">
             <list>
                 <bean class="java.lang.Class" factory-method="forName">
-                    <constructor-arg value="org.iternine.jeppetto.test.accesscontrol.DefaultAccessObjectDAO"/>
+                    <constructor-arg value="org.iternine.jeppetto.dao.test.accesscontrol.DefaultAccessObjectDAO"/>
                 </bean>
             </list>
         </property>
         <property name="target">
             <bean class="org.iternine.jeppetto.dao.DAOBuilder" factory-method="buildDAO">
-                <constructor-arg index="0" value="org.iternine.jeppetto.test.accesscontrol.DefaultAccessObject"/>
-                <constructor-arg index="1" value="org.iternine.jeppetto.test.accesscontrol.DefaultAccessObjectDAO"/>
+                <constructor-arg index="0" value="org.iternine.jeppetto.dao.test.accesscontrol.DefaultAccessObject"/>
+                <constructor-arg index="1" value="org.iternine.jeppetto.dao.test.accesscontrol.DefaultAccessObjectDAO"/>
                 <constructor-arg index="2" value="org.iternine.jeppetto.dao.hibernate.HibernateQueryModelDAO"/>
                 <constructor-arg index="3">
                     <map>
@@ -98,14 +97,14 @@
         <property name="proxyInterfaces">
             <list>
                 <bean class="java.lang.Class" factory-method="forName">
-                    <constructor-arg value="org.iternine.jeppetto.test.accesscontrol.IdentifiedCreatableObjectDAO"/>
+                    <constructor-arg value="org.iternine.jeppetto.dao.test.accesscontrol.IdentifiedCreatableObjectDAO"/>
                 </bean>
             </list>
         </property>
         <property name="target">
             <bean class="org.iternine.jeppetto.dao.DAOBuilder" factory-method="buildDAO">
-                <constructor-arg index="0" value="org.iternine.jeppetto.test.accesscontrol.IdentifiedCreatableObject"/>
-                <constructor-arg index="1" value="org.iternine.jeppetto.test.accesscontrol.IdentifiedCreatableObjectDAO"/>
+                <constructor-arg index="0" value="org.iternine.jeppetto.dao.test.accesscontrol.IdentifiedCreatableObject"/>
+                <constructor-arg index="1" value="org.iternine.jeppetto.dao.test.accesscontrol.IdentifiedCreatableObjectDAO"/>
                 <constructor-arg index="2" value="org.iternine.jeppetto.dao.hibernate.HibernateQueryModelDAO"/>
                 <constructor-arg index="3">
                     <map>
@@ -128,14 +127,14 @@
         <property name="proxyInterfaces">
             <list>
                 <bean class="java.lang.Class" factory-method="forName">
-                    <constructor-arg value="org.iternine.jeppetto.test.accesscontrol.RoleCreatableObjectDAO"/>
+                    <constructor-arg value="org.iternine.jeppetto.dao.test.accesscontrol.RoleCreatableObjectDAO"/>
                 </bean>
             </list>
         </property>
         <property name="target">
             <bean class="org.iternine.jeppetto.dao.DAOBuilder" factory-method="buildDAO">
-                <constructor-arg index="0" value="org.iternine.jeppetto.test.accesscontrol.RoleCreatableObject"/>
-                <constructor-arg index="1" value="org.iternine.jeppetto.test.accesscontrol.RoleCreatableObjectDAO"/>
+                <constructor-arg index="0" value="org.iternine.jeppetto.dao.test.accesscontrol.RoleCreatableObject"/>
+                <constructor-arg index="1" value="org.iternine.jeppetto.dao.test.accesscontrol.RoleCreatableObjectDAO"/>
                 <constructor-arg index="2" value="org.iternine.jeppetto.dao.hibernate.HibernateQueryModelDAO"/>
                 <constructor-arg index="3">
                     <map>

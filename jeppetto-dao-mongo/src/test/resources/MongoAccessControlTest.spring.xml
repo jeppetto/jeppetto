@@ -23,8 +23,8 @@
     <bean id="accessControlContextProvider" class="org.iternine.jeppetto.dao.SettableAccessControlContextProvider"/>
 
     <bean id="defaultAccessObjectDAO" class="org.iternine.jeppetto.dao.DAOBuilder" factory-method="buildDAO">
-        <constructor-arg index="0" value="org.iternine.jeppetto.test.accesscontrol.DefaultAccessObject"/>
-        <constructor-arg index="1" value="org.iternine.jeppetto.test.accesscontrol.DefaultAccessObjectDAO"/>
+        <constructor-arg index="0" value="org.iternine.jeppetto.dao.test.accesscontrol.DefaultAccessObject"/>
+        <constructor-arg index="1" value="org.iternine.jeppetto.dao.test.accesscontrol.DefaultAccessObjectDAO"/>
         <constructor-arg index="2" value="org.iternine.jeppetto.dao.mongodb.MongoDBQueryModelDAO"/>
         <constructor-arg index="3">
             <map>
@@ -38,8 +38,8 @@
 
 
     <bean id="identifiedCreatableObjectDAO" class="org.iternine.jeppetto.dao.DAOBuilder" factory-method="buildDAO">
-        <constructor-arg index="0" value="org.iternine.jeppetto.test.accesscontrol.IdentifiedCreatableObject"/>
-        <constructor-arg index="1" value="org.iternine.jeppetto.test.accesscontrol.IdentifiedCreatableObjectDAO"/>
+        <constructor-arg index="0" value="org.iternine.jeppetto.dao.test.accesscontrol.IdentifiedCreatableObject"/>
+        <constructor-arg index="1" value="org.iternine.jeppetto.dao.test.accesscontrol.IdentifiedCreatableObjectDAO"/>
         <constructor-arg index="2" value="org.iternine.jeppetto.dao.mongodb.MongoDBQueryModelDAO"/>
         <constructor-arg index="3">
             <map>
@@ -53,8 +53,8 @@
 
 
     <bean id="roleCreatableObjectDAO" class="org.iternine.jeppetto.dao.DAOBuilder" factory-method="buildDAO">
-        <constructor-arg index="0" value="org.iternine.jeppetto.test.accesscontrol.RoleCreatableObject"/>
-        <constructor-arg index="1" value="org.iternine.jeppetto.test.accesscontrol.RoleCreatableObjectDAO"/>
+        <constructor-arg index="0" value="org.iternine.jeppetto.dao.test.accesscontrol.RoleCreatableObject"/>
+        <constructor-arg index="1" value="org.iternine.jeppetto.dao.test.accesscontrol.RoleCreatableObjectDAO"/>
         <constructor-arg index="2" value="org.iternine.jeppetto.dao.mongodb.MongoDBQueryModelDAO"/>
         <constructor-arg index="3">
             <map>

@@ -21,8 +21,8 @@
     <!-- =================== Mongo DAOs =================== -->
 
     <bean id="noIdObjectDAO" class="org.iternine.jeppetto.dao.DAOBuilder" factory-method="buildDAO">
-        <constructor-arg index="0" value="org.iternine.jeppetto.test.NoIdObject"/>
-        <constructor-arg index="1" value="org.iternine.jeppetto.test.NoIdObjectDAO"/>
+        <constructor-arg index="0" value="org.iternine.jeppetto.dao.test.id.NoIdObject"/>
+        <constructor-arg index="1" value="org.iternine.jeppetto.dao.test.id.NoIdObjectDAO"/>
         <constructor-arg index="2" value="org.iternine.jeppetto.dao.mongodb.MongoDBQueryModelDAO"/>
         <constructor-arg index="3">
             <map>

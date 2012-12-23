@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC
+        "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+        "http://www.hibernate.org/dtd/hibernate-mapping-3.0.dtd">
+<hibernate-mapping package="org.iternine.jeppetto">
+
+    <class name="org.iternine.jeppetto.dao.test.SimpleObject" optimistic-lock="dirty" dynamic-update="true">
+        <id name="id" length="32">
+            <generator class="org.iternine.jeppetto.dao.hibernate.UUIDIdentifierGenerator"/>
+        </id>
+
+        <property name="intValue"/>
+        <property name="anotherIntValue"/>
+        <property name="longValue"/>
+
+        <many-to-one name="relatedObject" column="relatedObjectId" unique="true" not-null="false" cascade="all"/>
+
+        <bag name="relatedObjects" cascade="all" lazy="false">
+            <key column="simpleObjectId"/>
+            <one-to-many class="org.iternine.jeppetto.dao.test.RelatedObject"/>
+        </bag>
+
+        <set name="relatedObjectSet" cascade="all" lazy="false">
+            <key column="simpleObjectId"/>
+            <one-to-many class="org.iternine.jeppetto.dao.test.RelatedObject"/>
+        </set>
+
+        <map name="stringMap" table="StringMap" lazy="false" cascade="all" >
+            <key column="simpleObjectId"/>
+            <map-key type="string" column="key"/>
+            <element type="string" column="item"/>
+        </map>
+    </class>
+
+    <class name="org.iternine.jeppetto.dao.test.RelatedObject">
+        <id name="id" length="32">
+            <generator class="org.iternine.jeppetto.dao.hibernate.UUIDIdentifierGenerator"/>
+        </id>
+
+        <property name="relatedStringValue"/>
+        <property name="relatedIntValue"/>
+    </class>
+
+</hibernate-mapping>

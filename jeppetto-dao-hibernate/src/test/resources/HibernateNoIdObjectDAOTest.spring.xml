@@ -28,7 +28,7 @@
         <property name="dataSource" ref="dataSource"/>
         <property name="mappingResources">
             <list>
-                <value>HibernateNoIdObjectDAOTest.hbm.xml</value>
+                <value>hbm/HibernateNoIdObjectDAOTest.hbm.xml</value>
             </list>
         </property>
         <property name="hibernateProperties">
@@ -54,14 +54,14 @@
         <property name="proxyInterfaces">
             <list>
                 <bean class="java.lang.Class" factory-method="forName">
-                    <constructor-arg value="org.iternine.jeppetto.test.NoIdObjectDAO"/>
+                    <constructor-arg value="org.iternine.jeppetto.dao.test.id.NoIdObjectDAO"/>
                 </bean>
             </list>
         </property>
         <property name="target">
             <bean class="org.iternine.jeppetto.dao.DAOBuilder" factory-method="buildDAO">
-                <constructor-arg index="0" value="org.iternine.jeppetto.test.NoIdObject"/>
-                <constructor-arg index="1" value="org.iternine.jeppetto.test.NoIdObjectDAO"/>
+                <constructor-arg index="0" value="org.iternine.jeppetto.dao.test.id.NoIdObject"/>
+                <constructor-arg index="1" value="org.iternine.jeppetto.dao.test.id.NoIdObjectDAO"/>
                 <constructor-arg index="2" value="org.iternine.jeppetto.dao.hibernate.HibernateQueryModelDAO"/>
                 <constructor-arg index="3">
                     <map>

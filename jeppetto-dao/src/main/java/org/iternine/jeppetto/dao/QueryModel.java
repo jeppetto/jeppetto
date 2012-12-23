@@ -101,6 +101,7 @@ public class QueryModel {
         sorts.add(new Sort(sortField, sortDirection));
     }
 
+
     public Projection getProjection() {
         return projection;
     }
@@ -138,5 +139,64 @@ public class QueryModel {
 
     public void setAccessControlContext(AccessControlContext accessControlContext) {
         this.accessControlContext = accessControlContext;
+    }
+
+
+    //-------------------------------------------------------------
+    // Methods - Object
+    //-------------------------------------------------------------
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        QueryModel that = (QueryModel) o;
+
+        return firstResult == that.firstResult
+               && maxResults == that.maxResults
+               && !(accessControlContext != null ? !accessControlContext.equals(that.accessControlContext) : that.accessControlContext != null)
+               && !(associationConditions != null ? !associationConditions.equals(that.associationConditions) : that.associationConditions != null)
+               && !(conditions != null ? !conditions.equals(that.conditions) : that.conditions != null)
+               && !(projection != null ? !projection.equals(that.projection) : that.projection != null)
+               && !(sorts != null ? !sorts.equals(that.sorts) : that.sorts != null);
+    }
+
+
+    @Override
+    public int hashCode() {
+        int result = conditions != null ? conditions.hashCode() : 0;
+
+        result = 31 * result + (associationConditions != null ? associationConditions.hashCode() : 0);
+        result = 31 * result + (sorts != null ? sorts.hashCode() : 0);
+        result = 31 * result + (projection != null ? projection.hashCode() : 0);
+        result = 31 * result + maxResults;
+        result = 31 * result + firstResult;
+        result = 31 * result + (accessControlContext != null ? accessControlContext.hashCode() : 0);
+
+        return result;
+    }
+
+
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder();
+
+        sb.append("QueryModel {");
+        sb.append("\n  conditions=").append(conditions);
+        sb.append("\n  associationConditions=").append(associationConditions);
+        sb.append("\n  sorts=").append(sorts);
+        sb.append("\n  projection=").append(projection);
+        sb.append("\n  maxResults=").append(maxResults);
+        sb.append("\n  firstResult=").append(firstResult);
+        sb.append("\n  accessControlContext=").append(accessControlContext);
+        sb.append("\n}");
+
+        return sb.toString();
     }
 }
