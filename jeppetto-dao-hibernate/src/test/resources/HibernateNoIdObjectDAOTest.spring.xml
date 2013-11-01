@@ -24,7 +24,7 @@
 
     <!-- =================== SessionFactory =================== -->
 
-    <bean id="sessionFactory" class="org.springframework.orm.hibernate3.LocalSessionFactoryBean" depends-on="liquibase">
+    <bean id="sessionFactory" class="org.springframework.orm.hibernate4.LocalSessionFactoryBean" depends-on="liquibase">
         <property name="dataSource" ref="dataSource"/>
         <property name="mappingResources">
             <list>
@@ -43,7 +43,7 @@
         </property>
     </bean>
 
-    <bean name="transactionManager" class="org.springframework.orm.hibernate3.HibernateTransactionManager">
+    <bean name="transactionManager" class="org.springframework.orm.hibernate4.HibernateTransactionManager">
         <property name="sessionFactory" ref="sessionFactory"/>
     </bean>
 

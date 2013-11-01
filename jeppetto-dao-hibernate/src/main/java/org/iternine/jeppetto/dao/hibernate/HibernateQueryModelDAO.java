@@ -17,6 +17,9 @@
 package org.iternine.jeppetto.dao.hibernate;
 
 
+import org.hibernate.engine.spi.SessionFactoryImplementor;
+import org.hibernate.engine.spi.TypedValue;
+import org.hibernate.internal.CriteriaImpl;
 import org.iternine.jeppetto.dao.AccessControlContext;
 import org.iternine.jeppetto.dao.AccessControlContextProvider;
 import org.iternine.jeppetto.dao.AccessControlDAO;
@@ -48,9 +51,6 @@ import org.hibernate.criterion.Order;
 import org.hibernate.criterion.ProjectionList;
 import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
-import org.hibernate.engine.SessionFactoryImplementor;
-import org.hibernate.engine.TypedValue;
-import org.hibernate.impl.CriteriaImpl;
 import org.hibernate.loader.criteria.CriteriaQueryTranslator;
 import org.hibernate.type.StringType;
 
