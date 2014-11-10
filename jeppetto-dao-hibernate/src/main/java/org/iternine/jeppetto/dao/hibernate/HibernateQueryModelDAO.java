@@ -24,6 +24,7 @@ import org.iternine.jeppetto.dao.AccessControlException;
 import org.iternine.jeppetto.dao.AccessType;
 import org.iternine.jeppetto.dao.Condition;
 import org.iternine.jeppetto.dao.ConditionType;
+import org.iternine.jeppetto.dao.FailedBatchDeleteException;
 import org.iternine.jeppetto.dao.JeppettoException;
 import org.iternine.jeppetto.dao.NoSuchItemException;
 import org.iternine.jeppetto.dao.OptimisticLockException;
@@ -53,6 +54,8 @@ import org.hibernate.engine.TypedValue;
 import org.hibernate.impl.CriteriaImpl;
 import org.hibernate.loader.criteria.CriteriaQueryTranslator;
 import org.hibernate.type.StringType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -89,6 +92,8 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
     private AccessControlHelper accessControlHelper;
     private AccessControlContextProvider accessControlContextProvider;
     private String idField = "id";      // TODO: Allow for configuration...
+
+    private static final Logger logger = LoggerFactory.getLogger(HibernateQueryModelDAO.class);
 
 
     //-------------------------------------------------------------
@@ -201,9 +206,21 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
 
     @Override
     public void deleteByIds(ID... ids)
-            throws JeppettoException {
+            throws FailedBatchDeleteException, JeppettoException {
+        List<ID> failedDeletes = new ArrayList<ID>();
+
         for (ID id : ids) {
-            deleteById(id);
+            try {
+                deleteById(id);
+            } catch (Exception e) {
+                logger.warn("Failed to delete item with id = " + id, e);
+
+                failedDeletes.add(id);
+            }
+        }
+
+        if (failedDeletes.size() > 0) {
+            throw new FailedBatchDeleteException(failedDeletes);
         }
     }
 

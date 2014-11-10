@@ -37,7 +37,7 @@ public interface DynamicDAO extends GenericDAO<SimpleObject, String> {
     List<SimpleObject> findByIntValueAndAnotherIntValueGreaterThan(int intValue, int anotherIntValue);
 
 
-    SimpleObject findByIntValueHavingRelatedObjectWithRelatedIntValue(int intValue, int relatedIntValue);
+    SimpleObject findByHavingRelatedObjectWithRelatedIntValue(int relatedIntValue);
 
 
     List<SimpleObject> findByOrderByIntValueDesc();

@@ -20,6 +20,7 @@ package org.iternine.jeppetto.dao.jdbc;
 import org.iternine.jeppetto.dao.AccessControlContextProvider;
 import org.iternine.jeppetto.dao.Condition;
 import org.iternine.jeppetto.dao.ConditionType;
+import org.iternine.jeppetto.dao.FailedBatchDeleteException;
 import org.iternine.jeppetto.dao.JeppettoException;
 import org.iternine.jeppetto.dao.NoSuchItemException;
 import org.iternine.jeppetto.dao.OptimisticLockException;
@@ -35,6 +36,9 @@ import org.iternine.jeppetto.dao.id.IdGenerator;
 import org.iternine.jeppetto.dao.jdbc.enhance.EnhancerHelper;
 import org.iternine.jeppetto.dao.jdbc.enhance.JDBCPersistable;
 import org.iternine.jeppetto.enhance.Enhancer;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.sql.DataSource;
 
@@ -81,6 +85,8 @@ public class JDBCQueryModelDAO<T, ID>
     private DataSource dataSource;
     private IdGenerator<ID> idGenerator;
     private AccessControlContextProvider accessControlContextProvider;
+
+    private static final Logger logger = LoggerFactory.getLogger(JDBCQueryModelDAO.class);
 
 
     //-------------------------------------------------------------
@@ -188,9 +194,21 @@ public class JDBCQueryModelDAO<T, ID>
 
     @Override
     public void deleteByIds(ID... ids)
-            throws JeppettoException {
+            throws FailedBatchDeleteException, JeppettoException {
+        List<ID> failedDeletes = new ArrayList<ID>();
+
         for (ID id : ids) {
-            deleteById(id);
+            try {
+                deleteById(id);
+            } catch (Exception e) {
+                logger.warn("Failed to delete item with id = " + id, e);
+
+                failedDeletes.add(id);
+            }
+        }
+
+        if (failedDeletes.size() > 0) {
+            throw new FailedBatchDeleteException(failedDeletes);
         }
     }
 

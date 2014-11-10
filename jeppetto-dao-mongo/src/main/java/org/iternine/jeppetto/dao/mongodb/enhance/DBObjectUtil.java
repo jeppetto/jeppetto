@@ -22,7 +22,6 @@ import org.iternine.jeppetto.enhance.Enhancer;
 
 import com.mongodb.BasicDBObject;
 import com.mongodb.DBObject;
-import com.mongodb.DBPointer;
 import com.mongodb.DBRefBase;
 import org.bson.types.ObjectId;
 
@@ -52,6 +51,7 @@ public class DBObjectUtil {
     //-------------------------------------------------------------
 
     static {
+        //noinspection unchecked
         Collections.addAll(NO_CONVERSION_CLASSES,
                            Date.class,
                            boolean.class,
@@ -76,7 +76,6 @@ public class DBObjectUtil {
                            Double.class,
                            Pattern.class,
                            byte[].class,
-                           DBPointer.class,
                            DBRefBase.class,
                            ObjectId.class);
     }
@@ -162,6 +161,7 @@ public class DBObjectUtil {
             || DirtyableDBObject.class.isAssignableFrom(object.getClass())) {
             return object;
         } else if (Map.class.isAssignableFrom(object.getClass())) {
+            //noinspection unchecked
             return new DirtyableDBObjectMap((Map) object);
         } else if (List.class.isAssignableFrom(object.getClass())) {
             return new DirtyableDBObjectList((List) object, true);

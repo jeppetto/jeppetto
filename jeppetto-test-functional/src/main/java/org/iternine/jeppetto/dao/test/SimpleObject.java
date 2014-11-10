@@ -17,6 +17,8 @@
 package org.iternine.jeppetto.dao.test;
 
 
+import org.iternine.jeppetto.dao.annotation.Transient;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -43,6 +45,7 @@ public class SimpleObject {
     private Map<String, String> stringMap;
     private Set<String> stringSet;
     private SimpleEnum simpleEnum;
+    private int transientValue;
 
 
     //-------------------------------------------------------------
@@ -170,6 +173,17 @@ public class SimpleObject {
     }
 
 
+    @Transient
+    public int getTransientValue() {
+        return transientValue;
+    }
+
+
+    public void setTransientValue(int transientValue) {
+        this.transientValue = transientValue;
+    }
+
+
     public void addToStringList(String string) {
         if (stringList == null) {
             stringList = new ArrayList<String>();
@@ -243,9 +257,12 @@ public class SimpleObject {
         sb.append("SimpleObject");
         sb.append("{id='").append(id).append('\'');
         sb.append(", intValue=").append(intValue);
+        sb.append(", anotherIntValue=").append(anotherIntValue);
+        sb.append(", longValue=").append(longValue);
         sb.append(", relatedObject=").append(relatedObject);
         sb.append(", relatedObjects=").append(relatedObjects);
         sb.append(", relatedObjectMap=").append(relatedObjectMap);
+        sb.append(", stringList=").append(stringList);
         sb.append(", stringMap=").append(stringMap);
         sb.append(", stringSet=").append(stringSet);
         sb.append(", simpleEnum=").append(simpleEnum);

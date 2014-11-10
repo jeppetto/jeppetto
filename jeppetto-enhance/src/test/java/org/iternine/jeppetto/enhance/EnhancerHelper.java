@@ -17,6 +17,9 @@
 package org.iternine.jeppetto.enhance;
 
 
+import javassist.CtMethod;
+
+
 public class EnhancerHelper {
 
     //-------------------------------------------------------------
@@ -65,6 +68,12 @@ public class EnhancerHelper {
         @Override
         protected String getTemplateLocation() {
             return "snapshot.vm";
+        }
+
+
+        @Override
+        protected boolean shouldEnhanceMethod(CtMethod method) {
+            return true;
         }
     }
 }

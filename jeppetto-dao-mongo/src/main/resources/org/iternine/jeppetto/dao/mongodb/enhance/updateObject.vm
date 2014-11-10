@@ -22,7 +22,7 @@ public $_.cls("${baseName}$UpdateObject").ext($base).impl("org.iternine.jeppetto
 
     #foreach ( $getter in $getters )
     #set( $getterName = $getter.getName() )
-    #set( $key = $_.keyFor($getterName) )
+    #set( $key = $_.fieldFor($getterName) )
     #set( $setterName = $_.asSetter($getter) )
     #set ( $returnType = $_.returnTypeOf($getter) )
     #set ( $returnTypeName = $returnType.getName() )

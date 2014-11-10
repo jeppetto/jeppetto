@@ -46,16 +46,12 @@ public class TestContext {
     //-------------------------------------------------------------
 
     public TestContext(String configurationFilename, String propertiesFilename) {
-
         this(configurationFilename, propertiesFilename, (String) null);
     }
 
 
-    public TestContext(String configurationFilename, String propertiesFilename,
-                       String driverClassNameProperty) {
-
-        this(configurationFilename,
-             propertiesFilename,
+    public TestContext(String configurationFilename, String propertiesFilename, String driverClassNameProperty) {
+        this(configurationFilename, propertiesFilename,
              (driverClassNameProperty == null) ? null : new DatabaseProvider[] { new JdbcDatabaseProvider(driverClassNameProperty) }
         );
     }

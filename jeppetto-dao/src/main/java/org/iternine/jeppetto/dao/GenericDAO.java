@@ -106,10 +106,12 @@ public interface GenericDAO<T, ID> {
      *
      * @param ids of the objects to delete.
      *
+     * @throws FailedBatchDeleteException if some (or all) of the ids were not successfully deleted.  The exception
+     *                                    contains a list of the ids that failed to delete.
      * @throws JeppettoException if any underlying failure occurs
      */
     void deleteByIds(ID... ids)
-            throws JeppettoException;
+            throws FailedBatchDeleteException, JeppettoException;
 
 
     /**

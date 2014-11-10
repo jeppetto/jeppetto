@@ -104,18 +104,28 @@ public abstract class DynamicDAOTest {
 
     @Test
     public void findByRelatedValue() {
-        RelatedObject relatedObject = new RelatedObject();
-        relatedObject.setRelatedIntValue(20);
+        RelatedObject relatedObject1 = new RelatedObject();
+        relatedObject1.setRelatedIntValue(20);
 
-        SimpleObject newOne = new SimpleObject();
-        newOne.setIntValue(1);
-        newOne.setRelatedObject(relatedObject);
+        SimpleObject simpleObject1 = new SimpleObject();
+        simpleObject1.setIntValue(1);
+        simpleObject1.setRelatedObject(relatedObject1);
 
-        getDynamicDAO().save(newOne);
+        getDynamicDAO().save(simpleObject1);
 
-        SimpleObject result = getDynamicDAO().findByIntValueHavingRelatedObjectWithRelatedIntValue(1, 20);
+        RelatedObject relatedObject2 = new RelatedObject();
+        relatedObject2.setRelatedIntValue(30);
 
-        Assert.assertEquals(newOne.getId(), result.getId());
+        SimpleObject simpleObject2 = new SimpleObject();
+        simpleObject1.setIntValue(2);
+        simpleObject2.setRelatedObject(relatedObject2);
+
+        getDynamicDAO().save(simpleObject2);
+
+        SimpleObject result = getDynamicDAO().findByHavingRelatedObjectWithRelatedIntValue(20);
+
+        Assert.assertEquals(1, result.getIntValue());
+        Assert.assertEquals(20, result.getRelatedObject().getRelatedIntValue());
     }
 
 
@@ -146,11 +156,21 @@ public abstract class DynamicDAOTest {
         simpleObject.setIntValue(2);
         getDynamicDAO().save(simpleObject);
 
+        simpleObject = new SimpleObject();
+        simpleObject.setIntValue(3);
+        getDynamicDAO().save(simpleObject);
+
+        simpleObject = new SimpleObject();
+        simpleObject.setIntValue(4);
+        getDynamicDAO().save(simpleObject);
+
         List<SimpleObject> result = getDynamicDAO().findByOrderByIntValueDesc();
 
-        Assert.assertEquals(2, result.size());
-        Assert.assertEquals(2, result.get(0).getIntValue());
-        Assert.assertEquals(1, result.get(1).getIntValue());
+        Assert.assertEquals(4, result.size());
+        Assert.assertEquals(4, result.get(0).getIntValue());
+        Assert.assertEquals(3, result.get(1).getIntValue());
+        Assert.assertEquals(2, result.get(2).getIntValue());
+        Assert.assertEquals(1, result.get(3).getIntValue());
     }
 
 
@@ -195,8 +215,7 @@ public abstract class DynamicDAOTest {
     public void findAndSortReturnIterable() {
         createData();
 
-        Iterable<SimpleObject> results = getDynamicDAO().findByHavingRelatedObjectsWithRelatedIntValueLessThanOrderByIntValue(
-                19);
+        Iterable<SimpleObject> results = getDynamicDAO().findByHavingRelatedObjectsWithRelatedIntValueLessThanOrderByIntValue(19);
         Iterator<SimpleObject> i = results.iterator();
 
         assertTrue(i.hasNext());
@@ -211,8 +230,7 @@ public abstract class DynamicDAOTest {
     public void limit() {
         createData();
 
-        List<SimpleObject> results = getDynamicDAO().findByHavingRelatedObjectsWithRelatedIntValueLessThanOrderByIntValueAndLimit(
-                19, 1);
+        List<SimpleObject> results = getDynamicDAO().findByHavingRelatedObjectsWithRelatedIntValueLessThanOrderByIntValueAndLimit(19, 1);
 
         assertEquals(1, results.size());
         assertEquals(2, results.get(0).getIntValue());

@@ -330,11 +330,8 @@ class MongoDBSession {
         getCache(mongoDBQueryModelDAO.getDbCollection().getName()).clear();
 
         contextLogger.debug("{} flushed {}s in {}ms. (save={}, delete={})",
-                            new Object[] { contextName,
-                                           mongoDBQueryModelDAO.getCollectionClass().getSimpleName(),
-                                           TimeUnit.NANOSECONDS.toMillis(dirtyCheckCost),
-                                           saveCount,
-                                           deleteCount } );
+                            contextName, mongoDBQueryModelDAO.getCollectionClass().getSimpleName(),
+                            TimeUnit.NANOSECONDS.toMillis(dirtyCheckCost), saveCount, deleteCount);
     }
 
 

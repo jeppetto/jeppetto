@@ -13,7 +13,7 @@
         <property name="anotherIntValue"/>
         <property name="longValue"/>
 
-        <many-to-one name="relatedObject" column="relatedObjectId" unique="true" not-null="false" cascade="all"/>
+        <many-to-one name="relatedObject" column="relatedObjectId" unique="true" not-null="false" cascade="all" lazy="false"/>
 
         <bag name="relatedObjects" cascade="all" lazy="false">
             <key column="simpleObjectId"/>
@@ -30,6 +30,23 @@
             <map-key type="string" column="key"/>
             <element type="string" column="item"/>
         </map>
+
+        <property name="simpleEnum">
+            <type name="org.hibernate.type.EnumType">
+                <param name="enumClass">org.iternine.jeppetto.dao.test.SimpleEnum</param>
+                <param name="type">12</param>
+            </type>
+        </property>
+
+        <bag name="stringList" table="Strings" cascade="all" lazy="false">
+            <key column="simpleObjectId"/>
+            <element type="string" column="item"/>
+        </bag>
+
+        <set name="stringSet" table="Strings" cascade="all" lazy="false">
+            <key column="simpleObjectId"/>
+            <element type="string" column="item"/>
+        </set>
     </class>
 
     <class name="org.iternine.jeppetto.dao.test.RelatedObject">

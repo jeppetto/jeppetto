@@ -15,7 +15,7 @@ public $_.cls("${baseName}$JDBCPersistable").ext($base).impl("org.iternine.jeppe
     $_.field("private final java.util.Map __originalValues = new java.util.HashMap();")
 
     $_.field("private static final String SQL_INSERT = ${Q}INSERT INTO $base.getSimpleName() ${Q}
-                + ${Q}(#foreach( $getter in $getters ) $_.keyFor($getter.getName())#if( $velocityHasNext ),#end #end) ${Q}
+                + ${Q}(#foreach( $getter in $getters ) $_.fieldFor($getter.getName())#if( $velocityHasNext ),#end #end) ${Q}
                 + ${Q}VALUES (#foreach( $getter in $getters ) ?#if( $velocityHasNext ),#end #end) ${Q};")
     $_.field("private static final String SQL_DELETE = ${Q}DELETE FROM $base.getSimpleName() WHERE id = ?${Q};")
 
@@ -41,7 +41,7 @@ public $_.cls("${baseName}$JDBCPersistable").ext($base).impl("org.iternine.jeppe
 
     #foreach ( $getter in $getters )
     #set( $getterName = $getter.getName() )
-    #set( $key = $_.keyFor($getterName) )
+    #set( $key = $_.fieldFor($getterName) )
     #set( $setterName = $_.asSetter($getter) )
     #set( $returnType = $getter.getReturnType().getName() )
 
@@ -78,7 +78,7 @@ public $_.cls("${baseName}$JDBCPersistable").ext($base).impl("org.iternine.jeppe
     public void populateObject(java.sql.ResultSet resultSet) {
         #foreach( $getter in $getters )
         #set( $getterName = $getter.getName() )
-        #set( $key = $_.keyFor($getterName) )
+        #set( $key = $_.fieldFor($getterName) )
         #set( $setterName = $_.asSetter($getter) )
         #set( $returnType = $getter.getReturnType().getName() )
 

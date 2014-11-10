@@ -24,6 +24,7 @@ import org.iternine.jeppetto.dao.AccessControlDAO;
 import org.iternine.jeppetto.dao.AccessType;
 import org.iternine.jeppetto.dao.Condition;
 import org.iternine.jeppetto.dao.ConditionType;
+import org.iternine.jeppetto.dao.FailedBatchDeleteException;
 import org.iternine.jeppetto.dao.JeppettoException;
 import org.iternine.jeppetto.dao.NoSuchItemException;
 import org.iternine.jeppetto.dao.OptimisticLockException;
@@ -55,6 +56,7 @@ import com.mongodb.DBCursor;
 import com.mongodb.DBDecoder;
 import com.mongodb.DBDecoderFactory;
 import com.mongodb.DBObject;
+import com.mongodb.DuplicateKeyException;
 import com.mongodb.MongoException;
 import com.mongodb.WriteConcern;
 import org.bson.types.ObjectId;
@@ -331,7 +333,7 @@ public class MongoDBQueryModelDAO<T, ID>
 
     @Override
     public void deleteByIds(ID... ids)
-            throws JeppettoException {
+            throws FailedBatchDeleteException, JeppettoException {
         QueryModel queryModel = new QueryModel();
         queryModel.addCondition(buildIdCondition(Arrays.asList(ids)));
 
@@ -377,7 +379,7 @@ public class MongoDBQueryModelDAO<T, ID>
 
         if (queryLogger != null) {
             queryLogger.debug("Reference-based update of {} identified by {} with document {}",
-                              new Object[] { getCollectionClass().getSimpleName(), identifyingQuery.toMap(), updateClause.toMap() } );
+                              getCollectionClass().getSimpleName(), identifyingQuery.toMap(), updateClause.toMap());
         }
 
         try {
@@ -849,15 +851,13 @@ public class MongoDBQueryModelDAO<T, ID>
         }
 
         if (queryLogger != null) {
-            queryLogger.debug("Saving {} identified by {} with document {}",
-                              new Object[] { getCollectionClass().getSimpleName(),
-                                             identifyingQuery.toMap(),
-                                             optimalDbo.toMap() } );
+            queryLogger.debug("Saving {} identified by {} with document {}", getCollectionClass().getSimpleName(),
+                              identifyingQuery.toMap(), optimalDbo.toMap());
         }
 
         try {
             dbCollection.update(identifyingQuery, optimalDbo, true, false, getWriteConcern());
-        } catch (MongoException.DuplicateKey e) {
+        } catch (DuplicateKeyException e) {
             if (optimisticLockEnabled && e.getMessage().contains("$_id_")) {
                 Integer localOptimisticLockVersion = (Integer) dbo.get(OPTIMISTIC_LOCK_VERSION_FIELD) - 1;
 
@@ -992,6 +992,7 @@ public class MongoDBQueryModelDAO<T, ID>
             }
 
             try {
+                //noinspection unchecked
                 clazz.getMethod("set".concat(upperCaseFieldName), method.getReturnType());
             } catch (NoSuchMethodException e) {
                 continue;
@@ -1077,45 +1078,43 @@ public class MongoDBQueryModelDAO<T, ID>
     }
 
 
-    private Map<String, Set<String>> ensureIndexes(List<String> uniqueIndexes, final boolean unique) {
-        if (uniqueIndexes == null || uniqueIndexes.size() == 0) {
+    private Map<String, Set<String>> ensureIndexes(List<String> indexes, final boolean unique) {
+        if (indexes == null || indexes.size() == 0) {
             return Collections.emptyMap();
         }
 
         Map<String, Set<String>> result = new HashMap<String, Set<String>>();
 
-        for (final String uniqueIndex : uniqueIndexes) {
-            final DBObject index = new BasicDBObject();
-            String[] indexFields = uniqueIndex.split(",");
+        BasicDBObject options = new BasicDBObject();
+        options.put("unique", unique);
+        options.put("background", Boolean.TRUE);
+
+        for (final String index : indexes) {
+            final DBObject keys = new BasicDBObject();
+            String[] indexFields = index.split(",");
 
             for (String indexField : indexFields) {
                 indexField = indexField.trim();
 
                 if (indexField.startsWith("+")) {
-                    index.put(indexField.substring(1), 1);
+                    keys.put(indexField.substring(1), 1);
                 } else if (indexField.startsWith("-")) {
-                    index.put(indexField.substring(1), -1);
+                    keys.put(indexField.substring(1), -1);
                 } else {
-                    index.put(indexField, 1);
+                    keys.put(indexField, 1);
                 }
             }
 
-            result.put(uniqueIndex, index.keySet());
+            result.put(index, keys.keySet());
 
             if (queryLogger != null) {
-                queryLogger.debug("Ensuring index {} on {}",
-                                  new Object[] { index.toMap(), getCollectionClass().getSimpleName() } );
+                queryLogger.debug("Ensuring index {} on {}", keys.toMap(), getCollectionClass().getSimpleName());
             }
 
-            dbCollection.ensureIndex(index, createIndexName(uniqueIndex), unique);
+            dbCollection.createIndex(keys, options);
         }
 
         return result;
-    }
-
-
-    private String createIndexName(String indexSpec) {
-        return indexSpec.replace(',', '-');
     }
 
 

@@ -101,7 +101,7 @@ public abstract class ReferenceSetDAOTest {
         getSimpleObjectReferencesDAO().save(simpleObject2);
 
         ReferenceSet<SimpleObject> referenceSet = getSimpleObjectReferencesDAO().referenceByIds(simpleObject1.getId(),
-                                                                                      simpleObject2.getId());
+                                                                                                simpleObject2.getId());
         SimpleObject updateObject = referenceSet.getUpdateObject();
         updateObject.setLongValue(Long.MAX_VALUE);
         updateObject.setAnotherIntValue(999);

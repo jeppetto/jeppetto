@@ -68,7 +68,7 @@ abstract class MapReduceCommand
 
     @Override
     public String toString() {
-        return new StringBuilder(super.toString()).append(' ').append(DBObjectUtil.toDBObject(query.toMap())).toString();
+        return super.toString() + ' ' + DBObjectUtil.toDBObject(query.toMap());
     }
 
 

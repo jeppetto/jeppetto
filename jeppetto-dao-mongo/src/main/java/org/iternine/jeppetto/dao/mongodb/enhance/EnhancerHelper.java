@@ -17,9 +17,9 @@
 package org.iternine.jeppetto.dao.mongodb.enhance;
 
 
+import org.iternine.jeppetto.dao.EntityVelocityEnhancer;
 import org.iternine.jeppetto.enhance.Enhancer;
 import org.iternine.jeppetto.enhance.NoOpEnhancer;
-import org.iternine.jeppetto.enhance.VelocityEnhancer;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -64,7 +64,7 @@ public class EnhancerHelper {
 
                 dirtyableDBObjectEnhancers.put(baseClass, enhancer);
             } else {
-                enhancer = new VelocityEnhancer<T>(baseClass) {
+                enhancer = new EntityVelocityEnhancer<T>(baseClass) {
                     //-------------------------------------------------------------
                     // Implementation - Enhancer
                     //-------------------------------------------------------------
@@ -121,7 +121,7 @@ public class EnhancerHelper {
                 Map<String, Object> contextItems = new HashMap<String, Object>();
                 contextItems.put("updateObjectHelper", new UpdateObjectHelper());
 
-                enhancer = new VelocityEnhancer<T>(baseClass, contextItems) {
+                enhancer = new EntityVelocityEnhancer<T>(baseClass, contextItems) {
                     //-------------------------------------------------------------
                     // Implementation - Enhancer
                     //-------------------------------------------------------------

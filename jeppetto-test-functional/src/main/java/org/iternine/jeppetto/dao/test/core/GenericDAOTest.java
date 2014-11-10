@@ -21,15 +21,19 @@ import org.iternine.jeppetto.dao.GenericDAO;
 import org.iternine.jeppetto.dao.JeppettoException;
 import org.iternine.jeppetto.dao.NoSuchItemException;
 import org.iternine.jeppetto.dao.test.RelatedObject;
+import org.iternine.jeppetto.dao.test.SimpleEnum;
 import org.iternine.jeppetto.dao.test.SimpleObject;
 
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 
 public abstract class GenericDAOTest {
@@ -58,7 +62,8 @@ public abstract class GenericDAOTest {
     //-------------------------------------------------------------
 
     @Test
-    public void findById() throws NoSuchItemException {
+    public void findById()
+            throws NoSuchItemException {
         SimpleObject simpleObject = new SimpleObject();
 
         getGenericDAO().save(simpleObject);
@@ -77,7 +82,93 @@ public abstract class GenericDAOTest {
 
 
     @Test
-    public void saveAndFindWithMapOfStringToString() throws NoSuchItemException {
+    public void saveAndFindWithBasicFields()
+            throws NoSuchItemException {
+        SimpleObject simpleObject = new SimpleObject();
+        simpleObject.setIntValue(5);
+        simpleObject.setLongValue(100l);
+        simpleObject.setSimpleEnum(SimpleEnum.EnumValue);
+
+        getGenericDAO().save(simpleObject);
+
+        SimpleObject resultObject = getGenericDAO().findById(simpleObject.getId());
+
+        assertEquals(resultObject.getId(), simpleObject.getId());
+        assertEquals(5, resultObject.getIntValue());
+        assertEquals(100l, resultObject.getLongValue());
+        assertEquals(SimpleEnum.EnumValue, resultObject.getSimpleEnum());
+    }
+
+
+    @Test
+    public void saveAndUpdateBasicFields()
+            throws NoSuchItemException {
+        SimpleObject simpleObject = new SimpleObject();
+        simpleObject.setIntValue(5);
+        simpleObject.setLongValue(100l);
+        simpleObject.setSimpleEnum(SimpleEnum.EnumValue);
+
+        getGenericDAO().save(simpleObject);
+
+        SimpleObject resultObject = getGenericDAO().findById(simpleObject.getId());
+
+        resultObject.setIntValue(10);
+
+        getGenericDAO().save(resultObject);
+
+        resultObject = getGenericDAO().findById(simpleObject.getId());
+
+        assertEquals(resultObject.getId(), simpleObject.getId());
+        assertEquals(10, resultObject.getIntValue());
+        assertEquals(100l, resultObject.getLongValue());
+        assertEquals(SimpleEnum.EnumValue, resultObject.getSimpleEnum());
+    }
+
+
+    @Test
+    public void saveAndFindWithStringList()
+            throws NoSuchItemException {
+        SimpleObject simpleObject = new SimpleObject();
+        simpleObject.setStringList(new ArrayList<String>());
+        simpleObject.getStringList().add("foo");
+        simpleObject.getStringList().add("bar");
+        simpleObject.getStringList().add("bar");
+
+        getGenericDAO().save(simpleObject);
+
+        SimpleObject resultObject = getGenericDAO().findById(simpleObject.getId());
+
+        assertNotNull(resultObject.getStringList());
+        assertEquals(3, resultObject.getStringList().size());
+        assertEquals("foo", resultObject.getStringList().get(0));
+        assertEquals("bar", resultObject.getStringList().get(1));
+        assertEquals("bar", resultObject.getStringList().get(2));
+    }
+
+
+    @Test
+    public void saveAndFindWithStringSet()
+            throws NoSuchItemException {
+        SimpleObject simpleObject = new SimpleObject();
+        simpleObject.setStringSet(new HashSet<String>());
+        simpleObject.getStringSet().add("foo");
+        simpleObject.getStringSet().add("bar");
+        simpleObject.getStringSet().add("bar");
+
+        getGenericDAO().save(simpleObject);
+
+        SimpleObject resultObject = getGenericDAO().findById(simpleObject.getId());
+
+        assertNotNull(resultObject.getStringSet());
+        assertEquals(2, resultObject.getStringSet().size());
+        assertTrue(resultObject.getStringSet().contains("foo"));
+        assertTrue(resultObject.getStringSet().contains("bar"));
+    }
+
+
+    @Test
+    public void saveAndFindWithStringMap()
+            throws NoSuchItemException {
         SimpleObject simpleObject = new SimpleObject();
         simpleObject.setStringMap(new HashMap<String, String>());
         simpleObject.getStringMap().put("foo", "bar");
@@ -86,6 +177,7 @@ public abstract class GenericDAOTest {
 
         SimpleObject resultObject = getGenericDAO().findById(simpleObject.getId());
 
+        assertNotNull(resultObject.getStringMap());
         assertEquals("bar", resultObject.getStringMap().get("foo"));
     }
 
@@ -113,10 +205,36 @@ public abstract class GenericDAOTest {
         RelatedObject[] objects = resultObject.getRelatedObjects().toArray(new RelatedObject[1]);
         assertEquals(relatedObject.getRelatedIntValue(), objects[0].getRelatedIntValue());
         assertEquals(relatedObject.getRelatedIntValue(), resultObject.getRelatedObject().getRelatedIntValue());
-        Assert.assertTrue(simpleObject.getRelatedObjectMap().containsKey("foo"));
-        Assert.assertTrue(simpleObject.getRelatedObjectMap().containsKey("bar"));
+        assertTrue(simpleObject.getRelatedObjectMap().containsKey("foo"));
+        assertTrue(simpleObject.getRelatedObjectMap().containsKey("bar"));
         assertEquals(simpleObject.getRelatedObjectMap().get("foo").getRelatedIntValue(),
                      simpleObject.getRelatedObjectMap().get("bar").getRelatedIntValue());
+    }
+
+
+    @Test
+    public void saveAndUpdateComplexObject()
+            throws NoSuchItemException {
+        SimpleObject simpleObject = new SimpleObject();
+        simpleObject.setIntValue(1234);
+
+        RelatedObject relatedObject = new RelatedObject();
+        relatedObject.setRelatedIntValue(5678);
+
+        simpleObject.setRelatedObject(relatedObject);
+
+        getGenericDAO().save(simpleObject);
+
+        SimpleObject resultObject = getGenericDAO().findById(simpleObject.getId());
+
+        resultObject.getRelatedObject().setRelatedIntValue(1111);
+
+        getGenericDAO().save(resultObject);
+
+        resultObject = getGenericDAO().findById(simpleObject.getId());
+
+        assertEquals(resultObject.getId(), simpleObject.getId());
+        assertEquals(1111, resultObject.getRelatedObject().getRelatedIntValue());
     }
 
 
@@ -159,9 +277,26 @@ public abstract class GenericDAOTest {
             resultCount++;
         }
 
-        Assert.assertTrue(resultCount >= 2);
+        assertTrue(resultCount == 2);
 
         // check for existence of objects?
+    }
+
+
+    @Test
+    public void transientValuesAreNotPersisted()
+            throws NoSuchItemException {
+        SimpleObject simpleObject = new SimpleObject();
+        simpleObject.setIntValue(5);
+        simpleObject.setTransientValue(10);
+
+        getGenericDAO().save(simpleObject);
+
+        SimpleObject resultObject = getGenericDAO().findById(simpleObject.getId());
+
+        assertEquals(resultObject.getId(), simpleObject.getId());
+        assertEquals(5, resultObject.getIntValue());
+        assertEquals(0, resultObject.getTransientValue());
     }
 
 

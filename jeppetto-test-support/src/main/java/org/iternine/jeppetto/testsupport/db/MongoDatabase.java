@@ -17,9 +17,7 @@
 package org.iternine.jeppetto.testsupport.db;
 
 
-import com.mongodb.DB;
-import com.mongodb.DBObject;
-import com.mongodb.Mongo;
+import com.mongodb.MongoClient;
 import com.mongodb.MongoException;
 
 import org.dbunit.database.IDatabaseConnection;
@@ -112,28 +110,24 @@ public abstract class MongoDatabase extends Database {
         if (mongoDbName == null) {
             return;
         }
-        
+
+        MongoClient mongoClient = null;
         try {
-            Mongo mongo = new Mongo("127.0.0.1", mongoDbPort);
-            DB db = mongo.getDB(mongoDbName);
+            mongoClient = new MongoClient("127.0.0.1", mongoDbPort);
 
-            db.resetError();
-            db.dropDatabase();
+            mongoClient.dropDatabase(mongoDbName);
 
-            DBObject err = db.getLastError();
-            if (err != null && err.get("err") != null) {
-                logger.error("Could not drop database {}: {}", mongoDbName, err);
-            }
-
-            mongo.dropDatabase(mongoDbName);
-
-            if (mongo.getDatabaseNames().contains(mongoDbName)) {
+            if (mongoClient.getDatabaseNames().contains(mongoDbName)) {
                 logger.error("Database {} will not go away!", mongoDbName);
             }
         } catch (UnknownHostException e) {
             // weird
         } catch (MongoException e) {
             logger.warn("Could not drop database {}: {}", mongoDbName, e.getMessage());
+        } finally {
+            if (mongoClient != null) {
+                mongoClient.close();
+            }
         }
     }
 
