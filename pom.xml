@@ -33,6 +33,7 @@
 
     <modules>
         <module>jeppetto-dao</module>
+        <module>jeppetto-dao-dynamodb</module>
         <module>jeppetto-dao-hibernate</module>
         <module>jeppetto-dao-jdbc</module>
         <module>jeppetto-dao-mongo</module>
