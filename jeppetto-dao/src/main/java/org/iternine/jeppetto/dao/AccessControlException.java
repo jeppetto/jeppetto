@@ -27,17 +27,17 @@ public class AccessControlException extends JeppettoException {
     }
 
 
-    public AccessControlException(String s) {
-        super(s);
+    public AccessControlException(String message) {
+        super(message);
     }
 
 
-    public AccessControlException(Throwable throwable) {
-        super(throwable);
+    public AccessControlException(Throwable cause) {
+        super(cause);
     }
 
 
-    public AccessControlException(String s, Throwable throwable) {
-        super(s, throwable);
+    public AccessControlException(String message, Throwable cause) {
+        super(message, cause);
     }
 }

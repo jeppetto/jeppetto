@@ -24,7 +24,7 @@ import org.iternine.jeppetto.dao.AccessControlDAO;
 import org.iternine.jeppetto.dao.AccessType;
 import org.iternine.jeppetto.dao.Condition;
 import org.iternine.jeppetto.dao.ConditionType;
-import org.iternine.jeppetto.dao.FailedBatchDeleteException;
+import org.iternine.jeppetto.dao.FailedBatchException;
 import org.iternine.jeppetto.dao.JeppettoException;
 import org.iternine.jeppetto.dao.NoSuchItemException;
 import org.iternine.jeppetto.dao.OptimisticLockException;
@@ -333,7 +333,7 @@ public class MongoDBQueryModelDAO<T, ID>
 
     @Override
     public void deleteByIds(ID... ids)
-            throws FailedBatchDeleteException, JeppettoException {
+            throws FailedBatchException, JeppettoException {
         QueryModel queryModel = new QueryModel();
         queryModel.addCondition(buildIdCondition(Arrays.asList(ids)));
 
@@ -361,7 +361,7 @@ public class MongoDBQueryModelDAO<T, ID>
 
     @Override
     public void updateReferences(ReferenceSet<T> referenceSet, T updateObject)
-            throws JeppettoException {
+            throws FailedBatchException, JeppettoException {
         if (!UpdateObject.class.isAssignableFrom(updateObject.getClass())) {
             throw new JeppettoException("updateObject's type is not 'UpdateObject'.  Did it come from referenceSet.getUpdateObject()?");
         }

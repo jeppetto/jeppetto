@@ -22,23 +22,23 @@ import java.util.List;
 
 /**
  */
-public class FailedBatchDeleteException extends JeppettoException {
+public class FailedBatchException extends JeppettoException {
 
     //-------------------------------------------------------------
     // Variables - Private
     //-------------------------------------------------------------
 
-    private List failedDeletes;
+    private List failedItems;
 
 
     //-------------------------------------------------------------
     // Constructors
     //-------------------------------------------------------------
 
-    public FailedBatchDeleteException(List failedDeletes) {
-        super("Unable to delete all items");
+    public FailedBatchException(String message, List failedItems) {
+        super(message);
         
-        this.failedDeletes = failedDeletes;
+        this.failedItems = failedItems;
     }
 
 
@@ -46,7 +46,7 @@ public class FailedBatchDeleteException extends JeppettoException {
     // Methods - Getter/Setter
     //-------------------------------------------------------------
 
-    public List getFailedDeletes() {
-        return failedDeletes;
+    public List getFailedItems() {
+        return failedItems;
     }
 }

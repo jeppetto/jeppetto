@@ -24,7 +24,7 @@ import org.iternine.jeppetto.dao.AccessControlException;
 import org.iternine.jeppetto.dao.AccessType;
 import org.iternine.jeppetto.dao.Condition;
 import org.iternine.jeppetto.dao.ConditionType;
-import org.iternine.jeppetto.dao.FailedBatchDeleteException;
+import org.iternine.jeppetto.dao.FailedBatchException;
 import org.iternine.jeppetto.dao.JeppettoException;
 import org.iternine.jeppetto.dao.NoSuchItemException;
 import org.iternine.jeppetto.dao.OptimisticLockException;
@@ -206,7 +206,7 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
 
     @Override
     public void deleteByIds(ID... ids)
-            throws FailedBatchDeleteException, JeppettoException {
+            throws FailedBatchException, JeppettoException {
         List<ID> failedDeletes = new ArrayList<ID>();
 
         for (ID id : ids) {
@@ -220,7 +220,7 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
         }
 
         if (failedDeletes.size() > 0) {
-            throw new FailedBatchDeleteException(failedDeletes);
+            throw new FailedBatchException("Unable to delete all items", failedDeletes);
         }
     }
 
@@ -233,7 +233,7 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
 
     @Override
     public void updateReferences(ReferenceSet<T> referenceSet, T updateObject)
-            throws JeppettoException {
+            throws FailedBatchException, JeppettoException {
         throw new RuntimeException("updateReferences not yet implemented");
     }
 

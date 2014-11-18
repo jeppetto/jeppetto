@@ -27,17 +27,17 @@ public class OptimisticLockException extends JeppettoException {
     }
 
 
-    public OptimisticLockException(String s) {
-        super(s);
+    public OptimisticLockException(String message) {
+        super(message);
     }
 
 
-    public OptimisticLockException(Throwable throwable) {
-        super(throwable);
+    public OptimisticLockException(Throwable cause) {
+        super(cause);
     }
 
 
-    public OptimisticLockException(String s, Throwable throwable) {
-        super(s, throwable);
+    public OptimisticLockException(String message, Throwable cause) {
+        super(message, cause);
     }
 }

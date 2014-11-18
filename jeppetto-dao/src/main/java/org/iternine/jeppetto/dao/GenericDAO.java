@@ -106,12 +106,12 @@ public interface GenericDAO<T, ID> {
      *
      * @param ids of the objects to delete.
      *
-     * @throws FailedBatchDeleteException if some (or all) of the ids were not successfully deleted.  The exception
-     *                                    contains a list of the ids that failed to delete.
+     * @throws FailedBatchException if some (or all) of the ids were not successfully deleted.  The exception
+     *                              contains a list of the ids that failed to delete.
      * @throws JeppettoException if any underlying failure occurs
      */
     void deleteByIds(ID... ids)
-            throws FailedBatchDeleteException, JeppettoException;
+            throws FailedBatchException, JeppettoException;
 
 
     /**
@@ -130,10 +130,12 @@ public interface GenericDAO<T, ID> {
      * @param referenceSet containing references to stored items
      * @param updateObject the changes to make on references objects
      *
+     * @throws FailedBatchException if some (or all) of the referenced items were not successfully updated.
+     *                              The exception contains a list of the ids that failed to update.
      * @throws JeppettoException if any underlying failure occurs
      */
     void updateReferences(ReferenceSet<T> referenceSet, T updateObject)
-            throws JeppettoException;
+            throws FailedBatchException, JeppettoException;
 
 
     /**

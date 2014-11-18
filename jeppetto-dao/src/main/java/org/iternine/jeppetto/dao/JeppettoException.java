@@ -27,17 +27,17 @@ public class JeppettoException extends RuntimeException {
     }
 
 
-    public JeppettoException(String s) {
-        super(s);
+    public JeppettoException(String message) {
+        super(message);
     }
 
 
-    public JeppettoException(Throwable throwable) {
-        super(throwable);
+    public JeppettoException(Throwable cause) {
+        super(cause);
     }
 
 
-    public JeppettoException(String s, Throwable throwable) {
-        super(s, throwable);
+    public JeppettoException(String message, Throwable cause) {
+        super(message, cause);
     }
 }
