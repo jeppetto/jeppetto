@@ -62,6 +62,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -207,15 +208,13 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
     @Override
     public void deleteByIds(ID... ids)
             throws FailedBatchException, JeppettoException {
-        List<ID> failedDeletes = new ArrayList<ID>();
+        Map<ID, Exception> failedDeletes = new LinkedHashMap<ID, Exception>();
 
         for (ID id : ids) {
             try {
                 deleteById(id);
             } catch (Exception e) {
-                logger.warn("Failed to delete item with id = " + id, e);
-
-                failedDeletes.add(id);
+                failedDeletes.put(id, e);
             }
         }
 

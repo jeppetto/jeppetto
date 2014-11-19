@@ -14,39 +14,50 @@
  * limitations under the License.
  */
 
-package org.iternine.jeppetto.dao;
+package org.iternine.jeppetto.dao.dynamodb;
 
 
-import java.util.Map;
+import org.iternine.jeppetto.dao.ReferenceSet;
+import org.iternine.jeppetto.enhance.Enhancer;
 
 
-/**
- */
-public class FailedBatchException extends JeppettoException {
+public class ConditionReferenceSet<T>
+        implements ReferenceSet<T> {
 
     //-------------------------------------------------------------
     // Variables - Private
     //-------------------------------------------------------------
 
-    private Map<?, ? extends Throwable> failedItems;
+    private Enhancer<T> updateObjectEnhancer;
+    private ConditionExpressionBuilder conditionExpressionBuilder;
 
 
     //-------------------------------------------------------------
     // Constructors
     //-------------------------------------------------------------
 
-    public FailedBatchException(String message, Map<?, ? extends Throwable> failedItems) {
-        super(message);
-        
-        this.failedItems = failedItems;
+    public ConditionReferenceSet(Enhancer<T> updateObjectEnhancer,
+                                 ConditionExpressionBuilder conditionExpressionBuilder) {
+        this.updateObjectEnhancer = updateObjectEnhancer;
+        this.conditionExpressionBuilder = conditionExpressionBuilder;
     }
 
 
     //-------------------------------------------------------------
-    // Methods - Getter/Setter
+    // Implementation - ReferenceSet
     //-------------------------------------------------------------
 
-    public Map<?, ? extends Throwable> getFailedItems() {
-        return failedItems;
+    @Override
+    public T getUpdateObject() {
+        return updateObjectEnhancer.newInstance();
+    }
+
+
+    //-------------------------------------------------------------
+    // Methods - Package
+    //-------------------------------------------------------------
+
+    ConditionExpressionBuilder getConditionExpressionBuilder() {
+        return conditionExpressionBuilder;
     }
 }

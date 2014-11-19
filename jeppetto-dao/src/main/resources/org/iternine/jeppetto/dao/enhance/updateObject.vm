@@ -1,0 +1,74 @@
+#* @vtlvariable name="getters" type="javassist.CtMethod[]" *#
+#* @vtlvariable name="base" type="javassist.CtClass" *#
+#* @vtlvariable name="_" type="org.iternine.jeppetto.enhance.TemplateHelper" *#
+#* @vtlvariable name="updateObjectHelper" type="org.iternine.jeppetto.dao.updateobject.UpdateObjectHelper" *#
+#set( $baseName = $base.getName() )
+#set( $Q = '"')
+public $_.cls("${baseName}$UpdateObject").ext($base).impl("org.iternine.jeppetto.dao.updateobject.UpdateObject") {
+
+    #set( $thisName = $_.clsName() )
+
+    //-------------------------------------------------------------
+    // Variables - Private
+    //-------------------------------------------------------------
+
+    $_.field("private final java.util.Map __updates = new java.util.HashMap();")
+
+
+    //-------------------------------------------------------------
+    // Methods - Overrides
+    //-------------------------------------------------------------
+
+    #foreach ( $getter in $getters )
+    #set( $getterName = $getter.getName() )
+    #set( $field = $_.fieldFor($getterName) )
+    #set( $setterName = $_.asSetter($field) )
+    #set( $returnType = $_.returnTypeOf($getter) )
+    #set( $returnTypeName = $returnType.getName() )
+
+    #if ( $updateObjectHelper.needsUpdateObjectConversion($returnType) )
+    $_.method("
+    public $returnTypeName $getterName() {
+        $returnTypeName value = ($returnTypeName) __updates.get(${Q}$field${Q});
+
+        if (value == null) {
+            #if ( $updateObjectHelper.isAssignableFromList($returnType) )
+            value = new org.iternine.jeppetto.dao.updateobject.UpdateList(${Q}$updateObjectHelper.getListIndexFormat()${Q});
+            #elseif ( $updateObjectHelper.isAssignableFromMap($returnType) )
+            value = new org.iternine.jeppetto.dao.updateobject.UpdateMap();
+            #elseif ( $updateObjectHelper.isAssignableFromSet($returnType) )
+            throw new RuntimeException(${Q}Sets are not yet supported${Q});
+            ## value = new org.iternine.jeppetto.dao.updateobject.UpdateSet();
+            #else
+            value = ($returnTypeName) $updateObjectHelper.getEnhancerMethod()($returnTypeName .class).newInstance();
+            #end
+
+            __updates.put(${Q}$field${Q}, value);
+        }
+
+        return value;
+    }")
+    #end
+
+    $_.method("
+    public void $setterName($returnTypeName value) {
+        // TODO: handle id
+        #if ( $returnType.isPrimitive() )
+        __updates.put(${Q}$field${Q}, org.iternine.jeppetto.enhance.ReferenceUtil.asObject(value));
+        #else
+        __updates.put(${Q}$field${Q}, value);
+        #end
+    }")
+    #end
+
+
+    //-------------------------------------------------------------
+    // Implementation - UpdateObject
+    //-------------------------------------------------------------
+
+    $_.method("
+    public java.util.Map __getUpdates() {
+        return __updates;
+    }
+    ")
+}

@@ -18,8 +18,8 @@ package org.iternine.jeppetto.dao.dynamodb;
 
 
 import org.iternine.jeppetto.dao.JeppettoException;
-import org.iternine.jeppetto.dao.dirtyable.DirtyableList;
-import org.iternine.jeppetto.dao.dirtyable.DirtyableMap;
+import org.iternine.jeppetto.dao.persistable.PersistableList;
+import org.iternine.jeppetto.dao.persistable.PersistableMap;
 import org.iternine.jeppetto.enhance.Enhancer;
 
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
@@ -73,9 +73,9 @@ public class ConversionUtil {
     public static Map<String, AttributeValue> getItemFromObject(final DynamoDBPersistable dynamoDBPersistable) {
         Map<String, AttributeValue> itemMap = new HashMap<String, AttributeValue>();
 
-        for (Iterator<String> dirtyFields = dynamoDBPersistable.getDirtyFields(); dirtyFields.hasNext(); ) {
+        for (Iterator<String> dirtyFields = dynamoDBPersistable.__getDirtyFields(); dirtyFields.hasNext(); ) {
             String dirtyField = dirtyFields.next();
-            Object object = dynamoDBPersistable.get(dirtyField);
+            Object object = dynamoDBPersistable.__get(dirtyField);
 
             // We don't save nulls.  If it turns out we need it, we could have a "saveNulls" configuration value.
             // If saveNulls and attributeValue == null: itemMap.put(dirtyField, new AttributeValue().withNULL(Boolean.TRUE));
@@ -154,7 +154,7 @@ public class ConversionUtil {
         } else if (AttributeValue.class.isAssignableFrom(value.getClass())) {
             return (AttributeValue) value;
         } else {
-            Enhancer<T> enhancer = EnhancerHelper.getDynamoDBPersistableEnhancer((Class<T>) value.getClass());
+            Enhancer<T> enhancer = EnhancerHelper.getPersistableEnhancer((Class<T>) value.getClass());
             DynamoDBPersistable dynamoDBPersistable = (DynamoDBPersistable) enhancer.enhance(value);
 
             return new AttributeValue().withM(getItemFromObject(dynamoDBPersistable));
@@ -163,9 +163,9 @@ public class ConversionUtil {
 
 
     public static <T> T getObjectFromItem(final Map<String, AttributeValue> item, final Class<T> targetType) {
-        T t = EnhancerHelper.getDynamoDBPersistableEnhancer(targetType).newInstance();
+        T t = EnhancerHelper.getPersistableEnhancer(targetType).newInstance();
 
-        ((DynamoDBPersistable) t).putAll(item);
+        ((DynamoDBPersistable) t).__putAll(item);
 
         return t;
     }
@@ -216,7 +216,7 @@ public class ConversionUtil {
             return result;
         } else if (List.class.isAssignableFrom(targetType)) {
             List<AttributeValue> attributeValues = attributeValue.getL();
-            List result = new DirtyableList(attributeValues.size());
+            List result = new PersistableList(attributeValues.size());
 
             for (AttributeValue value : attributeValues) {
                 // NB: We currently only pick up the first type level for an attribute value.  So if, for example,
@@ -230,7 +230,7 @@ public class ConversionUtil {
             return result;
         } else if (Map.class.isAssignableFrom(targetType)) {
             Map<String, AttributeValue> attributeValues = attributeValue.getM();
-            Map result = new DirtyableMap(attributeValues.size());
+            Map result = new PersistableMap(attributeValues.size());
 
             for (Map.Entry<String, AttributeValue> entry : attributeValues.entrySet()) {
                 //noinspection unchecked

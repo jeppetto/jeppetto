@@ -267,11 +267,17 @@ public abstract class ReferenceSetDAOTest {
         SimpleObject resultSimpleObject = getSimpleObjectReferencesDAO().findById(simpleObject.getId());
 
         assertNotNull(resultSimpleObject.getRelatedObjects());
-        assertEquals(4, resultSimpleObject.getRelatedObjects().size());
         assertEquals(456, resultSimpleObject.getRelatedObjects().get(0).getRelatedIntValue());
-        assertNull(resultSimpleObject.getRelatedObjects().get(1));
-        assertNull(resultSimpleObject.getRelatedObjects().get(2));
-        assertEquals(789, resultSimpleObject.getRelatedObjects().get(3).getRelatedIntValue());
+
+        // TODO: Different stores treat gaps differently.  Some compact them down, others leave nulls in the middle
+        if (resultSimpleObject.getRelatedObjects().size() == 2) {
+            assertEquals(789, resultSimpleObject.getRelatedObjects().get(1).getRelatedIntValue());
+        } else {
+            assertEquals(4, resultSimpleObject.getRelatedObjects().size());
+            assertNull(resultSimpleObject.getRelatedObjects().get(1));
+            assertNull(resultSimpleObject.getRelatedObjects().get(2));
+            assertEquals(789, resultSimpleObject.getRelatedObjects().get(3).getRelatedIntValue());
+        }
     }
 
 
@@ -299,6 +305,41 @@ public abstract class ReferenceSetDAOTest {
         List<RelatedObject> relatedObjectUpdate = updateObject.getRelatedObjects();
 
         relatedObjectUpdate.remove(relatedObject1);
+
+        getSimpleObjectReferencesDAO().updateReferences(referenceSet, updateObject);
+
+        SimpleObject resultSimpleObject = getSimpleObjectReferencesDAO().findById(simpleObject.getId());
+
+        assertNotNull(resultSimpleObject.getRelatedObjects());
+        assertEquals(1, resultSimpleObject.getRelatedObjects().size());
+        assertEquals(789, resultSimpleObject.getRelatedObjects().get(0).getRelatedIntValue());
+    }
+
+
+    @Test
+    public void removeFromExistingListUsingIndex() {
+        SimpleObject simpleObject = new SimpleObject();
+        simpleObject.setIntValue(123);
+
+        RelatedObject relatedObject1 = new RelatedObject();
+        relatedObject1.setRelatedIntValue(456);
+        RelatedObject relatedObject2 = new RelatedObject();
+        relatedObject2.setRelatedIntValue(789);
+
+        List<RelatedObject> relatedObjects = new ArrayList<RelatedObject>();
+        relatedObjects.add(relatedObject1);
+        relatedObjects.add(relatedObject2);
+
+        simpleObject.setRelatedObjects(relatedObjects);
+
+        getSimpleObjectReferencesDAO().save(simpleObject);
+
+        ReferenceSet<SimpleObject> referenceSet = getSimpleObjectReferencesDAO().referenceByIds(simpleObject.getId());
+        SimpleObject updateObject = referenceSet.getUpdateObject();
+
+        List<RelatedObject> relatedObjectUpdate = updateObject.getRelatedObjects();
+
+        relatedObjectUpdate.remove(0);
 
         getSimpleObjectReferencesDAO().updateReferences(referenceSet, updateObject);
 

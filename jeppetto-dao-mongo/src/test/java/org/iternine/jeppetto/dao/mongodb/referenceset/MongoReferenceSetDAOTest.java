@@ -22,6 +22,9 @@ import org.iternine.jeppetto.dao.test.referenceset.ReferenceSetDAOTest;
 import org.iternine.jeppetto.testsupport.MongoDatabaseProvider;
 import org.iternine.jeppetto.testsupport.TestContext;
 
+import org.junit.Ignore;
+import org.junit.Test;
+
 
 public class MongoReferenceSetDAOTest extends ReferenceSetDAOTest {
 
@@ -55,5 +58,15 @@ public class MongoReferenceSetDAOTest extends ReferenceSetDAOTest {
 
             testContext = null;
         }
+    }
+
+
+    //-------------------------------------------------------------
+    // Tests
+    //-------------------------------------------------------------
+
+    @Ignore("MongoDB doesn't support removing an item by index, only by value.")
+    @Test
+    public void removeFromExistingListUsingIndex() {
     }
 }

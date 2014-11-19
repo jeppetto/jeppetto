@@ -17,15 +17,21 @@
 package org.iternine.jeppetto.dao.dynamodb;
 
 
+import org.iternine.jeppetto.dao.Condition;
 import org.iternine.jeppetto.dao.JeppettoException;
+import org.iternine.jeppetto.dao.QueryModel;
 
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
+import com.amazonaws.services.dynamodbv2.model.ComparisonOperator;
 
 import java.lang.reflect.Array;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 
 /**
@@ -50,49 +56,128 @@ public class ConditionExpressionBuilder {
         put(DynamoDBOperator.IsNotNull, "attribute_exists(%s)");
     }};
 
+    private static final Set<ComparisonOperator> RANGE_KEY_COMPARISON_OPERATORS = new HashSet<ComparisonOperator>() {{
+        add(ComparisonOperator.EQ);
+        add(ComparisonOperator.LE);
+        add(ComparisonOperator.LT);
+        add(ComparisonOperator.GE);
+        add(ComparisonOperator.GT);
+        add(ComparisonOperator.BEGINS_WITH);
+        add(ComparisonOperator.BETWEEN);
+    }};
+
 
     //-------------------------------------------------------------
     // Variables - Private
     //-------------------------------------------------------------
 
+    private Condition hashKeyCondition;
+    private Condition rangeKeyCondition;
     private StringBuilder expression = new StringBuilder();
-    private int placeholderCount = 0;
     private Map<String, AttributeValue> attributeValues = new HashMap<String, AttributeValue>();
+    private int placeholderCount = 0;
 
 
     //-------------------------------------------------------------
-    // Methods - Public
+    // Constructors
     //-------------------------------------------------------------
 
-    public void add(String key, DynamoDBConstraint constraint) {
-        if (expression.length() > 0) {
-            expression.append(" and ");
+    public ConditionExpressionBuilder(QueryModel queryModel, String hashKeyField, Map<String, String> localIndexes) {
+        if (queryModel.getConditions() != null) {
+            for (Condition condition : queryModel.getConditions()) {
+                DynamoDBConstraint dynamoDBConstraint = (DynamoDBConstraint) condition.getConstraint();
+                ComparisonOperator comparisonOperator = dynamoDBConstraint.getOperator().getComparisonOperator();
+
+                if (condition.getField().equals(hashKeyField) && comparisonOperator == ComparisonOperator.EQ) {
+                    this.hashKeyCondition = condition;
+                } else if (rangeKeyCondition == null     // First one wins...
+                           && localIndexes.containsKey(condition.getField())
+                           && RANGE_KEY_COMPARISON_OPERATORS.contains(comparisonOperator)) {
+                    this.rangeKeyCondition = condition;
+                } else {
+                    add(condition.getField(), dynamoDBConstraint);
+                }
+            }
         }
 
-        expression.append(buildCondition(key, constraint, placeholderCount));
-
-        Map<String, AttributeValue> newValues = getExpressionAttributeValues(constraint, placeholderCount);
-        attributeValues.putAll(newValues);
-
-        placeholderCount += newValues.size();
+        if (queryModel.getAssociationConditions() != null) {
+            for (Map.Entry<String, List<Condition>> associationConditions : queryModel.getAssociationConditions().entrySet()) {
+                for (Condition condition : associationConditions.getValue()) {
+                    add(associationConditions.getKey() + "." + condition.getField(), (DynamoDBConstraint) condition.getConstraint());
+                }
+            }
+        }
     }
 
 
     //-------------------------------------------------------------
-    // Methods - Getter/Setter
+    // Methods - Package
     //-------------------------------------------------------------
 
-    public boolean hasConditions() {
+    boolean hasHashKeyCondition() {
+        return hashKeyCondition != null;
+    }
+
+
+    Map<String, com.amazonaws.services.dynamodbv2.model.Condition> getKeyConditions() {
+        if (rangeKeyCondition == null) {
+            return Collections.singletonMap(hashKeyCondition.getField(), ((DynamoDBConstraint) hashKeyCondition.getConstraint()).asCondition());
+        } else {
+            Map<String, com.amazonaws.services.dynamodbv2.model.Condition> keyConditions = new HashMap<String, com.amazonaws.services.dynamodbv2.model.Condition>();
+
+            keyConditions.put(hashKeyCondition.getField(), ((DynamoDBConstraint) hashKeyCondition.getConstraint()).asCondition());
+            keyConditions.put(rangeKeyCondition.getField(), ((DynamoDBConstraint) rangeKeyCondition.getConstraint()).asCondition());
+
+            return keyConditions;
+        }
+    }
+
+
+    String getRangeKey() {
+        if (rangeKeyCondition == null) {
+            return null;
+        }
+
+        return rangeKeyCondition.getField();
+    }
+
+
+    void convertRangeKeyConditionToExpression() {
+        if (rangeKeyCondition == null) {
+            return;
+        }
+
+        add(rangeKeyCondition.getField(), (DynamoDBConstraint) rangeKeyCondition.getConstraint());
+    }
+
+
+    Map<String, AttributeValue> getKey() {
+        Map<String, AttributeValue> key;
+
+        if (rangeKeyCondition == null) {
+            key = Collections.singletonMap(hashKeyCondition.getField(), ConversionUtil.toAttributeValue(((DynamoDBConstraint) hashKeyCondition.getConstraint()).getValues()[0]));
+        } else {
+            key = new HashMap<String, AttributeValue>(2);
+
+            key.put(hashKeyCondition.getField(), ConversionUtil.toAttributeValue(((DynamoDBConstraint) hashKeyCondition.getConstraint()).getValues()[0]));
+            key.put(rangeKeyCondition.getField(), ConversionUtil.toAttributeValue(((DynamoDBConstraint) rangeKeyCondition.getConstraint()).getValues()[0]));
+        }
+
+        return key;
+    }
+
+
+    boolean hasExpression() {
         return expression.length() > 0;
     }
 
 
-    public String getExpression() {
+    String getExpression() {
         return expression.toString();
     }
 
 
-    public Map<String, AttributeValue> getAttributeValues() {
+    Map<String, AttributeValue> getAttributeValues() {
         return attributeValues;
     }
 
@@ -101,7 +186,19 @@ public class ConditionExpressionBuilder {
     // Methods - Private
     //-------------------------------------------------------------
 
-    private String buildCondition(String attribute, DynamoDBConstraint constraint, int placeholderCount) {
+    private void add(String key, DynamoDBConstraint constraint) {
+        if (expression.length() > 0) {
+            expression.append(" and ");
+        }
+
+        expression.append(buildCondition(key, constraint));
+
+        Map<String, AttributeValue> newValues = getExpressionAttributeValues(constraint);
+        attributeValues.putAll(newValues);
+    }
+
+
+    private String buildCondition(String attribute, DynamoDBConstraint constraint) {
         int argumentCount = constraint.getOperator().getArgumentCount();
         String operatorExpression = OPERATOR_EXPRESSIONS.get(constraint.getOperator());
 
@@ -130,19 +227,19 @@ public class ConditionExpressionBuilder {
     }
 
 
-    private Map<String, AttributeValue> getExpressionAttributeValues(DynamoDBConstraint constraint, int placeholderCount) {
+    private Map<String, AttributeValue> getExpressionAttributeValues(DynamoDBConstraint constraint) {
         int argumentCount = constraint.getOperator().getArgumentCount();
         Object[] values = constraint.getValues();
 
         if (argumentCount == 0) {
             return Collections.emptyMap();
         } else if (argumentCount == 1) {
-            return Collections.singletonMap(":a" + placeholderCount, ConversionUtil.toAttributeValue(values[0]));
+            return Collections.singletonMap(":a" + placeholderCount++, ConversionUtil.toAttributeValue(values[0]));
         } else if (argumentCount == 2) {
             Map<String, AttributeValue> result = new HashMap<String, AttributeValue>(2);
 
-            result.put(":a" + placeholderCount, ConversionUtil.toAttributeValue(values[0]));
-            result.put(":a" + (placeholderCount + 1), ConversionUtil.toAttributeValue(values[1]));
+            result.put(":a" + placeholderCount++, ConversionUtil.toAttributeValue(values[0]));
+            result.put(":a" + (placeholderCount++), ConversionUtil.toAttributeValue(values[1]));
 
             return result;
         } else {    // N arguments

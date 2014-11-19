@@ -18,9 +18,11 @@ package org.iternine.jeppetto.dao.dynamodb;
 
 
 import org.iternine.jeppetto.dao.EntityVelocityEnhancer;
+import org.iternine.jeppetto.dao.updateobject.UpdateObject;
 import org.iternine.jeppetto.enhance.Enhancer;
 import org.iternine.jeppetto.enhance.NoOpEnhancer;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -31,7 +33,8 @@ public class EnhancerHelper {
     // Variables - Private
     //-------------------------------------------------------------
 
-    private static Map<Class, Enhancer> dynamoDBPersistableEnhancers = new HashMap<Class, Enhancer>();
+    private static final Map<Class, Enhancer> persistableEnhancers = new HashMap<Class, Enhancer>();
+    private static final Map<Class, Enhancer> updateObjectEnhancers = new HashMap<Class, Enhancer>();
 
 
     //-------------------------------------------------------------
@@ -48,10 +51,18 @@ public class EnhancerHelper {
      * @return new enhancer
      */
     @SuppressWarnings( { "unchecked" })
-    public static <T> Enhancer<T> getDynamoDBPersistableEnhancer(Class<T> baseClass) {
-        Enhancer<T> enhancer = (Enhancer<T>) dynamoDBPersistableEnhancers.get(baseClass);
+    public static <T> Enhancer<T> getPersistableEnhancer(Class<T> baseClass) {
+        if (persistableEnhancers.containsKey(baseClass)) {
+            return (Enhancer<T>) persistableEnhancers.get(baseClass);
+        }
 
-        if (enhancer == null) {
+        synchronized (persistableEnhancers) {
+            Enhancer<T> enhancer = persistableEnhancers.get(baseClass);
+
+            if (enhancer != null) {
+                return enhancer;
+            }
+
             if (DynamoDBPersistable.class.isAssignableFrom(baseClass)) {
                 enhancer = new NoOpEnhancer<T>(baseClass);
             } else {
@@ -77,9 +88,64 @@ public class EnhancerHelper {
                 };
             }
 
-            dynamoDBPersistableEnhancers.put(baseClass, enhancer);
+            persistableEnhancers.put(baseClass, enhancer);
+
+            return enhancer;
+        }
+    }
+
+
+    /**
+     * Creates a new dynamoDBUpdateObject enhancer for the given class. If the class already implements
+     * {@link UpdateObject}, then a special "no-op" enhancer will be returned that
+     * doesn't do any special enhancement. Otherwise, a byte-code enhancer is returned.
+     *
+     * @param baseClass class for which to create an enhancer
+     *
+     * @return new enhancer
+     */
+    @SuppressWarnings( { "unchecked" })
+    public static <T> Enhancer<T> getUpdateObjectEnhancer(Class<T> baseClass) {
+        if (updateObjectEnhancers.containsKey(baseClass)) {
+            return (Enhancer<T>) updateObjectEnhancers.get(baseClass);
         }
 
-        return enhancer;
+        synchronized (updateObjectEnhancers) {
+            Enhancer<T> enhancer = updateObjectEnhancers.get(baseClass);
+
+            if (enhancer != null) {
+                return enhancer;
+            }
+
+            if (UpdateObject.class.isAssignableFrom(baseClass)) {
+                enhancer = new NoOpEnhancer<T>(baseClass);
+            } else {
+                enhancer = new EntityVelocityEnhancer<T>(baseClass, Collections.singletonMap("updateObjectHelper",
+                                                                                             (Object) new DynamoDBUpdateObjectHelper())) {
+                    //-------------------------------------------------------------
+                    // Implementation - Enhancer
+                    //-------------------------------------------------------------
+
+                    @Override
+                    public boolean needsEnhancement(Object object) {
+                        return object != null && !(object instanceof UpdateObject);
+                    }
+
+
+                    //-------------------------------------------------------------
+                    // Implementation - VelocityEnhancer
+                    //-------------------------------------------------------------
+
+                    @Override
+                    protected String getTemplateLocation() {
+                        return "org/iternine/jeppetto/dao/enhance/updateObject.vm";
+                    }
+                };
+            }
+
+            updateObjectEnhancers.put(baseClass, enhancer);
+
+            return enhancer;
+        }
     }
 }

@@ -171,10 +171,7 @@ public class TemplateHelper {
     }
 
 
-    public String asSetter(CtMethod getter) {
-        String getterName = getter.getName();
-        String field = fieldFor(getterName);
-
+    public String asSetter(String field) {
         return String.format("set%s%s", Character.toUpperCase(field.charAt(0)), field.substring(1));
     }
 

@@ -17,36 +17,51 @@
 package org.iternine.jeppetto.dao;
 
 
-import java.util.Map;
+import org.iternine.jeppetto.enhance.Enhancer;
 
 
-/**
- */
-public class FailedBatchException extends JeppettoException {
+public class IdReferenceSet<T, ID>
+        implements ReferenceSet<T> {
+
+    //-------------------------------------------------------------
+    // Constants
+    //-------------------------------------------------------------
+
+    private final ID[] ids;
+
 
     //-------------------------------------------------------------
     // Variables - Private
     //-------------------------------------------------------------
 
-    private Map<?, ? extends Throwable> failedItems;
+    private Enhancer<T> updateObjectEnhancer;
 
 
     //-------------------------------------------------------------
     // Constructors
     //-------------------------------------------------------------
 
-    public FailedBatchException(String message, Map<?, ? extends Throwable> failedItems) {
-        super(message);
-        
-        this.failedItems = failedItems;
+    public IdReferenceSet(Enhancer<T> updateObjectEnhancer, ID... ids) {
+        this.updateObjectEnhancer = updateObjectEnhancer;
+        this.ids = ids;
     }
 
 
     //-------------------------------------------------------------
-    // Methods - Getter/Setter
+    // Implementation - ReferenceSet
     //-------------------------------------------------------------
 
-    public Map<?, ? extends Throwable> getFailedItems() {
-        return failedItems;
+    @Override
+    public T getUpdateObject() {
+        return updateObjectEnhancer.newInstance();
+    }
+
+
+    //-------------------------------------------------------------
+    // Methods - Public
+    //-------------------------------------------------------------
+
+    public ID[] getIds() {
+        return ids;
     }
 }

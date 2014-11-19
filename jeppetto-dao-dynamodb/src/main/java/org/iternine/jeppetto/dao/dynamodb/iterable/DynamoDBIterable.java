@@ -104,8 +104,8 @@ public abstract class DynamoDBIterable<T> implements Iterable<T> {
 
                 T t = enhancer.newInstance();
 
-                ((DynamoDBPersistable) t).putAll(lastItem);
-                ((DynamoDBPersistable) t).markPersisted(dynamoDB.toString());
+                ((DynamoDBPersistable) t).__putAll(lastItem);
+                ((DynamoDBPersistable) t).__markPersisted(dynamoDB.toString());
 
                 return t;
             }

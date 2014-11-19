@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.iternine.jeppetto.dao.dirtyable;
+package org.iternine.jeppetto.dao.persistable;
 
 
 import org.iternine.jeppetto.dao.JeppettoException;
@@ -29,8 +29,8 @@ import java.util.Set;
 
 
 @SuppressWarnings({ "unchecked" })
-public class DirtyableList
-        implements Dirtyable, List {
+public class PersistableList
+        implements Persistable, List {
 
     //-------------------------------------------------------------
     // Variables - Private
@@ -51,7 +51,7 @@ public class DirtyableList
     /**
      * Default constructor that uses an ArrayList as the delegate and expects no non-Jeppetto access.
      */
-    public DirtyableList() {
+    public PersistableList() {
         this(new ArrayList(), false);
     }
 
@@ -59,7 +59,7 @@ public class DirtyableList
     /**
      * Constructor that uses an ArrayList with an initial capacity as the delegate and expects no non-Jeppetto access.
      */
-    public DirtyableList(int initialCapacity) {
+    public PersistableList(int initialCapacity) {
         this(new ArrayList(initialCapacity), false);
     }
 
@@ -71,7 +71,7 @@ public class DirtyableList
      * @param delegate the underlying List implementation
      * @param modifiableDelegate true if access is possible to the delegate by non-Jeppetto code
      */
-    public DirtyableList(List delegate, boolean modifiableDelegate) {
+    public PersistableList(List delegate, boolean modifiableDelegate) {
         this.delegate = delegate;
         this.firstAppendedIndex = delegate.size();
         this.modifiableDelegate = modifiableDelegate;
@@ -79,28 +79,28 @@ public class DirtyableList
 
 
     //-------------------------------------------------------------
-    // Implementation - Dirtyable
+    // Implementation - Persistable
     //-------------------------------------------------------------
 
     @Override
-    public boolean isDirty() {
+    public boolean __isDirty() {
         return rewrite
                || delegate.size() > firstAppendedIndex
                || !modifiedIndexes.isEmpty()
-               || getDirtyFields().hasNext();
+               || __getDirtyFields().hasNext();
     }
 
 
     @Override
-    public void markPersisted(String storeIdentifier) {
+    public void __markPersisted(String storeIdentifier) {
         for (Object object : delegate) {
-            if (!(object instanceof Dirtyable)) {
+            if (!(object instanceof Persistable)) {
                 continue;
             }
 
-            Dirtyable dirtyable = (Dirtyable) object;
+            Persistable persistable = (Persistable) object;
 
-            dirtyable.markPersisted(storeIdentifier);
+            persistable.__markPersisted(storeIdentifier);
         }
 
         this.rewrite = false;
@@ -111,13 +111,13 @@ public class DirtyableList
 
 
     @Override
-    public boolean isPersisted(String storeIdentifier) {
+    public boolean __isPersisted(String storeIdentifier) {
         return storeIdentifier.equals(this.storeIdentifier);
     }
 
 
     @Override
-    public Iterator<String> getDirtyFields() {
+    public Iterator<String> __getDirtyFields() {
         return new Iterator<String>() {
             private Iterator delegateIterator = delegate.iterator();
             private int i = -1;
@@ -129,8 +129,8 @@ public class DirtyableList
 
                     if (++i >= firstAppendedIndex
                         || modifiedIndexes.contains(i)
-                        || !(object instanceof Dirtyable)
-                        || ((Dirtyable) object).isDirty()) {
+                        || !(object instanceof Persistable)
+                        || ((Persistable) object).__isDirty()) {
                         return true;
                     }
                 }
@@ -154,7 +154,7 @@ public class DirtyableList
 
 
     @Override
-    public Object getDelegate() {
+    public Object __getDelegate() {
         return delegate;
     }
 
@@ -196,7 +196,7 @@ public class DirtyableList
         return element;
 
 //        // TODO: revisit whether these semantics makes sense
-//        if (element == null || element instanceof Dirtyable || DBObjectUtil.needsNoConversion(element.getClass())) {
+//        if (element == null || element instanceof Persistable || DBObjectUtil.needsNoConversion(element.getClass())) {
 //            return element;
 //        }
 //
@@ -314,7 +314,7 @@ public class DirtyableList
 
                 return next;
 
-//                if (next == null || next instanceof Dirtyable || DBObjectUtil.needsNoConversion(next.getClass())) {
+//                if (next == null || next instanceof Persistable || DBObjectUtil.needsNoConversion(next.getClass())) {
 //                    return next;
 //                }
 //
@@ -338,7 +338,7 @@ public class DirtyableList
 
                 return previous;
 
-//                if (previous == null || previous instanceof Dirtyable || DBObjectUtil.needsNoConversion(previous.getClass())) {
+//                if (previous == null || previous instanceof Persistable || DBObjectUtil.needsNoConversion(previous.getClass())) {
 //                    return previous;
 //                }
 //
@@ -446,7 +446,7 @@ public class DirtyableList
             return false;
         }
 
-        List thatList = o instanceof DirtyableList ? ((DirtyableList) o).delegate : (List) o;
+        List thatList = o instanceof PersistableList ? ((PersistableList) o).delegate : (List) o;
 
         return delegate.equals(thatList);
     }

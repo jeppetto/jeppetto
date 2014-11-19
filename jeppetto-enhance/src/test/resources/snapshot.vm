@@ -33,7 +33,8 @@ public $_.cls("${baseName}Snapshot").ext($base).impl("org.iternine.jeppetto.enha
 
     #foreach ( $getter in $getters )
         #set( $getterName = $getter.getName() )
-        #set( $setterName = $_.asSetter($getter) )
+        #set( $field = $_.fieldFor($getterName) )
+        #set( $setterName = $_.asSetter($field) )
         #set( $returnType = $getter.getReturnType().getName() )
 
         $_.method("public $returnType $getterName() {

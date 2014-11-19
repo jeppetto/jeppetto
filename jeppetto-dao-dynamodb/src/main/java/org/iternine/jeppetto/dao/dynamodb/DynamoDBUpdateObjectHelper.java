@@ -14,39 +14,28 @@
  * limitations under the License.
  */
 
-package org.iternine.jeppetto.dao;
+package org.iternine.jeppetto.dao.dynamodb;
 
 
-import java.util.Map;
+import org.iternine.jeppetto.dao.updateobject.UpdateObjectHelper;
 
 
 /**
  */
-public class FailedBatchException extends JeppettoException {
+public class DynamoDBUpdateObjectHelper extends UpdateObjectHelper {
 
     //-------------------------------------------------------------
-    // Variables - Private
+    // Implementation - UpdateObjectHelper
     //-------------------------------------------------------------
 
-    private Map<?, ? extends Throwable> failedItems;
-
-
-    //-------------------------------------------------------------
-    // Constructors
-    //-------------------------------------------------------------
-
-    public FailedBatchException(String message, Map<?, ? extends Throwable> failedItems) {
-        super(message);
-        
-        this.failedItems = failedItems;
+    @Override
+    public Object getEnhancerMethod() {
+        return "org.iternine.jeppetto.dao.dynamodb.EnhancerHelper.getUpdateObjectEnhancer";
     }
 
 
-    //-------------------------------------------------------------
-    // Methods - Getter/Setter
-    //-------------------------------------------------------------
-
-    public Map<?, ? extends Throwable> getFailedItems() {
-        return failedItems;
+    @Override
+    public String getListIndexFormat() {
+        return "[%d]";
     }
 }

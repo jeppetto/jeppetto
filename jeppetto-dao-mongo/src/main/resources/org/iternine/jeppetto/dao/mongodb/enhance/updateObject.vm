@@ -22,15 +22,15 @@ public $_.cls("${baseName}$UpdateObject").ext($base).impl("org.iternine.jeppetto
 
     #foreach ( $getter in $getters )
     #set( $getterName = $getter.getName() )
-    #set( $key = $_.fieldFor($getterName) )
-    #set( $setterName = $_.asSetter($getter) )
+    #set( $field = $_.fieldFor($getterName) )
+    #set( $setterName = $_.asSetter($field) )
     #set ( $returnType = $_.returnTypeOf($getter) )
     #set ( $returnTypeName = $returnType.getName() )
 
     #if ( !$updateObjectHelper.needsNoConversion($returnType) )
     $_.method("
     public $returnTypeName $getterName() {
-        $returnTypeName value = ($returnTypeName) __updates.get(${Q}$key${Q});
+        $returnTypeName value = ($returnTypeName) __updates.get(${Q}$field${Q});
 
         if (value == null) {
             #if ( $updateObjectHelper.isAssignableFromList($returnType) )
@@ -43,9 +43,9 @@ public $_.cls("${baseName}$UpdateObject").ext($base).impl("org.iternine.jeppetto
             value = ($returnTypeName) org.iternine.jeppetto.dao.mongodb.enhance.EnhancerHelper.getUpdateObjectEnhancer($returnTypeName .class).newInstance();
             #end
 
-            ((org.iternine.jeppetto.dao.mongodb.enhance.UpdateObject) value).setPrefix(prefix + ${Q}${key}${Q} + '.');
+            ((org.iternine.jeppetto.dao.mongodb.enhance.UpdateObject) value).setPrefix(prefix + ${Q}${field}${Q} + '.');
 
-            __updates.put(${Q}$key${Q}, value);
+            __updates.put(${Q}$field${Q}, value);
         }
 
         return value;
@@ -56,9 +56,9 @@ public $_.cls("${baseName}$UpdateObject").ext($base).impl("org.iternine.jeppetto
     public void $setterName($returnTypeName value) {
         // TODO: handle id
         #if ( $returnType.isPrimitive() )
-        __updates.put(${Q}$key${Q}, org.iternine.jeppetto.enhance.ReferenceUtil.asObject(value));
+        __updates.put(${Q}$field${Q}, org.iternine.jeppetto.enhance.ReferenceUtil.asObject(value));
         #else
-        __updates.put(${Q}$key${Q}, value);
+        __updates.put(${Q}$field${Q}, value);
         #end
     }")
     #end

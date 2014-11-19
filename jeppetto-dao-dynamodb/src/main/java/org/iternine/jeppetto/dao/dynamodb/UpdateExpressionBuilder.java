@@ -18,13 +18,17 @@ package org.iternine.jeppetto.dao.dynamodb;
 
 
 import org.iternine.jeppetto.dao.JeppettoException;
-import org.iternine.jeppetto.dao.dirtyable.DirtyableList;
-import org.iternine.jeppetto.dao.dirtyable.DirtyableMap;
+import org.iternine.jeppetto.dao.persistable.PersistableList;
+import org.iternine.jeppetto.dao.updateobject.UpdateList;
+import org.iternine.jeppetto.dao.updateobject.UpdateMap;
+import org.iternine.jeppetto.dao.updateobject.UpdateObject;
 
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 
@@ -51,11 +55,16 @@ public class UpdateExpressionBuilder {
     }
 
 
+    public UpdateExpressionBuilder(UpdateObject updateObject) {
+        extractUpdateDetails(updateObject, "");
+    }
+
+
     //-------------------------------------------------------------
-    // Methods - Getter/Setter
+    // Methods - Package
     //-------------------------------------------------------------
 
-    public String getExpression() {
+    String getExpression() {
         StringBuilder expression = new StringBuilder();
 
         if (setExpression.length() > 0) {
@@ -76,7 +85,7 @@ public class UpdateExpressionBuilder {
     }
 
 
-    public Map<String, AttributeValue> getAttributeValues() {
+    Map<String, AttributeValue> getAttributeValues() {
         return attributeValues;
     }
 
@@ -86,29 +95,71 @@ public class UpdateExpressionBuilder {
     //-------------------------------------------------------------
 
     private void extractUpdateDetails(DynamoDBPersistable dynamoDBPersistable, String prefix) {
-        for (Iterator<String> dirtyKeysIterator = dynamoDBPersistable.getDirtyFields(); dirtyKeysIterator.hasNext(); ) {
-            String key = dirtyKeysIterator.next();
-            Object object = dynamoDBPersistable.get(key);
-            String fullyQualifiedKey = prefix + key;
+        for (Iterator<String> dirtyFieldsIterator = dynamoDBPersistable.__getDirtyFields(); dirtyFieldsIterator.hasNext(); ) {
+            String field = dirtyFieldsIterator.next();
+            Object object = dynamoDBPersistable.__get(field);
+            String fullyQualifiedField = prefix + field;
 
             if (object == null) {
-                append(removeExpression, fullyQualifiedKey);
-            } else if (DynamoDBPersistable.class.isAssignableFrom(object.getClass())) {
-                extractUpdateDetails((DynamoDBPersistable) object, fullyQualifiedKey + ".");
-            } else if (DirtyableList.class.isAssignableFrom(object.getClass())) {
+                append(removeExpression, fullyQualifiedField);
+            } else if (PersistableList.class.isAssignableFrom(object.getClass())) {
                 // TODO: implement
                 throw new JeppettoException("Not yet implemented");
-            } else if (DirtyableMap.class.isAssignableFrom(object.getClass())) {
-                // TODO: implement
-                throw new JeppettoException("Not yet implemented");
+            } else if (DynamoDBPersistable.class.isAssignableFrom(object.getClass())) {     // Includes PersistableMap as well
+                extractUpdateDetails((DynamoDBPersistable) object, fullyQualifiedField + ".");
             } else {
-                append(setExpression, fullyQualifiedKey + " = :a" + attributeValueCounter);
-                attributeValues.put(":a" + attributeValueCounter, ConversionUtil.toAttributeValue(object));
-
-                attributeValueCounter++;
+                addToSetExpression(fullyQualifiedField, object);
             }
         }
     }
+
+
+    private void extractUpdateDetails(UpdateObject updateObject, String prefix) {
+        for (Map.Entry<String, Object> updateEntry : updateObject.__getUpdates().entrySet()) {
+            String fullyQualifiedField = prefix + updateEntry.getKey();
+            Object object = updateEntry.getValue();
+
+            if (object == null) {
+                append(removeExpression, fullyQualifiedField);
+            } else if (UpdateList.class.isAssignableFrom(object.getClass())) {
+                UpdateList updateList = (UpdateList) object;
+
+                if (updateList.wasCleared()) {
+                    addToSetExpression(fullyQualifiedField, new ArrayList<Object>(updateList.__getUpdates().values()));
+                } else {
+                    extractUpdateDetails(updateList, fullyQualifiedField);
+                }
+            } else if (UpdateMap.class.isAssignableFrom(object.getClass())) {
+                UpdateMap updateMap = (UpdateMap) object;
+
+                if (updateMap.wasCleared()) {
+                    addToSetExpression(fullyQualifiedField, updateMap);
+                } else {
+                    extractUpdateDetails(updateMap, fullyQualifiedField + ".");
+                }
+            } else if (UpdateObject.class.isAssignableFrom(object.getClass())) {
+                extractUpdateDetails((UpdateObject) object, fullyQualifiedField + ".");
+            } else {
+                addToSetExpression(fullyQualifiedField, object);
+            }
+        }
+    }
+
+
+    private void addToSetExpression(String fullyQualifiedField, Object object) {
+        append(setExpression, fullyQualifiedField + " = :a" + attributeValueCounter);
+        attributeValues.put(":a" + attributeValueCounter, ConversionUtil.toAttributeValue(object));
+
+        attributeValueCounter++;
+    }
+
+
+//    private void addListToSetExpression(String fullyQualifiedField, List<Object> list) {
+//        append(setExpression, fullyQualifiedField + " = list_append(" + fullyQualifiedField + ", :a" + attributeValueCounter + ')');
+//        attributeValues.put(":a" + attributeValueCounter, ConversionUtil.toAttributeValue(list));
+//
+//        attributeValueCounter++;
+//    }
 
 
     private void append(StringBuilder sb, String text) {

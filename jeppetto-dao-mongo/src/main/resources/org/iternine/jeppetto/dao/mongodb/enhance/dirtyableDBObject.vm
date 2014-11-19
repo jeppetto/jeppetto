@@ -17,8 +17,8 @@ public $_.cls("${baseName}$DirtyableDBObject").ext($base).impl("org.iternine.jep
     $_.field("private final java.util.Map __extraValues = new java.util.HashMap();")
     $_.field("private java.util.Set __keys = new java.util.HashSet(java.util.Arrays.asList(new String[] {
         #foreach ( $getter in $getters )
-            #set ( $key = $_.fieldFor($getter.getName()) )
-            #if ( $key.equals('id') )
+            #set ( $field = $_.fieldFor($getter.getName()) )
+            #if ( $field.equals('id') )
                 ${Q}_id${Q}#if( $velocityHasNext ),#end
             #else
                 ${Q}$_.fieldFor($getter.getName())${Q}#if( $velocityHasNext ),#end
@@ -50,8 +50,8 @@ public $_.cls("${baseName}$DirtyableDBObject").ext($base).impl("org.iternine.jep
 
     #foreach ( $getter in $getters )
     #set( $getterName = $getter.getName() )
-    #set( $key = $_.fieldFor($getterName) )
-    #set( $setterName = $_.asSetter($getter) )
+    #set( $field = $_.fieldFor($getterName) )
+    #set( $setterName = $_.asSetter($field) )
     #set( $returnType = $getter.getReturnType().getName() )
 
     $_.method("
@@ -61,7 +61,7 @@ public $_.cls("${baseName}$DirtyableDBObject").ext($base).impl("org.iternine.jep
 
     $_.method("
     public void $setterName($returnType value) {
-        __dirtyKeys.add(${Q}$key${Q});
+        __dirtyKeys.add(${Q}$field${Q});
 
         if (__delegate == null) {
             super.$setterName(value);
@@ -108,8 +108,8 @@ public $_.cls("${baseName}$DirtyableDBObject").ext($base).impl("org.iternine.jep
         __keys.add(key); // keys can be removed so first thing to do is restore it
 
         #foreach ( $getter in $getters )
-        #set ( $key = $_.fieldFor($getter.getName()) )
-        #set ( $setterName = $_.asSetter($getter) )
+        #set ( $field = $_.fieldFor($getter.getName()) )
+        #set ( $setterName = $_.asSetter($field) )
         #set ( $returnType = $_.returnTypeOf($getter) )
         #set ( $returnTypeName = $returnType.getName() )
 
@@ -127,7 +127,7 @@ public $_.cls("${baseName}$DirtyableDBObject").ext($base).impl("org.iternine.jep
         }
 
         #else
-        if (${Q}$key${Q}.equals(key)) {
+        if (${Q}$field${Q}.equals(key)) {
             #if ( $returnType.isPrimitive() )
                 ## Need coercion logic?
                 this.$setterName((($_.wrapperNameFor($returnType)) v).${returnTypeName}Value());
@@ -152,7 +152,7 @@ public $_.cls("${baseName}$DirtyableDBObject").ext($base).impl("org.iternine.jep
     public Object get(String key) {
         #foreach ( $getter in $getters )
         #set ( $getterName = $getter.getName() )
-        #set ( $key = $_.fieldFor($getterName) )
+        #set ( $field = $_.fieldFor($getterName) )
         #set ( $returnType = $_.returnTypeOf($getter) )
 
         #if ( $getter.getName() == 'getId' )
@@ -168,7 +168,7 @@ public $_.cls("${baseName}$DirtyableDBObject").ext($base).impl("org.iternine.jep
         }
 
         #else
-        if (${Q}$key${Q}.equals(key)) {
+        if (${Q}$field${Q}.equals(key)) {
             #if ( $returnType.isPrimitive() )
             return $_.wrapperNameFor($returnType) .valueOf(this.$getterName());
             #else

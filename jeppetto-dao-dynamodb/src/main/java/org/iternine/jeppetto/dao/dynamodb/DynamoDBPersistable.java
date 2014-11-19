@@ -17,32 +17,32 @@
 package org.iternine.jeppetto.dao.dynamodb;
 
 
-import org.iternine.jeppetto.dao.dirtyable.Dirtyable;
+import org.iternine.jeppetto.dao.persistable.Persistable;
 
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 
 import java.util.Map;
 
 
-public interface DynamoDBPersistable extends Dirtyable {
+public interface DynamoDBPersistable extends Persistable {
 
     /**
      * @param key of the field to retrieve
      *
      * @return the associated field's value
      */
-    Object get(String key);
+    Object __get(String key);
 
 
     /**
      * @param key of the field to update
      * @param value to place in the associated field
      */
-    void put(String key, AttributeValue value);
+    void __put(String key, AttributeValue value);
 
 
     /**
      * @param itemMap that contains key, value pairs to apply to this object
      */
-    void putAll(Map<String, AttributeValue> itemMap);
+    void __putAll(Map<String, AttributeValue> itemMap);
 }

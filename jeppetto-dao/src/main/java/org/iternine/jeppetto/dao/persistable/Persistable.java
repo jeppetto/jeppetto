@@ -14,40 +14,40 @@
  * limitations under the License.
  */
 
-package org.iternine.jeppetto.dao.dirtyable;
+package org.iternine.jeppetto.dao.persistable;
 
 
 import java.util.Iterator;
 
 
-public interface Dirtyable {
-
-    /**
-     * @return true if this object is dirtied from it's persisted state
-     */
-    boolean isDirty();
-
+public interface Persistable {
 
     /**
      * Consider the current state of the object to be in sync with the persisted state.
      */
-    void markPersisted(String storeIdentifier);
+    void __markPersisted(String storeIdentifier);
 
 
     /**
      * @return true if this object has a representation in the underlying store.
      */
-    boolean isPersisted(String storeIdentifier);
+    boolean __isPersisted(String storeIdentifier);
+
+
+    /**
+     * @return true if this object is dirtied from it's persisted state
+     */
+    boolean __isDirty();
 
 
     /**
      * @return Iterator corresponding to changed fields in this object
      */
-    Iterator<String> getDirtyFields();
+    Iterator<String> __getDirtyFields();
 
 
     /**
-     * @return The object this Dirtyable is delegating to, or null if it is managing everything itself
+     * @return The object this Persistable is delegating to, or null if it is managing everything itself
      */
-    Object getDelegate();
+    Object __getDelegate();
 }

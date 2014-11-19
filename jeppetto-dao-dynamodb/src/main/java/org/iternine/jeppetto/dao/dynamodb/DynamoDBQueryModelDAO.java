@@ -20,7 +20,8 @@ package org.iternine.jeppetto.dao.dynamodb;
 import org.iternine.jeppetto.dao.AccessControlContextProvider;
 import org.iternine.jeppetto.dao.Condition;
 import org.iternine.jeppetto.dao.ConditionType;
-import org.iternine.jeppetto.dao.FailedBatchDeleteException;
+import org.iternine.jeppetto.dao.FailedBatchException;
+import org.iternine.jeppetto.dao.IdReferenceSet;
 import org.iternine.jeppetto.dao.JeppettoException;
 import org.iternine.jeppetto.dao.NoSuchItemException;
 import org.iternine.jeppetto.dao.OptimisticLockException;
@@ -37,13 +38,13 @@ import org.iternine.jeppetto.dao.dynamodb.iterable.BatchGetIterable;
 import org.iternine.jeppetto.dao.dynamodb.iterable.QueryIterable;
 import org.iternine.jeppetto.dao.dynamodb.iterable.ScanIterable;
 import org.iternine.jeppetto.dao.id.IdGenerator;
+import org.iternine.jeppetto.dao.updateobject.UpdateObject;
 import org.iternine.jeppetto.enhance.Enhancer;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.dynamodbv2.model.BatchGetItemRequest;
-import com.amazonaws.services.dynamodbv2.model.ComparisonOperator;
 import com.amazonaws.services.dynamodbv2.model.DeleteItemRequest;
 import com.amazonaws.services.dynamodbv2.model.GetItemRequest;
 import com.amazonaws.services.dynamodbv2.model.GetItemResult;
@@ -64,11 +65,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 
 /**
@@ -83,16 +83,6 @@ public class DynamoDBQueryModelDAO<T, ID>
     //-------------------------------------------------------------
     // Constants
     //-------------------------------------------------------------
-
-    private static final Set<ComparisonOperator> RANGE_KEY_COMPARISON_OPERATORS = new HashSet<ComparisonOperator>() {{
-        add(ComparisonOperator.EQ);
-        add(ComparisonOperator.LE);
-        add(ComparisonOperator.LT);
-        add(ComparisonOperator.GE);
-        add(ComparisonOperator.GT);
-        add(ComparisonOperator.BEGINS_WITH);
-        add(ComparisonOperator.BETWEEN);
-    }};
 
     private static final Logger logger = LoggerFactory.getLogger(DynamoDBQueryModelDAO.class);
 
@@ -111,7 +101,8 @@ public class DynamoDBQueryModelDAO<T, ID>
     private final String rangeKeyField;
     private final Map<String, String> localIndexes;
 //    private Map<Pair<String, String>, String> globalIndexes;
-    private final Enhancer<T> enhancer;
+    private final Enhancer<T> persistableEnhancer;
+    private final Enhancer<T> updateObjectEnhancer;
 
 
     //-------------------------------------------------------------
@@ -162,7 +153,8 @@ public class DynamoDBQueryModelDAO<T, ID>
 //            }
 //        }
 
-        this.enhancer = EnhancerHelper.getDynamoDBPersistableEnhancer(entityClass);
+        this.persistableEnhancer = EnhancerHelper.getPersistableEnhancer(entityClass);
+        this.updateObjectEnhancer = EnhancerHelper.getUpdateObjectEnhancer(entityClass);
     }
 
 
@@ -176,7 +168,7 @@ public class DynamoDBQueryModelDAO<T, ID>
         GetItemResult result;
 
         try {
-            result = dynamoDB.getItem(new GetItemRequest(tableName, getKeyFromId(id)));
+            result = dynamoDB.getItem(new GetItemRequest(tableName, getKeyFrom(id)));
         } catch (AmazonClientException e) {
             throw new JeppettoException(e);
         }
@@ -187,7 +179,7 @@ public class DynamoDBQueryModelDAO<T, ID>
 
         T t = ConversionUtil.getObjectFromItem(result.getItem(), entityClass);
 
-        ((DynamoDBPersistable) t).markPersisted(dynamoDB.toString());
+        ((DynamoDBPersistable) t).__markPersisted(dynamoDB.toString());
 
         return t;
     }
@@ -199,13 +191,13 @@ public class DynamoDBQueryModelDAO<T, ID>
         Collection<Map<String, AttributeValue>> keys = new ArrayList<Map<String, AttributeValue>>();
 
         for (ID id : ids) {
-            keys.add(getKeyFromId(id));
+            keys.add(getKeyFrom(id));
         }
 
         Map<String, KeysAndAttributes> requestItems = Collections.singletonMap(tableName, new KeysAndAttributes().withKeys(keys));
         BatchGetItemRequest batchGetItemRequest = new BatchGetItemRequest().withRequestItems(requestItems);
 
-        return new BatchGetIterable<T>(dynamoDB, enhancer, batchGetItemRequest, tableName);
+        return new BatchGetIterable<T>(dynamoDB, persistableEnhancer, batchGetItemRequest, tableName);
     }
 
 
@@ -219,15 +211,15 @@ public class DynamoDBQueryModelDAO<T, ID>
     @Override
     public void save(T entity)
             throws OptimisticLockException, JeppettoException {
-        DynamoDBPersistable dynamoDBPersistable = (DynamoDBPersistable) enhancer.enhance(entity);
+        DynamoDBPersistable dynamoDBPersistable = (DynamoDBPersistable) persistableEnhancer.enhance(entity);
 
-        if (!dynamoDBPersistable.isPersisted(dynamoDB.toString())) {
+        if (!dynamoDBPersistable.__isPersisted(dynamoDB.toString())) {
             saveItem(dynamoDBPersistable);
         } else {
-            updateItem(dynamoDBPersistable);
+            updateItem(getKeyFrom(dynamoDBPersistable), new UpdateExpressionBuilder(dynamoDBPersistable), null);
         }
 
-        dynamoDBPersistable.markPersisted(dynamoDB.toString());
+        dynamoDBPersistable.__markPersisted(dynamoDB.toString());
     }
 
 
@@ -238,7 +230,7 @@ public class DynamoDBQueryModelDAO<T, ID>
             throw new JeppettoException("entity is null; nothing to delete.");
         }
 
-        deleteItem(getKey((DynamoDBPersistable) enhancer.enhance(entity)));
+        deleteItem(getKeyFrom((DynamoDBPersistable) persistableEnhancer.enhance(entity)));
     }
 
 
@@ -249,41 +241,71 @@ public class DynamoDBQueryModelDAO<T, ID>
             throw new JeppettoException("id is null; unable to delete entity.");
         }
 
-        deleteItem(getKeyFromId(id));
+        deleteItem(getKeyFrom(id));
     }
 
 
     @Override
     public void deleteByIds(ID... ids)
-            throws FailedBatchDeleteException, JeppettoException {
-        List<ID> failedDeletes = new ArrayList<ID>();
+            throws FailedBatchException, JeppettoException {
+        Map<ID, Exception> failedDeletes = new LinkedHashMap<ID, Exception>();
 
         for (ID id : ids) {
             try {
-                deleteItem(getKeyFromId(id));
+                deleteItem(getKeyFrom(id));
             } catch (Exception e) {
-                logger.warn("Failed to delete item with id = " + id, e);
-
-                failedDeletes.add(id);
+                failedDeletes.put(id, e);
             }
         }
 
         if (failedDeletes.size() > 0) {
-            throw new FailedBatchDeleteException(failedDeletes);
+            throw new FailedBatchException("Unable to delete all items", failedDeletes);
         }
     }
 
 
     @Override
     public ReferenceSet<T> referenceByIds(ID... ids) {
-        throw new UnsupportedOperationException("referenceByIds() not yet supported.");
+        return new IdReferenceSet<T, ID>(updateObjectEnhancer, ids);
     }
 
 
     @Override
     public void updateReferences(ReferenceSet<T> referenceSet, T updateObject)
-            throws JeppettoException {
-        throw new UnsupportedOperationException("updateReferences() not yet supported.");
+            throws FailedBatchException, JeppettoException {
+        UpdateExpressionBuilder updateExpressionBuilder = new UpdateExpressionBuilder((UpdateObject) updateObject);
+
+        if (IdReferenceSet.class.isAssignableFrom(referenceSet.getClass())) {
+            IdReferenceSet<T, ID> idReferenceSet = (IdReferenceSet<T, ID>) referenceSet;
+            Map<ID, Exception> failedUpdates = new LinkedHashMap<ID, Exception>();
+
+            for (ID id : idReferenceSet.getIds()) {
+                try {
+                    updateItem(getKeyFrom(id), updateExpressionBuilder, null);
+                } catch (Exception e) {
+                    failedUpdates.put(id, e);
+                }
+            }
+
+            if (failedUpdates.size() > 0) {
+                throw new FailedBatchException("Unable to update all items", failedUpdates);
+            }
+        } else {
+            ConditionReferenceSet<T> conditionReferenceSet = (ConditionReferenceSet<T>) referenceSet;
+            ConditionExpressionBuilder conditionExpressionBuilder = conditionReferenceSet.getConditionExpressionBuilder();
+
+            Map<String, AttributeValue> key;
+
+            try {
+                key = conditionExpressionBuilder.getKey();
+            } catch (NullPointerException e) {
+                throw new JeppettoException("DynamoDB only supports updates where the condition uniquely identifies the item by its key.", e);
+            }
+
+            updateItem(key, updateExpressionBuilder, conditionExpressionBuilder);
+
+            // TODO: Investigate if we can update multiple items at the same time (i.e. scan-based updates or hash-key (but no range-key) ids)
+        }
     }
 
 
@@ -322,55 +344,14 @@ public class DynamoDBQueryModelDAO<T, ID>
     @Override
     public Iterable<T> findUsingQueryModel(QueryModel queryModel)
             throws JeppettoException {
-        Condition hashKeyCondition = null;
-        Condition actingRangeKeyCondition = null;
-        ConditionExpressionBuilder conditionExpressionBuilder = new ConditionExpressionBuilder();
+        ConditionExpressionBuilder conditionExpressionBuilder = new ConditionExpressionBuilder(queryModel, hashKeyField, localIndexes);
 
-        if (queryModel.getConditions() != null) {
-            for (Condition condition : queryModel.getConditions()) {
-                DynamoDBConstraint dynamoDBConstraint = (DynamoDBConstraint) condition.getConstraint();
-                ComparisonOperator comparisonOperator = dynamoDBConstraint.getOperator().getComparisonOperator();
-
-                if (condition.getField().equals(hashKeyField) && comparisonOperator == ComparisonOperator.EQ) {
-                    hashKeyCondition = condition;
-                } else if (actingRangeKeyCondition == null     // First one wins...
-                           && localIndexes.containsKey(condition.getField())
-                           && RANGE_KEY_COMPARISON_OPERATORS.contains(comparisonOperator)) {
-                    actingRangeKeyCondition = condition;
-                } else {
-                    conditionExpressionBuilder.add(condition.getField(), dynamoDBConstraint);
-                }
-            }
-        }
-
-        if (queryModel.getAssociationConditions() != null) {
-            for (Map.Entry<String, List<Condition>> associationConditions : queryModel.getAssociationConditions().entrySet()) {
-                for (Condition condition : associationConditions.getValue()) {
-                    conditionExpressionBuilder.add(associationConditions.getKey() + "." + condition.getField(),
-                                                   (DynamoDBConstraint) condition.getConstraint());
-                }
-            }
-        }
-
-        if (hashKeyCondition != null) {
-            Map<String, com.amazonaws.services.dynamodbv2.model.Condition> keyConditions
-                    = new HashMap<String, com.amazonaws.services.dynamodbv2.model.Condition>();
-            String actingRangeKey;
-
-            keyConditions.put(hashKeyCondition.getField(), ((DynamoDBConstraint) hashKeyCondition.getConstraint()).asCondition());
-
-            if (actingRangeKeyCondition == null) {
-                actingRangeKey = null;
-            } else {
-                actingRangeKey = actingRangeKeyCondition.getField();
-                keyConditions.put(actingRangeKey, ((DynamoDBConstraint) actingRangeKeyCondition.getConstraint()).asCondition());
-            }
-
-            return queryItems(queryModel, keyConditions, actingRangeKey, conditionExpressionBuilder);
+        if (conditionExpressionBuilder.hasHashKeyCondition()) {
+            return queryItems(queryModel, conditionExpressionBuilder);
         } else {
-            if (actingRangeKeyCondition != null) {
-                conditionExpressionBuilder.add(actingRangeKeyCondition.getField(), (DynamoDBConstraint) actingRangeKeyCondition.getConstraint());
-            }
+            logger.warn("Condition does not have a hash key specified -- using 'scan' to search.");
+
+            conditionExpressionBuilder.convertRangeKeyConditionToExpression();
 
             return scanItems(queryModel, conditionExpressionBuilder);
         }
@@ -391,6 +372,9 @@ public class DynamoDBQueryModelDAO<T, ID>
             throws JeppettoException {
         Iterable<T> matches = findUsingQueryModel(queryModel);
 
+        // Would ideally catch individual exceptions and throw a FailedBatchException.  Unfortunately, we don't have an easy
+        // way to convert the key from a match to an ID object, which is what the exception's Map contains.  Maybe DynamoDB will
+        // add support for a query-based delete.
         for (T match : matches) {
             delete(match);
         }
@@ -400,7 +384,11 @@ public class DynamoDBQueryModelDAO<T, ID>
     @Override
     public ReferenceSet<T> referenceUsingQueryModel(QueryModel queryModel)
             throws JeppettoException {
-        throw new UnsupportedOperationException("referenceUsingQueryModel() not yet supported.");
+        // For referencing an object, we can only identify an item by its actual range key, not one of the index fields.  For the
+        // third parameter, pass in a singleton map that only contains the range field.
+        return new ConditionReferenceSet<T>(updateObjectEnhancer,
+                                            new ConditionExpressionBuilder(queryModel, hashKeyField,
+                                                                           Collections.singletonMap(rangeKeyField, (String) null)));
     }
 
 
@@ -431,14 +419,30 @@ public class DynamoDBQueryModelDAO<T, ID>
     }
 
 
-    private void updateItem(DynamoDBPersistable dynamoDBPersistable) {
-        UpdateExpressionBuilder updateExpressionBuilder = new UpdateExpressionBuilder(dynamoDBPersistable);
-
+    private void updateItem(Map<String, AttributeValue> key, UpdateExpressionBuilder updateExpressionBuilder,
+                            ConditionExpressionBuilder conditionExpressionBuilder) {
         try {
-            dynamoDB.updateItem(new UpdateItemRequest().withTableName(tableName)
-                                                       .withKey(getKey(dynamoDBPersistable))
-                                                       .withUpdateExpression(updateExpressionBuilder.getExpression())
-                                                       .withExpressionAttributeValues(updateExpressionBuilder.getAttributeValues()));
+            UpdateItemRequest updateItemRequest = new UpdateItemRequest().withTableName(tableName)
+                                                                         .withKey(key)
+                                                                         .withUpdateExpression(updateExpressionBuilder.getExpression());
+
+            Map<String, AttributeValue> attributeValues;
+
+            if (conditionExpressionBuilder == null) {
+                attributeValues = updateExpressionBuilder.getAttributeValues();
+            } else {
+                attributeValues = new LinkedHashMap<String, AttributeValue>();
+                attributeValues.putAll(updateExpressionBuilder.getAttributeValues());
+                attributeValues.putAll(conditionExpressionBuilder.getAttributeValues());
+
+                updateItemRequest.withConditionExpression(conditionExpressionBuilder.getExpression());
+            }
+
+            if (!attributeValues.isEmpty()) {
+                updateItemRequest.withExpressionAttributeValues(attributeValues);
+            }
+
+            dynamoDB.updateItem(updateItemRequest);
         } catch (Exception e) {
             throw new JeppettoException(e);
         }
@@ -454,12 +458,11 @@ public class DynamoDBQueryModelDAO<T, ID>
     }
 
 
-    private Iterable<T> queryItems(QueryModel queryModel, Map<String, com.amazonaws.services.dynamodbv2.model.Condition> keyConditions,
-                                   String actingRangeKey, ConditionExpressionBuilder conditionExpressionBuilder) {
+    private Iterable<T> queryItems(QueryModel queryModel, ConditionExpressionBuilder conditionExpressionBuilder) {
         QueryRequest queryRequest = new QueryRequest(tableName);
 
-        queryRequest.setKeyConditions(keyConditions);
-        queryRequest.setIndexName(localIndexes.get(actingRangeKey));
+        queryRequest.setKeyConditions(conditionExpressionBuilder.getKeyConditions());
+        queryRequest.setIndexName(localIndexes.get(conditionExpressionBuilder.getRangeKey()));
         queryRequest.setConsistentRead(consistentRead);
 
         if (queryModel.getFirstResult() > 0) {
@@ -472,7 +475,7 @@ public class DynamoDBQueryModelDAO<T, ID>
 
         if (queryModel.getSorts() != null) {
             for (Sort sort : queryModel.getSorts()) {
-                if (!sort.getField().equals(actingRangeKey)) {
+                if (!sort.getField().equals(conditionExpressionBuilder.getRangeKey())) {
                     logger.warn("Unable to sort on other than the acting range key. Ignoring sort on " + sort.getField());
                 }
 
@@ -480,7 +483,7 @@ public class DynamoDBQueryModelDAO<T, ID>
             }
         }
 
-        if (conditionExpressionBuilder.hasConditions()) {
+        if (conditionExpressionBuilder.hasExpression()) {
             queryRequest.setFilterExpression(conditionExpressionBuilder.getExpression());
             queryRequest.setExpressionAttributeValues(conditionExpressionBuilder.getAttributeValues());
         }
@@ -488,7 +491,7 @@ public class DynamoDBQueryModelDAO<T, ID>
         // TODO: if partial object, add attributes to fetch
 //            queryRequest.setAttributesToGet();
 
-        return new QueryIterable<T>(dynamoDB, enhancer, queryRequest, hashKeyField);
+        return new QueryIterable<T>(dynamoDB, persistableEnhancer, queryRequest, hashKeyField);
     }
 
 
@@ -507,7 +510,7 @@ public class DynamoDBQueryModelDAO<T, ID>
             logger.warn("Not able to sort when performing a 'scan' operation.  Ignoring... ");
         }
 
-        if (conditionExpressionBuilder.hasConditions()) {
+        if (conditionExpressionBuilder.hasExpression()) {
             scanRequest.setFilterExpression(conditionExpressionBuilder.getExpression());
             scanRequest.setExpressionAttributeValues(conditionExpressionBuilder.getAttributeValues());
         }
@@ -515,19 +518,19 @@ public class DynamoDBQueryModelDAO<T, ID>
         // TODO: if partial object, add attributes to fetch
 //            scanRequest.setAttributesToGet();
 
-        return new ScanIterable<T>(dynamoDB, enhancer, scanRequest, hashKeyField);
+        return new ScanIterable<T>(dynamoDB, persistableEnhancer, scanRequest, hashKeyField);
     }
 
 
     private void generateIdIfNeeded(DynamoDBPersistable dynamoDBPersistable) {
-        if (dynamoDBPersistable.get(hashKeyField) != null
-         /* && rangeKeyField != null && dynamoDBPersistable.get(rangeKeyField) != null */) {
+        if (dynamoDBPersistable.__get(hashKeyField) != null
+         /* && rangeKeyField != null && dynamoDBPersistable.__get(rangeKeyField) != null */) {
             return;
         }
 
         // TODO: handle case when part of the key is there (e.g. code generates range key, but wants to generate hash key)
-        // Can't blindly use getKeyFromId since a single generated value may be for the range key...
-        dynamoDBPersistable.putAll(getKeyFromId(idGenerator.generateId()));
+        // Can't blindly use getKeyFrom since a single generated value may be for the range key...
+        dynamoDBPersistable.__putAll(getKeyFrom(idGenerator.generateId()));
     }
 
 
@@ -554,7 +557,7 @@ public class DynamoDBQueryModelDAO<T, ID>
     }
 
 
-    private Map<String, AttributeValue> getKeyFromId(ID id) {
+    private Map<String, AttributeValue> getKeyFrom(ID id) {
         Map<String, AttributeValue> key;
 
         if (Pair.class.isAssignableFrom(id.getClass())) {
@@ -570,17 +573,17 @@ public class DynamoDBQueryModelDAO<T, ID>
     }
 
 
-    public Map<String, AttributeValue> getKey(DynamoDBPersistable dynamoDBPersistable) {
+    public Map<String, AttributeValue> getKeyFrom(DynamoDBPersistable dynamoDBPersistable) {
         Map<String, AttributeValue> key;
 
         if (rangeKeyField != null) {
             key = new HashMap<String, AttributeValue>(2);
 
-            key.put(hashKeyField, ConversionUtil.toAttributeValue(dynamoDBPersistable.get(hashKeyField)));
-            key.put(rangeKeyField, ConversionUtil.toAttributeValue(dynamoDBPersistable.get(rangeKeyField)));
+            key.put(hashKeyField, ConversionUtil.toAttributeValue(dynamoDBPersistable.__get(hashKeyField)));
+            key.put(rangeKeyField, ConversionUtil.toAttributeValue(dynamoDBPersistable.__get(rangeKeyField)));
         } else {
-            key = Collections.singletonMap(hashKeyField, ConversionUtil.toAttributeValue(
-                    dynamoDBPersistable.get(hashKeyField)));
+            key = Collections.singletonMap(hashKeyField, ConversionUtil.toAttributeValue(dynamoDBPersistable.__get(
+                    hashKeyField)));
         }
 
         return key;

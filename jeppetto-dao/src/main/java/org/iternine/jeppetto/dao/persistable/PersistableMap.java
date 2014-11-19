@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.iternine.jeppetto.dao.dirtyable;
+package org.iternine.jeppetto.dao.persistable;
 
 
 import org.iternine.jeppetto.dao.JeppettoException;
@@ -29,16 +29,15 @@ import java.util.Map;
 import java.util.Set;
 
 
-public class DirtyableMap
-        implements Dirtyable, Map<String, Object> {
+public class PersistableMap
+        implements Persistable, Map<String, Object> {
 
     //-------------------------------------------------------------
     // Variables - Private
     //-------------------------------------------------------------
 
     private Map<String, Object> delegate;
-    private Set<String> addedOrUpdatedKeys = new HashSet<String>();
-    private Set<String> removedKeys = new HashSet<String>();
+    private Set<String> updatedKeys = new HashSet<String>();
     private String storeIdentifier;
 
 
@@ -46,17 +45,17 @@ public class DirtyableMap
     // Constructors
     //-------------------------------------------------------------
 
-    public DirtyableMap() {
+    public PersistableMap() {
         this(new HashMap<String, Object>());
     }
 
 
-    public DirtyableMap(int initialCapacity) {
+    public PersistableMap(int initialCapacity) {
         this(new HashMap<String, Object>(initialCapacity));
     }
 
 
-    public DirtyableMap(Map<String, Object> delegate) {
+    public PersistableMap(Map<String, Object> delegate) {
         this.delegate = delegate;
     }
 
@@ -66,28 +65,27 @@ public class DirtyableMap
     //-------------------------------------------------------------
 
     @Override
-    public boolean isDirty() {
-        return !addedOrUpdatedKeys.isEmpty() || !removedKeys.isEmpty() || getDirtyFields().hasNext();
+    public boolean __isDirty() {
+        return !updatedKeys.isEmpty() || __getDirtyFields().hasNext();
     }
 
 
     @Override
-    public void markPersisted(String storeIdentifier) {
-        addedOrUpdatedKeys.clear();
-        removedKeys.clear();
+    public void __markPersisted(String storeIdentifier) {
+        updatedKeys.clear();
 
         for (Object o : delegate.entrySet()) {
             Map.Entry entry = (Map.Entry) o;
 
             //noinspection SuspiciousMethodCalls
-            if (addedOrUpdatedKeys.contains(entry.getKey())) {
+            if (updatedKeys.contains(entry.getKey())) {
                 continue;
             }
 
-            if (entry.getValue() instanceof Dirtyable) {
-                Dirtyable dirtyableDBObject = (Dirtyable) entry.getValue();
+            if (entry.getValue() instanceof Persistable) {
+                Persistable persistable = (Persistable) entry.getValue();
 
-                dirtyableDBObject.markPersisted(storeIdentifier);
+                persistable.__markPersisted(storeIdentifier);
             }
         }
 
@@ -96,30 +94,37 @@ public class DirtyableMap
 
 
     @Override
-    public boolean isPersisted(String storeIdentifier) {
+    public boolean __isPersisted(String storeIdentifier) {
         return storeIdentifier.equals(this.storeIdentifier);
     }
 
 
     @Override
-    public Iterator<String> getDirtyFields() {
+    public Iterator<String> __getDirtyFields() {
         return new Iterator<String>() {
-            private Iterator<Map.Entry<String, Object>> entries = entrySet().iterator();
-            private Map.Entry<String, Object> entry;
+            private Iterator<String> keysIterator;
+            private String key;
+
+            {
+                Set<String> allKeys = new HashSet<String>(delegate.keySet());
+                allKeys.addAll(updatedKeys);
+
+                this.keysIterator = allKeys.iterator();
+            }
 
             @Override
             public boolean hasNext() {
-                while (entries.hasNext()) {
-                    entry = entries.next();
+                while (keysIterator.hasNext()) {
+                    key = keysIterator.next();
 
-                    // At this point, every value in the map is either a DirtyableDBObject or an immutable
-                    // type (such as String).  The exception is the byte[] type, which doesn't get converted and
-                    // we don't know if it changed, so we'll assume it's dirty.
-                    if (addedOrUpdatedKeys.contains(entry.getKey())
-                        || (entry.getValue() instanceof Dirtyable
-                            && (((Dirtyable) entry.getValue()).isDirty()
-                                || !((Dirtyable) entry.getValue()).isPersisted(storeIdentifier)))
-                        || entry.getValue() instanceof byte[]) {
+                    if (updatedKeys.contains(key)) {
+                        return true;
+                    }
+
+                    Object value = delegate.get(key);
+
+                    if (value instanceof Persistable && (((Persistable) value).__isDirty()
+                                                       || !((Persistable) value).__isPersisted(storeIdentifier))) {
                         return true;
                     }
                 }
@@ -130,20 +135,20 @@ public class DirtyableMap
 
             @Override
             public String next() {
-                return entry.getKey();
+                return key;
             }
 
 
             @Override
             public void remove() {
-                throw new JeppettoException("Can't remove items from dirtyKeys");
+                throw new JeppettoException("Can't remove items from dirtyFields");
             }
         };
     }
 
 
     @Override
-    public Object getDelegate() {
+    public Object __getDelegate() {
         return delegate;
     }
 
@@ -154,11 +159,7 @@ public class DirtyableMap
 
     @Override
     public Object put(String key, Object value) {
-        addedOrUpdatedKeys.add(key);
-
-        if (removedKeys.size() > 0) {
-            removedKeys.remove(key);
-        }
+        updatedKeys.add(key);
 
         return delegate.put(key, value);
     }
@@ -170,11 +171,7 @@ public class DirtyableMap
         Object result = delegate.remove(stringKey);
 
         if (result != null) {
-            removedKeys.add(stringKey);
-
-            if (addedOrUpdatedKeys.size() > 0) {
-                addedOrUpdatedKeys.remove(stringKey);
-            }
+            updatedKeys.add(stringKey);
         }
 
         return result;
@@ -182,8 +179,8 @@ public class DirtyableMap
 
 
     @Override
-    public void putAll(Map<? extends String, ? extends Object> m) {
-        for (Map.Entry<? extends String, ? extends Object> entry : m.entrySet()) {
+    public void putAll(Map<? extends String, ?> m) {
+        for (Map.Entry<? extends String, ?> entry : m.entrySet()) {
             put(entry.getKey(), entry.getValue());
         }
     }
@@ -191,8 +188,7 @@ public class DirtyableMap
 
     @Override
     public void clear() {
-        removedKeys.addAll(delegate.keySet());
-        addedOrUpdatedKeys.clear();
+        updatedKeys.clear();
         delegate.clear();
     }
 
@@ -310,7 +306,7 @@ public class DirtyableMap
 
                     @Override
                     public void remove() {
-                        DirtyableMap.this.remove(currentKey);
+                        PersistableMap.this.remove(currentKey);
                     }
                 };
             }
@@ -324,13 +320,13 @@ public class DirtyableMap
 
             @Override
             public boolean remove(Object o) {
-                return DirtyableMap.this.remove(o) != null;
+                return PersistableMap.this.remove(o) != null;
             }
 
 
             @Override
             public void clear() {
-                DirtyableMap.this.clear();
+                PersistableMap.this.clear();
             }
         };
     }

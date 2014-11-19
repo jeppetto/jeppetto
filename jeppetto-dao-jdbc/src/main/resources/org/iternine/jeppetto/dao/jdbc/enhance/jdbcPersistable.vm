@@ -41,8 +41,8 @@ public $_.cls("${baseName}$JDBCPersistable").ext($base).impl("org.iternine.jeppe
 
     #foreach ( $getter in $getters )
     #set( $getterName = $getter.getName() )
-    #set( $key = $_.fieldFor($getterName) )
-    #set( $setterName = $_.asSetter($getter) )
+    #set( $field = $_.fieldFor($getterName) )
+    #set( $setterName = $_.asSetter($field) )
     #set( $returnType = $getter.getReturnType().getName() )
 
     $_.method("
@@ -52,8 +52,8 @@ public $_.cls("${baseName}$JDBCPersistable").ext($base).impl("org.iternine.jeppe
 
     $_.method("
     public void $setterName($returnType value) {
-        if (!__originalValues.containsKey(${Q}$key${Q})) {
-            __originalValues.put(${Q}$key${Q}, org.iternine.jeppetto.enhance.ReferenceUtil.asObject($getterName()));
+        if (!__originalValues.containsKey(${Q}$field${Q})) {
+            __originalValues.put(${Q}$field${Q}, org.iternine.jeppetto.enhance.ReferenceUtil.asObject($getterName()));
         }
 
         if (__delegate == null) {
@@ -78,30 +78,30 @@ public $_.cls("${baseName}$JDBCPersistable").ext($base).impl("org.iternine.jeppe
     public void populateObject(java.sql.ResultSet resultSet) {
         #foreach( $getter in $getters )
         #set( $getterName = $getter.getName() )
-        #set( $key = $_.fieldFor($getterName) )
-        #set( $setterName = $_.asSetter($getter) )
+        #set( $field = $_.fieldFor($getterName) )
+        #set( $setterName = $_.asSetter($field) )
         #set( $returnType = $getter.getReturnType().getName() )
 
         #if ( $returnType == 'int' )
-        super.$setterName(resultSet.getInt(${Q}$key${Q}));
+        super.$setterName(resultSet.getInt(${Q}$field${Q}));
         #elseif( $returnType == 'short' )
-        super.$setterName(resultSet.getShort(${Q}$key${Q}));
+        super.$setterName(resultSet.getShort(${Q}$field${Q}));
         #elseif( $returnType == 'long' )
-        super.$setterName(resultSet.getLong(${Q}$key${Q}));
+        super.$setterName(resultSet.getLong(${Q}$field${Q}));
         #elseif( $returnType == 'byte' )
-        super.$setterName(resultSet.getByte(${Q}$key${Q}));
+        super.$setterName(resultSet.getByte(${Q}$field${Q}));
         #elseif( $returnType == 'double' )
-        super.$setterName(resultSet.getDouble(${Q}$key${Q}));
+        super.$setterName(resultSet.getDouble(${Q}$field${Q}));
         #elseif( $returnType == 'float' )
-        super.$setterName(resultSet.getFloat(${Q}$key${Q}));
+        super.$setterName(resultSet.getFloat(${Q}$field${Q}));
         #elseif( $returnType == 'boolean' )
-        super.$setterName(resultSet.getBoolean(${Q}$key${Q}));
+        super.$setterName(resultSet.getBoolean(${Q}$field${Q}));
         #elseif( $returnType == 'java.lang.String' )
-        super.$setterName(resultSet.getString(${Q}$key${Q}));
+        super.$setterName(resultSet.getString(${Q}$field${Q}));
         #elseif( $returnType == 'java.util.Date' )
-        super.$setterName(new java.util.Date(resultSet.getTimestamp(${Q}$key${Q}).getTime()));
+        super.$setterName(new java.util.Date(resultSet.getTimestamp(${Q}$field${Q}).getTime()));
         #else
-        super.$setterName(resultSet.getObject(${Q}$key${Q}));
+        super.$setterName(resultSet.getObject(${Q}$field${Q}));
         #end
         #end
     }")
