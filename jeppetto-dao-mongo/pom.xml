@@ -45,8 +45,7 @@
         <dependency>
             <groupId>org.mongodb</groupId>
             <artifactId>mongo-java-driver</artifactId>
-            <version>${mongo-java-driver.version}</version>
-            <scope>provided</scope>
+            <version>2.12.4</version>
         </dependency>
 
         <dependency>
