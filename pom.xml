@@ -46,7 +46,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <slf4j.version>1.7.7</slf4j.version>
         <mongo-java-driver.version>2.12.4</mongo-java-driver.version>
-        <spring.version>3.1.2.RELEASE</spring.version>
+        <spring.version>4.1.2.RELEASE</spring.version>
     </properties>
 
     <profiles>

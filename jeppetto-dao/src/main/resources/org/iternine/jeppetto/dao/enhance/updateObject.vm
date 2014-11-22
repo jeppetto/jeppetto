@@ -37,8 +37,8 @@ public $_.cls("${baseName}$UpdateObject").ext($base).impl("org.iternine.jeppetto
             #elseif ( $updateObjectHelper.isAssignableFromMap($returnType) )
             value = new org.iternine.jeppetto.dao.updateobject.UpdateMap();
             #elseif ( $updateObjectHelper.isAssignableFromSet($returnType) )
-            throw new RuntimeException(${Q}Sets are not yet supported${Q});
             ## value = new org.iternine.jeppetto.dao.updateobject.UpdateSet();
+            value = new java.util.HashSet();
             #else
             value = ($returnTypeName) $updateObjectHelper.getEnhancerMethod()($returnTypeName .class).newInstance();
             #end
