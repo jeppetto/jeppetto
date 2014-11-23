@@ -125,16 +125,15 @@ public interface GenericDAO<T, ID> {
 
 
     /**
-     * Update the objects referenced by the referenceSet with the changes in the updateObject.
+     * Update the objects referenced by the referenceSet with the changes in the contained updateObject.
      *
-     * @param referenceSet containing references to stored items
-     * @param updateObject the changes to make on references objects
+     * @param referenceSet containing references and desired changes to stored items
      *
      * @throws FailedBatchException if some (or all) of the referenced items were not successfully updated.
      *                              The exception contains a list of the ids that failed to update.
      * @throws JeppettoException if any underlying failure occurs
      */
-    void updateReferences(ReferenceSet<T> referenceSet, T updateObject)
+    void updateReferences(ReferenceSet<T> referenceSet)
             throws FailedBatchException, JeppettoException;
 
 

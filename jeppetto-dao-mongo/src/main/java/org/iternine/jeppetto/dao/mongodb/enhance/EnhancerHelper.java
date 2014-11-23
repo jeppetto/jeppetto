@@ -18,6 +18,7 @@ package org.iternine.jeppetto.dao.mongodb.enhance;
 
 
 import org.iternine.jeppetto.dao.EntityVelocityEnhancer;
+import org.iternine.jeppetto.dao.updateobject.UpdateObjectVelocityEnhancer;
 import org.iternine.jeppetto.enhance.Enhancer;
 import org.iternine.jeppetto.enhance.NoOpEnhancer;
 
@@ -118,10 +119,7 @@ public class EnhancerHelper {
 
                 updateObjectEnhancers.put(baseClass, enhancer);
             } else {
-                Map<String, Object> contextItems = new HashMap<String, Object>();
-                contextItems.put("updateObjectHelper", new UpdateObjectHelper());
-
-                enhancer = new EntityVelocityEnhancer<T>(baseClass, contextItems) {
+                enhancer = new UpdateObjectVelocityEnhancer<T>(baseClass) {
                     //-------------------------------------------------------------
                     // Implementation - Enhancer
                     //-------------------------------------------------------------
@@ -139,6 +137,16 @@ public class EnhancerHelper {
                     @Override
                     protected String getTemplateLocation() {
                         return "org/iternine/jeppetto/dao/mongodb/enhance/updateObject.vm";
+                    }
+
+
+                    @Override
+                    protected Map<String, Object> getAdditionalContextItems() {
+                        Map<String, Object> contextItems = super.getAdditionalContextItems();
+
+                        contextItems.put("updateObjectHelper", new UpdateObjectHelper());
+
+                        return contextItems;
                     }
                 };
 

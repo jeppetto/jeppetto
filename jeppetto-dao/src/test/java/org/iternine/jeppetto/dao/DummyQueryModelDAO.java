@@ -154,7 +154,7 @@ public class DummyQueryModelDAO<T, ID>
 
 
     @Override
-    public void updateReferences(ReferenceSet<T> referenceSet, T entityUpdates)
+    public void updateReferences(ReferenceSet<T> referenceSet)
             throws JeppettoException {
     }
 

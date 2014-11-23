@@ -219,7 +219,7 @@ public class JDBCQueryModelDAO<T, ID>
 
 
     @Override
-    public void updateReferences(ReferenceSet<T> referenceSet, T updateObject)
+    public void updateReferences(ReferenceSet<T> referenceSet)
             throws FailedBatchException, JeppettoException {
         throw new RuntimeException("updateReferences not yet implemented");
     }

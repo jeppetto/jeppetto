@@ -101,7 +101,7 @@ public class ComparingQueryModelDAO
 
 
     @Override
-    public void updateReferences(ReferenceSet<Sample> referenceSet, Sample updateObject)
+    public void updateReferences(ReferenceSet<Sample> referenceSet)
             throws JeppettoException {
         throw new UnsupportedOperationException();
     }

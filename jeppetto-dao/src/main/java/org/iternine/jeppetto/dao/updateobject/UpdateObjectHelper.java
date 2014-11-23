@@ -102,4 +102,15 @@ public abstract class UpdateObjectHelper {
     public boolean isAssignableFromSet(Class clazz) {
         return Set.class.isAssignableFrom(clazz);
     }
+
+
+    public String getAdderField(String methodName) {
+        if (!methodName.startsWith("addTo")) {
+            throw new RuntimeException("Unexpected adder: " + methodName);
+        }
+
+        String field = methodName.substring(5);
+
+        return field.substring(0, 1).toLowerCase().concat(field.substring(1));
+    }
 }

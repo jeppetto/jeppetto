@@ -104,9 +104,7 @@ public interface QueryModelDAO<T, ID> extends GenericDAO<T, ID> {
      *
      * @return corresponding Condition object
      */
-    Condition buildCondition(String conditionField,
-                             ConditionType conditionType,
-                             Iterator argsIterator);
+    Condition buildCondition(String conditionField, ConditionType conditionType, Iterator argsIterator);
 
 
     /**
@@ -121,7 +119,5 @@ public interface QueryModelDAO<T, ID> extends GenericDAO<T, ID> {
      *
      * @return corresponding Projection object
      */
-    Projection buildProjection(String projectionField,
-                               ProjectionType projectionType,
-                               Iterator argsIterator);
+    Projection buildProjection(String projectionField, ProjectionType projectionType, Iterator argsIterator);
 }

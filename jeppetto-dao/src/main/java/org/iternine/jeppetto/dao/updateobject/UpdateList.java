@@ -28,7 +28,7 @@ import java.util.TreeMap;
 
 
 public class UpdateList
-        implements List, UpdateObject {
+        implements UpdateObject, List {
 
     //-------------------------------------------------------------
     // Variables - Private

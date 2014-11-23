@@ -19,6 +19,7 @@ package org.iternine.jeppetto.dao.dynamodb;
 
 import org.iternine.jeppetto.dao.JeppettoException;
 import org.iternine.jeppetto.dao.persistable.PersistableList;
+import org.iternine.jeppetto.dao.updateobject.NumericIncrement;
 import org.iternine.jeppetto.dao.updateobject.UpdateList;
 import org.iternine.jeppetto.dao.updateobject.UpdateMap;
 import org.iternine.jeppetto.dao.updateobject.UpdateObject;
@@ -137,6 +138,8 @@ public class UpdateExpressionBuilder {
                 } else {
                     extractUpdateDetails(updateMap, fullyQualifiedField + ".");
                 }
+            } else if (NumericIncrement.class.isAssignableFrom(object.getClass())) {
+                addIncrementToSetExpression(fullyQualifiedField, ((NumericIncrement) object).getIncrement());
             } else if (UpdateObject.class.isAssignableFrom(object.getClass())) {
                 extractUpdateDetails((UpdateObject) object, fullyQualifiedField + ".");
             } else {
@@ -149,6 +152,26 @@ public class UpdateExpressionBuilder {
     private void addToSetExpression(String fullyQualifiedField, Object object) {
         append(setExpression, fullyQualifiedField + " = :a" + attributeValueCounter);
         attributeValues.put(":a" + attributeValueCounter, ConversionUtil.toAttributeValue(object));
+
+        attributeValueCounter++;
+    }
+
+
+    private void addIncrementToSetExpression(String fullyQualifiedField, Number number) {
+        String numberString = number.toString();
+        String incrementString;
+
+        if (numberString.charAt(0) == '-') {    // is negative
+            incrementString = " - :a" + attributeValueCounter;
+
+            attributeValues.put(":a" + attributeValueCounter, new AttributeValue().withN(numberString.substring(1)));
+        } else {                                // is positive
+            incrementString = " + :a" + attributeValueCounter;
+
+            attributeValues.put(":a" + attributeValueCounter, new AttributeValue().withN(numberString));
+        }
+
+        append(setExpression, fullyQualifiedField + " = " + fullyQualifiedField + incrementString);
 
         attributeValueCounter++;
     }

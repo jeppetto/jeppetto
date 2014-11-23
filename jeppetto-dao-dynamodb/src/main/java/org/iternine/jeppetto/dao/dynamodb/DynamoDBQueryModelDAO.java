@@ -102,7 +102,7 @@ public class DynamoDBQueryModelDAO<T, ID>
     private final Map<String, String> localIndexes;
 //    private Map<Pair<String, String>, String> globalIndexes;
     private final Enhancer<T> persistableEnhancer;
-    private final Enhancer<T> updateObjectEnhancer;
+    private final Enhancer<? extends T> updateObjectEnhancer;
 
 
     //-------------------------------------------------------------
@@ -154,7 +154,24 @@ public class DynamoDBQueryModelDAO<T, ID>
 //        }
 
         this.persistableEnhancer = EnhancerHelper.getPersistableEnhancer(entityClass);
-        this.updateObjectEnhancer = EnhancerHelper.getUpdateObjectEnhancer(entityClass);
+
+        String updateObjectClassName = (String) daoProperties.get("updateObject");
+        if (updateObjectClassName == null) {
+            this.updateObjectEnhancer = EnhancerHelper.getUpdateObjectEnhancer(entityClass);
+        } else {
+            try {
+                Class updateObjectClass = Class.forName(updateObjectClassName);
+
+                if (!entityClass.isAssignableFrom(updateObjectClass)) {
+                    throw new JeppettoException(String.format("Invalid UpdateObject type. %s does not subclass entity type %s",
+                                                              updateObjectClassName, entityClass.getName()));
+                }
+
+                this.updateObjectEnhancer = (Enhancer<? extends T>) EnhancerHelper.getUpdateObjectEnhancer(updateObjectClass);
+            } catch (ClassNotFoundException e) {
+                throw new JeppettoException(e);
+            }
+        }
     }
 
 
@@ -271,8 +288,9 @@ public class DynamoDBQueryModelDAO<T, ID>
 
 
     @Override
-    public void updateReferences(ReferenceSet<T> referenceSet, T updateObject)
+    public void updateReferences(ReferenceSet<T> referenceSet)
             throws FailedBatchException, JeppettoException {
+        Object updateObject = referenceSet.getUpdateObject();
         UpdateExpressionBuilder updateExpressionBuilder = new UpdateExpressionBuilder((UpdateObject) updateObject);
 
         if (IdReferenceSet.class.isAssignableFrom(referenceSet.getClass())) {

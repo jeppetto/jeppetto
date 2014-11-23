@@ -28,7 +28,7 @@ public class ConditionReferenceSet<T>
     // Variables - Private
     //-------------------------------------------------------------
 
-    private Enhancer<T> updateObjectEnhancer;
+    private Object updateObject;
     private ConditionExpressionBuilder conditionExpressionBuilder;
 
 
@@ -36,9 +36,9 @@ public class ConditionReferenceSet<T>
     // Constructors
     //-------------------------------------------------------------
 
-    public ConditionReferenceSet(Enhancer<T> updateObjectEnhancer,
-                                 ConditionExpressionBuilder conditionExpressionBuilder) {
-        this.updateObjectEnhancer = updateObjectEnhancer;
+    public <U extends T> ConditionReferenceSet(Enhancer<U> updateObjectEnhancer,
+                                               ConditionExpressionBuilder conditionExpressionBuilder) {
+        this.updateObject = updateObjectEnhancer.newInstance();
         this.conditionExpressionBuilder = conditionExpressionBuilder;
     }
 
@@ -48,8 +48,9 @@ public class ConditionReferenceSet<T>
     //-------------------------------------------------------------
 
     @Override
-    public T getUpdateObject() {
-        return updateObjectEnhancer.newInstance();
+    public <U extends T> U getUpdateObject() {
+        //noinspection unchecked
+        return (U) updateObject;
     }
 
 

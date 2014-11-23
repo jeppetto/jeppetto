@@ -38,13 +38,8 @@ public abstract class EntityVelocityEnhancer<T> extends VelocityEnhancer<T> {
     }
 
 
-    protected EntityVelocityEnhancer(Class<T> baseClass, Map<String, Object> contextItems) {
-        super(baseClass, contextItems);
-    }
-
-
     //-------------------------------------------------------------
-    // Methods - Implementation
+    // Implementation - VelocityEnhancer
     //-------------------------------------------------------------
 
     protected boolean shouldEnhanceMethod(CtMethod method) {

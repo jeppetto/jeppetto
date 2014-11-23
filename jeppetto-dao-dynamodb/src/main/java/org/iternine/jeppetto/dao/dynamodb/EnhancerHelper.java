@@ -19,10 +19,10 @@ package org.iternine.jeppetto.dao.dynamodb;
 
 import org.iternine.jeppetto.dao.EntityVelocityEnhancer;
 import org.iternine.jeppetto.dao.updateobject.UpdateObject;
+import org.iternine.jeppetto.dao.updateobject.UpdateObjectVelocityEnhancer;
 import org.iternine.jeppetto.enhance.Enhancer;
 import org.iternine.jeppetto.enhance.NoOpEnhancer;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -120,8 +120,7 @@ public class EnhancerHelper {
             if (UpdateObject.class.isAssignableFrom(baseClass)) {
                 enhancer = new NoOpEnhancer<T>(baseClass);
             } else {
-                enhancer = new EntityVelocityEnhancer<T>(baseClass, Collections.singletonMap("updateObjectHelper",
-                                                                                             (Object) new DynamoDBUpdateObjectHelper())) {
+                enhancer = new UpdateObjectVelocityEnhancer<T>(baseClass) {
                     //-------------------------------------------------------------
                     // Implementation - Enhancer
                     //-------------------------------------------------------------
@@ -139,6 +138,16 @@ public class EnhancerHelper {
                     @Override
                     protected String getTemplateLocation() {
                         return "org/iternine/jeppetto/dao/enhance/updateObject.vm";
+                    }
+
+
+                    @Override
+                    protected Map<String, Object> getAdditionalContextItems() {
+                        Map<String, Object> contextItems = super.getAdditionalContextItems();
+
+                        contextItems.put("updateObjectHelper", new DynamoDBUpdateObjectHelper());
+
+                        return contextItems;
                     }
                 };
             }

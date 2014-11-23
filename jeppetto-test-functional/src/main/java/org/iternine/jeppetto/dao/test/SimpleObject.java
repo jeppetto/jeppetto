@@ -37,6 +37,7 @@ public class SimpleObject {
     private int intValue;
     private int anotherIntValue;
     private long longValue;
+    private double doubleValue;
     private RelatedObject relatedObject;
     private List<RelatedObject> relatedObjects;
     private Map<String, RelatedObject> relatedObjectMap;
@@ -107,6 +108,16 @@ public class SimpleObject {
 
     public void setLongValue(long longValue) {
         this.longValue = longValue;
+    }
+
+
+    public double getDoubleValue() {
+        return doubleValue;
+    }
+
+
+    public void setDoubleValue(double doubleValue) {
+        this.doubleValue = doubleValue;
     }
 
 

@@ -77,7 +77,7 @@ public abstract class ReferenceSetDAOTest {
         updateObject.setAnotherIntValue(999);
         updateObject.setSimpleEnum(null);
 
-        getSimpleObjectReferencesDAO().updateReferences(referenceSet, updateObject);
+        getSimpleObjectReferencesDAO().updateReferences(referenceSet);
 
         SimpleObject resultSimpleObject = getSimpleObjectReferencesDAO().findById(simpleObject.getId());
 
@@ -106,7 +106,7 @@ public abstract class ReferenceSetDAOTest {
         updateObject.setLongValue(Long.MAX_VALUE);
         updateObject.setAnotherIntValue(999);
 
-        getSimpleObjectReferencesDAO().updateReferences(referenceSet, updateObject);
+        getSimpleObjectReferencesDAO().updateReferences(referenceSet);
 
         SimpleObject resultSimpleObject1 = getSimpleObjectReferencesDAO().findById(simpleObject1.getId());
 
@@ -137,7 +137,7 @@ public abstract class ReferenceSetDAOTest {
 
         updateObject.setRelatedObject(relatedObject);
 
-        getSimpleObjectReferencesDAO().updateReferences(referenceSet, updateObject);
+        getSimpleObjectReferencesDAO().updateReferences(referenceSet);
 
         SimpleObject resultSimpleObject = getSimpleObjectReferencesDAO().findById(simpleObject.getId());
 
@@ -166,7 +166,7 @@ public abstract class ReferenceSetDAOTest {
         RelatedObject relatedUpdateObject = updateObject.getRelatedObject();
         relatedUpdateObject.setRelatedIntValue(999);
 
-        getSimpleObjectReferencesDAO().updateReferences(referenceSet, updateObject);
+        getSimpleObjectReferencesDAO().updateReferences(referenceSet);
 
         SimpleObject resultSimpleObject = getSimpleObjectReferencesDAO().findById(simpleObject.getId());
 
@@ -193,7 +193,7 @@ public abstract class ReferenceSetDAOTest {
 
         updateObject.setRelatedObjects(relatedObjects);
 
-        getSimpleObjectReferencesDAO().updateReferences(referenceSet, updateObject);
+        getSimpleObjectReferencesDAO().updateReferences(referenceSet);
 
         SimpleObject resultSimpleObject = getSimpleObjectReferencesDAO().findById(simpleObject.getId());
 
@@ -228,7 +228,7 @@ public abstract class ReferenceSetDAOTest {
 
         relatedObjectUpdate.add(relatedObject2);
 
-        getSimpleObjectReferencesDAO().updateReferences(referenceSet, updateObject);
+        getSimpleObjectReferencesDAO().updateReferences(referenceSet);
 
         SimpleObject resultSimpleObject = getSimpleObjectReferencesDAO().findById(simpleObject.getId());
 
@@ -262,7 +262,7 @@ public abstract class ReferenceSetDAOTest {
 
         updateObject.getRelatedObjects().set(3, relatedObject2);
 
-        getSimpleObjectReferencesDAO().updateReferences(referenceSet, updateObject);
+        getSimpleObjectReferencesDAO().updateReferences(referenceSet);
 
         SimpleObject resultSimpleObject = getSimpleObjectReferencesDAO().findById(simpleObject.getId());
 
@@ -306,7 +306,7 @@ public abstract class ReferenceSetDAOTest {
 
         relatedObjectUpdate.remove(relatedObject1);
 
-        getSimpleObjectReferencesDAO().updateReferences(referenceSet, updateObject);
+        getSimpleObjectReferencesDAO().updateReferences(referenceSet);
 
         SimpleObject resultSimpleObject = getSimpleObjectReferencesDAO().findById(simpleObject.getId());
 
@@ -341,7 +341,7 @@ public abstract class ReferenceSetDAOTest {
 
         relatedObjectUpdate.remove(0);
 
-        getSimpleObjectReferencesDAO().updateReferences(referenceSet, updateObject);
+        getSimpleObjectReferencesDAO().updateReferences(referenceSet);
 
         SimpleObject resultSimpleObject = getSimpleObjectReferencesDAO().findById(simpleObject.getId());
 
@@ -370,7 +370,7 @@ public abstract class ReferenceSetDAOTest {
         SimpleObject updateObject = referenceSet.getUpdateObject();
 
         updateObject.getRelatedObjects().clear();
-        getSimpleObjectReferencesDAO().updateReferences(referenceSet, updateObject);
+        getSimpleObjectReferencesDAO().updateReferences(referenceSet);
 
         SimpleObject resultSimpleObject = getSimpleObjectReferencesDAO().findById(simpleObject.getId());
 
@@ -404,7 +404,7 @@ public abstract class ReferenceSetDAOTest {
 
         updateObject.getRelatedObjects().add(relatedObject2);
 
-        getSimpleObjectReferencesDAO().updateReferences(referenceSet, updateObject);
+        getSimpleObjectReferencesDAO().updateReferences(referenceSet);
 
         SimpleObject resultSimpleObject = getSimpleObjectReferencesDAO().findById(simpleObject.getId());
 
@@ -433,7 +433,7 @@ public abstract class ReferenceSetDAOTest {
         SimpleObject updateObject = referenceSet.getUpdateObject();
 
         updateObject.getRelatedObjectMap().clear();
-        getSimpleObjectReferencesDAO().updateReferences(referenceSet, updateObject);
+        getSimpleObjectReferencesDAO().updateReferences(referenceSet);
 
         SimpleObject resultSimpleObject = getSimpleObjectReferencesDAO().findById(simpleObject.getId());
 
@@ -467,7 +467,7 @@ public abstract class ReferenceSetDAOTest {
 
         updateObject.getRelatedObjectMap().put("two", relatedObject2);
 
-        getSimpleObjectReferencesDAO().updateReferences(referenceSet, updateObject);
+        getSimpleObjectReferencesDAO().updateReferences(referenceSet);
 
         SimpleObject resultSimpleObject = getSimpleObjectReferencesDAO().findById(simpleObject.getId());
 
@@ -493,7 +493,7 @@ public abstract class ReferenceSetDAOTest {
         updateList.add("bunny");
         updateList.add("cow");
 
-        getSimpleObjectReferencesDAO().updateReferences(referenceSet, updateObject);
+        getSimpleObjectReferencesDAO().updateReferences(referenceSet);
 
         SimpleObject resultSimpleObject = getSimpleObjectReferencesDAO().findById(simpleObject.getId());
 
@@ -523,7 +523,7 @@ public abstract class ReferenceSetDAOTest {
         updateSet.add("bunny"); // should not be duplicated
         updateSet.add("cow");
 
-        getSimpleObjectReferencesDAO().updateReferences(referenceSet, updateObject);
+        getSimpleObjectReferencesDAO().updateReferences(referenceSet);
 
         SimpleObject resultSimpleObject = getSimpleObjectReferencesDAO().findById(simpleObject.getId());
 
@@ -553,7 +553,7 @@ public abstract class ReferenceSetDAOTest {
         SimpleObject updateObject = referenceSet.getUpdateObject();
         updateObject.setAnotherIntValue(42);
 
-        getSimpleObjectReferencesDAO().updateReferences(referenceSet, updateObject);
+        getSimpleObjectReferencesDAO().updateReferences(referenceSet);
 
         Iterable<SimpleObject> results = getSimpleObjectReferencesDAO().findAll();
 
@@ -567,6 +567,83 @@ public abstract class ReferenceSetDAOTest {
 
         assertEquals(2, resultCount);
     }
+
+
+    @Test
+    public void incrementIntValue() {
+        SimpleObject simpleObject = new SimpleObject();
+        simpleObject.setIntValue(1);
+
+        getSimpleObjectReferencesDAO().save(simpleObject);
+
+        ReferenceSet<SimpleObject> referenceSet = getSimpleObjectReferencesDAO().referenceByIds(simpleObject.getId());
+        SimpleUpdateObject updateObject = referenceSet.getUpdateObject();
+        updateObject.addToIntValue(1);
+
+        getSimpleObjectReferencesDAO().updateReferences(referenceSet);
+
+        SimpleObject resultSimpleObject = getSimpleObjectReferencesDAO().findById(simpleObject.getId());
+
+        assertEquals(2, resultSimpleObject.getIntValue());
+    }
+
+
+    @Test
+    public void decrementIntValue() {
+        SimpleObject simpleObject = new SimpleObject();
+        simpleObject.setIntValue(100);
+
+        getSimpleObjectReferencesDAO().save(simpleObject);
+
+        ReferenceSet<SimpleObject> referenceSet = getSimpleObjectReferencesDAO().referenceByIds(simpleObject.getId());
+        SimpleUpdateObject updateObject = referenceSet.getUpdateObject();
+        updateObject.addToIntValue(-5);
+
+        getSimpleObjectReferencesDAO().updateReferences(referenceSet);
+
+        SimpleObject resultSimpleObject = getSimpleObjectReferencesDAO().findById(simpleObject.getId());
+
+        assertEquals(95, resultSimpleObject.getIntValue());
+    }
+
+
+    @Test
+    public void incrementLongValue() {
+        SimpleObject simpleObject = new SimpleObject();
+        simpleObject.setLongValue(1l);
+
+        getSimpleObjectReferencesDAO().save(simpleObject);
+
+        ReferenceSet<SimpleObject> referenceSet = getSimpleObjectReferencesDAO().referenceByIds(simpleObject.getId());
+        SimpleUpdateObject updateObject = referenceSet.getUpdateObject();
+        updateObject.addToLongValue(100l);
+
+        getSimpleObjectReferencesDAO().updateReferences(referenceSet);
+
+        SimpleObject resultSimpleObject = getSimpleObjectReferencesDAO().findById(simpleObject.getId());
+
+        assertEquals(101l, resultSimpleObject.getLongValue());
+    }
+
+
+    @Test
+    public void incrementDoubleValue() {
+        SimpleObject simpleObject = new SimpleObject();
+        simpleObject.setDoubleValue(1.5d);
+
+        getSimpleObjectReferencesDAO().save(simpleObject);
+
+        ReferenceSet<SimpleObject> referenceSet = getSimpleObjectReferencesDAO().referenceByIds(simpleObject.getId());
+        SimpleUpdateObject updateObject = referenceSet.getUpdateObject();
+        updateObject.addToDoubleValue(2.25d);
+
+        getSimpleObjectReferencesDAO().updateReferences(referenceSet);
+
+        SimpleObject resultSimpleObject = getSimpleObjectReferencesDAO().findById(simpleObject.getId());
+
+        assertEquals(3.75d, resultSimpleObject.getDoubleValue(), 0.0001d);
+    }
+
 
     // TODO: index based operation on existing list
     // TODO: replace list

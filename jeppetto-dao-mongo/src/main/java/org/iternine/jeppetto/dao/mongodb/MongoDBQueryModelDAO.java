@@ -360,12 +360,9 @@ public class MongoDBQueryModelDAO<T, ID>
 
 
     @Override
-    public void updateReferences(ReferenceSet<T> referenceSet, T updateObject)
+    public void updateReferences(ReferenceSet<T> referenceSet)
             throws FailedBatchException, JeppettoException {
-        if (!UpdateObject.class.isAssignableFrom(updateObject.getClass())) {
-            throw new JeppettoException("updateObject's type is not 'UpdateObject'.  Did it come from referenceSet.getUpdateObject()?");
-        }
-
+        Object updateObject = referenceSet.getUpdateObject();
         DBObject updateClause = ((UpdateObject) updateObject).getUpdateClause();
         DBObject identifyingQuery = ((MongoDBReferenceSet<T>) referenceSet).getIdentifyingQuery();
 

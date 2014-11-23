@@ -43,6 +43,7 @@
             <map>
                 <entry key="db" value-ref="dynamoDb"/>
                 <entry key="idGenerator"><bean class="org.iternine.jeppetto.dao.id.UUIDGenerator"/></entry>
+                <entry key="updateObject" value="org.iternine.jeppetto.dao.test.referenceset.SimpleUpdateObject"/>
             </map>
         </constructor-arg>
     </bean>

@@ -24,25 +24,19 @@ public class IdReferenceSet<T, ID>
         implements ReferenceSet<T> {
 
     //-------------------------------------------------------------
-    // Constants
-    //-------------------------------------------------------------
-
-    private final ID[] ids;
-
-
-    //-------------------------------------------------------------
     // Variables - Private
     //-------------------------------------------------------------
 
-    private Enhancer<T> updateObjectEnhancer;
+    private Object updateObject;
+    private final ID[] ids;
 
 
     //-------------------------------------------------------------
     // Constructors
     //-------------------------------------------------------------
 
-    public IdReferenceSet(Enhancer<T> updateObjectEnhancer, ID... ids) {
-        this.updateObjectEnhancer = updateObjectEnhancer;
+    public <U extends T> IdReferenceSet(Enhancer<U> updateObjectEnhancer, ID... ids) {
+        this.updateObject = updateObjectEnhancer.newInstance();
         this.ids = ids;
     }
 
@@ -52,8 +46,9 @@ public class IdReferenceSet<T, ID>
     //-------------------------------------------------------------
 
     @Override
-    public T getUpdateObject() {
-        return updateObjectEnhancer.newInstance();
+    public <U extends T> U getUpdateObject() {
+        //noinspection unchecked
+        return (U) updateObject;
     }
 
 

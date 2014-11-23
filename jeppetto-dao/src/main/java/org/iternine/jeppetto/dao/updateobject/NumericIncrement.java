@@ -14,47 +14,26 @@
  * limitations under the License.
  */
 
-package org.iternine.jeppetto.dao.mongodb;
+package org.iternine.jeppetto.dao.updateobject;
 
 
-import org.iternine.jeppetto.dao.ReferenceSet;
-import org.iternine.jeppetto.dao.mongodb.enhance.UpdateObject;
-import org.iternine.jeppetto.enhance.Enhancer;
-
-import com.mongodb.DBObject;
-
-
-public class MongoDBReferenceSet<T>
-        implements ReferenceSet<T> {
+/**
+ */
+public class NumericIncrement {
 
     //-------------------------------------------------------------
     // Variables - Private
     //-------------------------------------------------------------
 
-    private DBObject identifyingQuery;
-    private Object updateObject;
+    private Number increment;
 
 
     //-------------------------------------------------------------
     // Constructors
     //-------------------------------------------------------------
 
-    public <U extends T> MongoDBReferenceSet(DBObject identifyingQuery, Enhancer<U> updateObjectEnhancer) {
-        this.identifyingQuery = identifyingQuery;
-        this.updateObject = updateObjectEnhancer.newInstance();
-
-        ((UpdateObject) updateObject).setPrefix("");    // Root object, so start with an empty prefix.
-    }
-
-
-    //-------------------------------------------------------------
-    // Implementation - ReferenceSet
-    //-------------------------------------------------------------
-
-    @Override
-    public <U extends T> U getUpdateObject() {
-        //noinspection unchecked
-        return (U) updateObject;
+    public NumericIncrement(Number increment) {
+        this.increment = increment;
     }
 
 
@@ -62,7 +41,7 @@ public class MongoDBReferenceSet<T>
     // Methods - Getter/Setter
     //-------------------------------------------------------------
 
-    public DBObject getIdentifyingQuery() {
-        return identifyingQuery;
+    public Number getIncrement() {
+        return increment;
     }
 }
