@@ -26,7 +26,6 @@ import org.iternine.jeppetto.dao.updateobject.UpdateObject;
 
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -109,7 +108,7 @@ public class UpdateExpressionBuilder {
             } else if (DynamoDBPersistable.class.isAssignableFrom(object.getClass())) {     // Includes PersistableMap as well
                 extractUpdateDetails((DynamoDBPersistable) object, fullyQualifiedField + ".");
             } else {
-                addToSetExpression(fullyQualifiedField, object);
+                addToSetExpression(object, fullyQualifiedField);
             }
         }
     }
@@ -126,30 +125,35 @@ public class UpdateExpressionBuilder {
                 UpdateList updateList = (UpdateList) object;
 
                 if (updateList.wasCleared()) {
-                    addToSetExpression(fullyQualifiedField, new ArrayList<Object>(updateList.__getUpdates().values()));
+                    addToSetExpression(updateList.getAdds(), fullyQualifiedField);
                 } else {
+                    // TODO: Can't actually have both index updates and list_appends.
                     extractUpdateDetails(updateList, fullyQualifiedField);
+
+                    if (!updateList.getAdds().isEmpty()) {
+                        addListItemsToSetExpression(updateList.getAdds(), fullyQualifiedField);
+                    }
                 }
             } else if (UpdateMap.class.isAssignableFrom(object.getClass())) {
                 UpdateMap updateMap = (UpdateMap) object;
 
                 if (updateMap.wasCleared()) {
-                    addToSetExpression(fullyQualifiedField, updateMap);
+                    addToSetExpression(updateMap, fullyQualifiedField);
                 } else {
                     extractUpdateDetails(updateMap, fullyQualifiedField + ".");
                 }
             } else if (NumericIncrement.class.isAssignableFrom(object.getClass())) {
-                addIncrementToSetExpression(fullyQualifiedField, ((NumericIncrement) object).getIncrement());
+                addIncrementToSetExpression(((NumericIncrement) object).getIncrement(), fullyQualifiedField);
             } else if (UpdateObject.class.isAssignableFrom(object.getClass())) {
                 extractUpdateDetails((UpdateObject) object, fullyQualifiedField + ".");
             } else {
-                addToSetExpression(fullyQualifiedField, object);
+                addToSetExpression(object, fullyQualifiedField);
             }
         }
     }
 
 
-    private void addToSetExpression(String fullyQualifiedField, Object object) {
+    private void addToSetExpression(Object object, String fullyQualifiedField) {
         append(setExpression, fullyQualifiedField + " = :a" + attributeValueCounter);
         attributeValues.put(":a" + attributeValueCounter, ConversionUtil.toAttributeValue(object));
 
@@ -157,7 +161,15 @@ public class UpdateExpressionBuilder {
     }
 
 
-    private void addIncrementToSetExpression(String fullyQualifiedField, Number number) {
+    private void addListItemsToSetExpression(List<Object> adds, String fullyQualifiedField) {
+        append(setExpression, fullyQualifiedField + " = list_append(" + fullyQualifiedField + ", :a" + attributeValueCounter + ')');
+        attributeValues.put(":a" + attributeValueCounter, ConversionUtil.toAttributeValue(adds));
+
+        attributeValueCounter++;
+    }
+
+
+    private void addIncrementToSetExpression(Number number, String fullyQualifiedField) {
         String numberString = number.toString();
         String incrementString;
 
@@ -175,14 +187,6 @@ public class UpdateExpressionBuilder {
 
         attributeValueCounter++;
     }
-
-
-//    private void addListToSetExpression(String fullyQualifiedField, List<Object> list) {
-//        append(setExpression, fullyQualifiedField + " = list_append(" + fullyQualifiedField + ", :a" + attributeValueCounter + ')');
-//        attributeValues.put(":a" + attributeValueCounter, ConversionUtil.toAttributeValue(list));
-//
-//        attributeValueCounter++;
-//    }
 
 
     private void append(StringBuilder sb, String text) {

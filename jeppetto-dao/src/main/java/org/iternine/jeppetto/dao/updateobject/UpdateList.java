@@ -19,6 +19,7 @@ package org.iternine.jeppetto.dao.updateobject;
 
 import org.iternine.jeppetto.dao.JeppettoException;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -35,9 +36,9 @@ public class UpdateList
     //-------------------------------------------------------------
 
     private Map<String, Object> updates = new TreeMap<String, Object>();
+    private List<Object> adds = new ArrayList<Object>();
     private boolean cleared = false;
     private String indexFormat;
-    private int addIndex = 1000000000;
 
 
     //-------------------------------------------------------------
@@ -75,24 +76,22 @@ public class UpdateList
 
     @Override
     public boolean add(Object element) {
-        updates.put(String.format(indexFormat, addIndex++), element);
-
-        return true;
+        return adds.add(element);
     }
 
 
     @Override
     public boolean addAll(Collection collection) {
-        for (Object element : collection) {
-            updates.put(String.format(indexFormat, addIndex++), element);
-        }
-
-        return true;
+        return adds.addAll(collection);
     }
 
 
     @Override
     public Object remove(int index) {
+        if (cleared) {
+            throw new JeppettoException("remove(index) after clear() not supported");
+        }
+
         return updates.put(String.format(indexFormat, index), null);
     }
 
@@ -218,5 +217,10 @@ public class UpdateList
 
     public boolean wasCleared() {
         return cleared;
+    }
+
+
+    public List<Object> getAdds() {
+        return adds;
     }
 }

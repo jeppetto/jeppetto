@@ -228,14 +228,20 @@ public abstract class ReferenceSetDAOTest {
 
         relatedObjectUpdate.add(relatedObject2);
 
+        RelatedObject relatedObject3 = new RelatedObject();
+        relatedObject3.setRelatedIntValue(999);
+
+        relatedObjectUpdate.add(relatedObject3);
+
         getSimpleObjectReferencesDAO().updateReferences(referenceSet);
 
         SimpleObject resultSimpleObject = getSimpleObjectReferencesDAO().findById(simpleObject.getId());
 
         assertNotNull(resultSimpleObject.getRelatedObjects());
-        assertEquals(2, resultSimpleObject.getRelatedObjects().size());
+        assertEquals(3, resultSimpleObject.getRelatedObjects().size());
         assertEquals(456, resultSimpleObject.getRelatedObjects().get(0).getRelatedIntValue());
         assertEquals(789, resultSimpleObject.getRelatedObjects().get(1).getRelatedIntValue());
+        assertEquals(999, resultSimpleObject.getRelatedObjects().get(2).getRelatedIntValue());
     }
 
 
