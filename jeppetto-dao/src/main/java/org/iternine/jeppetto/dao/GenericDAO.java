@@ -115,25 +115,28 @@ public interface GenericDAO<T, ID> {
 
 
     /**
-     * Build a ReferenceSet to persisted objects with the passed in id values.
+     * Get an object that can be used to capture a set of changes to be applied to one ore more
+     * persisted objects.
      *
-     * @param ids of the objects to reference.
+     * @return An update object that is either a T or a subclass of T
      *
      * @throws JeppettoException if any underlying failure occurs
      */
-    ReferenceSet<T> referenceByIds(ID... ids);
+    <U extends T> U getUpdateObject();
 
 
     /**
-     * Update the objects referenced by the referenceSet with the changes in the contained updateObject.
+     * Apply the set of changes described in the update object to persisted items with the
+     * specified ids.
      *
-     * @param referenceSet containing references and desired changes to stored items
+     * @param updateObject that describes the set of changes to be applied.
+     * @param ids of the objects to update.
      *
      * @throws FailedBatchException if some (or all) of the referenced items were not successfully updated.
      *                              The exception contains a list of the ids that failed to update.
      * @throws JeppettoException if any underlying failure occurs
      */
-    void updateReferences(ReferenceSet<T> referenceSet)
+    <U extends T> void updateByIds(U updateObject, ID... ids)
             throws FailedBatchException, JeppettoException;
 
 

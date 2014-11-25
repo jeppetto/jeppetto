@@ -14,19 +14,14 @@
  * limitations under the License.
  */
 
-package org.iternine.jeppetto.dao.test.referenceset;
+package org.iternine.jeppetto.dao.test.updateobject;
 
 
+import org.iternine.jeppetto.dao.GenericDAO;
 import org.iternine.jeppetto.dao.test.SimpleObject;
 
 
-/**
- */
-public abstract class SimpleUpdateObject extends SimpleObject {
+public interface UpdateObjectDAO extends GenericDAO<SimpleObject, String> {
 
-    public abstract void addToIntValue(int increment);
-
-    public abstract void addToLongValue(long increment);
-
-    public abstract void addToDoubleValue(double increment);
+    void updateByAnotherIntValue(SimpleObject simpleObject, int anotherIntValue);
 }

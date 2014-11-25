@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.iternine.jeppetto.dao.dynamodb.referenceset;
+package org.iternine.jeppetto.dao.dynamodb.updateobject;
 
 
 import com.amazonaws.services.dynamodbv2.model.AttributeDefinition;
@@ -25,8 +25,8 @@ import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
 import com.amazonaws.services.dynamodbv2.model.ScalarAttributeType;
 
 import org.iternine.jeppetto.dao.JeppettoException;
-import org.iternine.jeppetto.dao.test.referenceset.ReferenceSetDAO;
-import org.iternine.jeppetto.dao.test.referenceset.ReferenceSetDAOTest;
+import org.iternine.jeppetto.dao.test.updateobject.UpdateObjectDAO;
+import org.iternine.jeppetto.dao.test.updateobject.UpdateObjectDAOTest;
 import org.iternine.jeppetto.testsupport.DynamoDBDatabaseProvider;
 import org.iternine.jeppetto.testsupport.TestContext;
 import org.junit.Ignore;
@@ -37,7 +37,7 @@ import java.util.Collections;
 import java.util.List;
 
 
-public class DynamoDBReferenceSetDAOTest extends ReferenceSetDAOTest {
+public class DynamoDBUpdateObjectDAOTest extends UpdateObjectDAOTest {
 
     //-------------------------------------------------------------
     // Variables - Private
@@ -57,15 +57,15 @@ public class DynamoDBReferenceSetDAOTest extends ReferenceSetDAOTest {
     //-------------------------------------------------------------
 
     @Override
-    protected ReferenceSetDAO getSimpleObjectReferencesDAO() {
+    protected UpdateObjectDAO getSimpleObjectReferencesDAO() {
         if (testContext == null) {
-            testContext = new TestContext("DynamoDBReferenceSetDAOTest.spring.xml",
+            testContext = new TestContext("DynamoDBUpdateObjectDAOTest.spring.xml",
                                           "DynamoDBTest.properties",
                                           new DynamoDBDatabaseProvider(createTableRequests));
         }
 
         //noinspection unchecked
-        return (ReferenceSetDAO) testContext.getBean("dynamoDBReferenceSetDAO");
+        return (UpdateObjectDAO) testContext.getBean("dynamoDBUpdateObjectDAO");
     }
 
 
@@ -89,9 +89,9 @@ public class DynamoDBReferenceSetDAOTest extends ReferenceSetDAOTest {
     }
 
 
-    @Ignore("DynamoDB doesn't support updates when the key isn't part of the reference phrase.")
+    @Ignore("DynamoDB doesn't support updates when the key isn't part of the query phrase.")
     @Test(expected = JeppettoException.class)
-    public void referenceByOtherField() {
+    public void updateByOtherField() {
     }
 
 

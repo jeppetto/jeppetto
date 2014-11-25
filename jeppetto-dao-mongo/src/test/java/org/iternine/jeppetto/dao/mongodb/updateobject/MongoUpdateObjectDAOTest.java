@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-package org.iternine.jeppetto.dao.mongodb.referenceset;
+package org.iternine.jeppetto.dao.mongodb.updateobject;
 
 
-import org.iternine.jeppetto.dao.test.referenceset.ReferenceSetDAO;
-import org.iternine.jeppetto.dao.test.referenceset.ReferenceSetDAOTest;
+import org.iternine.jeppetto.dao.test.updateobject.UpdateObjectDAO;
+import org.iternine.jeppetto.dao.test.updateobject.UpdateObjectDAOTest;
 import org.iternine.jeppetto.testsupport.MongoDatabaseProvider;
 import org.iternine.jeppetto.testsupport.TestContext;
 
@@ -26,7 +26,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 
-public class MongoReferenceSetDAOTest extends ReferenceSetDAOTest {
+public class MongoUpdateObjectDAOTest extends UpdateObjectDAOTest {
 
     //-------------------------------------------------------------
     // Variables - Private
@@ -36,18 +36,18 @@ public class MongoReferenceSetDAOTest extends ReferenceSetDAOTest {
 
 
     //-------------------------------------------------------------
-    // Implementation - ReferenceSetDAOTest
+    // Implementation - UpdateObjectDAOTest
     //-------------------------------------------------------------
 
     @Override
-    protected ReferenceSetDAO getSimpleObjectReferencesDAO() {
+    protected UpdateObjectDAO getSimpleObjectReferencesDAO() {
         if (testContext == null) {
-            testContext = new TestContext("MongoReferenceSetDAOTest.spring.xml",
+            testContext = new TestContext("MongoUpdateObjectDAOTest.spring.xml",
                                           "MongoDAOTest.properties",
                                           new MongoDatabaseProvider());
         }
 
-        return (ReferenceSetDAO) testContext.getBean("referenceSetDAO");
+        return (UpdateObjectDAO) testContext.getBean("updateObjectDAO");
     }
 
 
@@ -68,5 +68,29 @@ public class MongoReferenceSetDAOTest extends ReferenceSetDAOTest {
     @Ignore("MongoDB doesn't support removing an item by index, only by value.")
     @Test
     public void removeFromExistingListUsingIndex() {
+    }
+
+
+    @Ignore("Need to implement update object extension.")
+    @Test
+    public void incrementIntValue() {
+    }
+
+
+    @Ignore("Need to implement update object extension.")
+    @Test
+    public void decrementIntValue() {
+    }
+
+
+    @Ignore("Need to implement update object extension.")
+    @Test
+    public void incrementLongValue() {
+    }
+
+
+    @Ignore("Need to implement update object extension.")
+    @Test
+    public void incrementDoubleValue() {
     }
 }

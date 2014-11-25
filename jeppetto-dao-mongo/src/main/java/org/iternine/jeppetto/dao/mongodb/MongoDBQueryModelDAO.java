@@ -32,7 +32,6 @@ import org.iternine.jeppetto.dao.Projection;
 import org.iternine.jeppetto.dao.ProjectionType;
 import org.iternine.jeppetto.dao.QueryModel;
 import org.iternine.jeppetto.dao.QueryModelDAO;
-import org.iternine.jeppetto.dao.ReferenceSet;
 import org.iternine.jeppetto.dao.Sort;
 import org.iternine.jeppetto.dao.SortDirection;
 import org.iternine.jeppetto.dao.TooManyItemsException;
@@ -174,6 +173,7 @@ public class MongoDBQueryModelDAO<T, ID>
 //    private boolean saveNulls;
     private WriteConcern defaultWriteConcern;
     private Logger queryLogger;
+    private Enhancer<T> updateObjectEnhancer;
 
 
     //-------------------------------------------------------------
@@ -216,6 +216,8 @@ public class MongoDBQueryModelDAO<T, ID>
         if (Boolean.parseBoolean((String) daoProperties.get("showQueries"))) {
             queryLogger = LoggerFactory.getLogger(getClass());
         }
+
+        this.updateObjectEnhancer = EnhancerHelper.getUpdateObjectEnhancer(getCollectionClass());
     }
 
 
@@ -346,7 +348,19 @@ public class MongoDBQueryModelDAO<T, ID>
 
 
     @Override
-    public ReferenceSet<T> referenceByIds(ID... ids) {
+    public <U extends T> U getUpdateObject() {
+        T updateObject = updateObjectEnhancer.newInstance();
+
+        ((UpdateObject) updateObject).setPrefix("");    // Root object, so start with an empty prefix.
+
+        //noinspection unchecked
+        return (U) updateObject;
+    }
+
+
+    @Override
+    public <U extends T> void updateByIds(U updateObject, ID... ids)
+            throws FailedBatchException, JeppettoException {
         QueryModel queryModel = new QueryModel();
         queryModel.addCondition(buildIdCondition(Arrays.asList(ids)));
 
@@ -354,36 +368,7 @@ public class MongoDBQueryModelDAO<T, ID>
             queryModel.setAccessControlContext(accessControlContextProvider.getCurrent());
         }
 
-        return new MongoDBReferenceSet<T>(buildQueryObject(queryModel, AccessType.ReadWrite),
-                                          EnhancerHelper.<T>getUpdateObjectEnhancer(getCollectionClass()));
-    }
-
-
-    @Override
-    public void updateReferences(ReferenceSet<T> referenceSet)
-            throws FailedBatchException, JeppettoException {
-        Object updateObject = referenceSet.getUpdateObject();
-        DBObject updateClause = ((UpdateObject) updateObject).getUpdateClause();
-        DBObject identifyingQuery = ((MongoDBReferenceSet<T>) referenceSet).getIdentifyingQuery();
-
-        if (updateClause.keySet().size() == 0) {
-            if (queryLogger != null) {
-                queryLogger.debug("Bypassing update identified by {}; no changes", identifyingQuery.toMap());
-            }
-
-            return;
-        }
-
-        if (queryLogger != null) {
-            queryLogger.debug("Reference-based update of {} identified by {} with document {}",
-                              getCollectionClass().getSimpleName(), identifyingQuery.toMap(), updateClause.toMap());
-        }
-
-        try {
-            dbCollection.update(identifyingQuery, updateClause, false, true, getWriteConcern());
-        } catch (MongoException e) {
-            throw new JeppettoException(e);
-        }
+        updateUsingQueryModel(updateObject, queryModel);
     }
 
 
@@ -520,10 +505,29 @@ public class MongoDBQueryModelDAO<T, ID>
 
 
     @Override
-    public ReferenceSet<T> referenceUsingQueryModel(QueryModel queryModel)
+    public <U extends T> void updateUsingQueryModel(U updateObject, QueryModel queryModel)
             throws JeppettoException {
-        return new MongoDBReferenceSet<T>(buildQueryObject(queryModel, AccessType.ReadWrite),
-                                          EnhancerHelper.<T>getUpdateObjectEnhancer(getCollectionClass()));
+        DBObject updateClause = ((UpdateObject) updateObject).getUpdateClause();
+        DBObject identifyingQuery = buildQueryObject(queryModel, AccessType.ReadWrite);
+
+        if (updateClause.keySet().size() == 0) {
+            if (queryLogger != null) {
+                queryLogger.debug("Bypassing update identified by {}; no changes", identifyingQuery.toMap());
+            }
+
+            return;
+        }
+
+        if (queryLogger != null) {
+            queryLogger.debug("Reference-based update of {} identified by {} with document {}",
+                              getCollectionClass().getSimpleName(), identifyingQuery.toMap(), updateClause.toMap());
+        }
+
+        try {
+            dbCollection.update(identifyingQuery, updateClause, false, true, getWriteConcern());
+        } catch (MongoException e) {
+            throw new JeppettoException(e);
+        }
     }
 
 

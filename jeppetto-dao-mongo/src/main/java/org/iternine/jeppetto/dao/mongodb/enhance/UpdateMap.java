@@ -158,6 +158,13 @@ public class UpdateMap
     }
 
 
+    // Temp hack
+    @Override
+    public Map<String, Object> __getUpdates() {
+        return null;
+    }
+
+
     //-------------------------------------------------------------
     // Methods - Private
     //-------------------------------------------------------------

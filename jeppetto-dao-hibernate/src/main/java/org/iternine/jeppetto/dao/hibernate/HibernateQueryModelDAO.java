@@ -32,7 +32,6 @@ import org.iternine.jeppetto.dao.Projection;
 import org.iternine.jeppetto.dao.ProjectionType;
 import org.iternine.jeppetto.dao.QueryModel;
 import org.iternine.jeppetto.dao.QueryModelDAO;
-import org.iternine.jeppetto.dao.ReferenceSet;
 import org.iternine.jeppetto.dao.Sort;
 import org.iternine.jeppetto.dao.SortDirection;
 import org.iternine.jeppetto.dao.TooManyItemsException;
@@ -225,15 +224,15 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
 
 
     @Override
-    public ReferenceSet<T> referenceByIds(ID... ids) {
-        throw new RuntimeException("referenceByIds not yet implemented");
+    public <U extends T> U getUpdateObject() {
+        throw new RuntimeException("getUpdateObject not yet implemented");
     }
 
 
     @Override
-    public void updateReferences(ReferenceSet<T> referenceSet)
+    public <U extends T> void updateByIds(U updateObject, ID... ids)
             throws FailedBatchException, JeppettoException {
-        throw new RuntimeException("updateReferences not yet implemented");
+        throw new RuntimeException("updateByIds not yet implemented");
     }
 
 
@@ -330,9 +329,9 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
 
 
     @Override
-    public ReferenceSet<T> referenceUsingQueryModel(QueryModel queryModel)
+    public <U extends T> void updateUsingQueryModel(U updateObject, QueryModel queryModel)
             throws JeppettoException {
-        throw new RuntimeException("referenceUsingQueryModel not yet implemented");
+        throw new RuntimeException("updateUsingQueryModel not yet implemented");
     }
 
 

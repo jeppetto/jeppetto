@@ -26,6 +26,7 @@ import com.mongodb.DBObject;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Set;
 
 import static org.iternine.jeppetto.dao.mongodb.enhance.UpdateOperation.*;
@@ -196,6 +197,13 @@ public class UpdateSet
     @Override
     public void setPrefix(String prefix) {
         this.prefix = prefix;
+    }
+
+
+    // Temp hack
+    @Override
+    public Map<String, Object> __getUpdates() {
+        return null;
     }
 
 

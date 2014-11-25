@@ -230,6 +230,7 @@ public class MongoDAOTest {
                                         "simpleEnum",
                                         "intValue",
                                         "longValue",
+                                        "doubleValue",
                                         "anotherIntValue");
 
         assertEquals(knownFields, dbo.keySet());

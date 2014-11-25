@@ -113,5 +113,10 @@ public $_.cls("${baseName}$UpdateObject").ext($base).impl("org.iternine.jeppetto
         this.prefix = prefix;
     }")
 
+    $_.method("
+    public java.util.Map __getUpdates() {
+        return null;
+    }
+    ")
 // declare a "setValue()" method that can be used for extraValues (e.g. __olv)?
 }

@@ -21,7 +21,6 @@ import org.iternine.jeppetto.dao.AccessControlContextProvider;
 import org.iternine.jeppetto.dao.Condition;
 import org.iternine.jeppetto.dao.ConditionType;
 import org.iternine.jeppetto.dao.FailedBatchException;
-import org.iternine.jeppetto.dao.IdReferenceSet;
 import org.iternine.jeppetto.dao.JeppettoException;
 import org.iternine.jeppetto.dao.NoSuchItemException;
 import org.iternine.jeppetto.dao.OptimisticLockException;
@@ -30,7 +29,6 @@ import org.iternine.jeppetto.dao.Projection;
 import org.iternine.jeppetto.dao.ProjectionType;
 import org.iternine.jeppetto.dao.QueryModel;
 import org.iternine.jeppetto.dao.QueryModelDAO;
-import org.iternine.jeppetto.dao.ReferenceSet;
 import org.iternine.jeppetto.dao.Sort;
 import org.iternine.jeppetto.dao.SortDirection;
 import org.iternine.jeppetto.dao.TooManyItemsException;
@@ -282,47 +280,28 @@ public class DynamoDBQueryModelDAO<T, ID>
 
 
     @Override
-    public ReferenceSet<T> referenceByIds(ID... ids) {
-        return new IdReferenceSet<T, ID>(updateObjectEnhancer, ids);
+    public <U extends T> U getUpdateObject() {
+        //noinspection unchecked
+        return (U) updateObjectEnhancer.newInstance();
     }
 
 
     @Override
-    public void updateReferences(ReferenceSet<T> referenceSet)
+    public <U extends T> void updateByIds(U updateObject, ID... ids)
             throws FailedBatchException, JeppettoException {
-        Object updateObject = referenceSet.getUpdateObject();
         UpdateExpressionBuilder updateExpressionBuilder = new UpdateExpressionBuilder((UpdateObject) updateObject);
+        Map<ID, Exception> failedUpdates = new LinkedHashMap<ID, Exception>();
 
-        if (IdReferenceSet.class.isAssignableFrom(referenceSet.getClass())) {
-            IdReferenceSet<T, ID> idReferenceSet = (IdReferenceSet<T, ID>) referenceSet;
-            Map<ID, Exception> failedUpdates = new LinkedHashMap<ID, Exception>();
-
-            for (ID id : idReferenceSet.getIds()) {
-                try {
-                    updateItem(getKeyFrom(id), updateExpressionBuilder, null);
-                } catch (Exception e) {
-                    failedUpdates.put(id, e);
-                }
-            }
-
-            if (failedUpdates.size() > 0) {
-                throw new FailedBatchException("Unable to update all items", failedUpdates);
-            }
-        } else {
-            ConditionReferenceSet<T> conditionReferenceSet = (ConditionReferenceSet<T>) referenceSet;
-            ConditionExpressionBuilder conditionExpressionBuilder = conditionReferenceSet.getConditionExpressionBuilder();
-
-            Map<String, AttributeValue> key;
-
+        for (ID id : ids) {
             try {
-                key = conditionExpressionBuilder.getKey();
-            } catch (NullPointerException e) {
-                throw new JeppettoException("DynamoDB only supports updates where the condition uniquely identifies the item by its key.", e);
+                updateItem(getKeyFrom(id), updateExpressionBuilder, null);
+            } catch (Exception e) {
+                failedUpdates.put(id, e);
             }
+        }
 
-            updateItem(key, updateExpressionBuilder, conditionExpressionBuilder);
-
-            // TODO: Investigate if we can update multiple items at the same time (i.e. scan-based updates or hash-key (but no range-key) ids)
+        if (failedUpdates.size() > 0) {
+            throw new FailedBatchException("Unable to update all items", failedUpdates);
         }
     }
 
@@ -400,13 +379,23 @@ public class DynamoDBQueryModelDAO<T, ID>
 
 
     @Override
-    public ReferenceSet<T> referenceUsingQueryModel(QueryModel queryModel)
+    public <U extends T> void updateUsingQueryModel(U updateObject, QueryModel queryModel)
             throws JeppettoException {
+        UpdateExpressionBuilder updateExpressionBuilder = new UpdateExpressionBuilder((UpdateObject) updateObject);
         // For referencing an object, we can only identify an item by its actual range key, not one of the index fields.  For the
         // third parameter, pass in a singleton map that only contains the range field.
-        return new ConditionReferenceSet<T>(updateObjectEnhancer,
-                                            new ConditionExpressionBuilder(queryModel, hashKeyField,
-                                                                           Collections.singletonMap(rangeKeyField, (String) null)));
+        ConditionExpressionBuilder conditionExpressionBuilder
+                = new ConditionExpressionBuilder(queryModel, hashKeyField, Collections.singletonMap(rangeKeyField, (String) null));
+
+        Map<String, AttributeValue> key;
+
+        try {
+            key = conditionExpressionBuilder.getKey();
+        } catch (NullPointerException e) {
+            throw new JeppettoException("DynamoDB only supports updates where the condition uniquely identifies the item by its key.", e);
+        }
+
+        updateItem(key, updateExpressionBuilder, conditionExpressionBuilder);
     }
 
 

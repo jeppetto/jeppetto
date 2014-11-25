@@ -27,6 +27,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Map;
 
 import static org.iternine.jeppetto.dao.mongodb.enhance.UpdateOperation.*;
 
@@ -246,6 +247,13 @@ public class UpdateList
     @Override
     public void setPrefix(String prefix) {
         this.prefix = prefix;
+    }
+
+
+    // Temp hack
+    @Override
+    public Map<String, Object> __getUpdates() {
+        return null;
     }
 
 

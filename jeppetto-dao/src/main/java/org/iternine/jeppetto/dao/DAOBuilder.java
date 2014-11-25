@@ -288,8 +288,8 @@ public class DAOBuilder {
             buildReturnClause(interfaceMethod, sb, modelClass);
 
             break;
-        case Reference:
-            buildReferenceClause(sb);
+        case Update:
+            buildUpdateClause(sb);
 
             break;
         case Delete:
@@ -317,6 +317,10 @@ public class DAOBuilder {
 
 
     private static OperationType buildQueryModelFromAnnotation(DataAccessMethod dataAccessMethod, StringBuilder sb) {
+        if (dataAccessMethod.operation() == OperationType.Update) {
+            sb.append("    org.iternine.jeppetto.dao.updateobject.UpdateObject updateObject = (org.iternine.jeppetto.dao.updateobject.UpdateObject) argsIterator.next();\n\n");
+        }
+
         if (dataAccessMethod.conditions() != null && dataAccessMethod.conditions().length > 0) {
             for (org.iternine.jeppetto.dao.annotation.Condition conditionAnnotation : dataAccessMethod.conditions()) {
                 sb.append(String.format("    queryModel.addCondition(buildCondition(\"%s\", org.iternine.jeppetto.dao.ConditionType.%s, argsIterator));\n",
@@ -363,11 +367,11 @@ public class DAOBuilder {
 
 
     /**
-     * We build 'findBy', 'countBy', and 'deleteBy' QueryModels in the following way:
+     * We build 'findBy', 'countBy', 'updateBy', and 'deleteBy' QueryModels in the following way:
      * <p/>
      *      findBy<query part>*[OrderBy<order part>*][AndLimit][AndSkip]
      *      countBy<query part>*[OrderBy<order part>*][AndLimit][AndSkip]
-     *      referenceBy<query part>*
+     *      updateBy<query part>*
      *      deleteBy<query part>*
      * <p/>
      * Query parts are of the following forms:
@@ -423,9 +427,10 @@ public class DAOBuilder {
 
             queryString = methodName.substring("countBy".length(), methodName.length() - (methodName.endsWith("As") ? "As".length() : 0));
             operationType = OperationType.Read;
-        } else if (methodName.startsWith("referenceBy")) {
-            queryString = methodName.substring("referenceBy".length(), methodName.length() - (methodName.endsWith("As") ? "As".length() : 0));
-            operationType = OperationType.Reference;
+        } else if (methodName.startsWith("updateBy")) {
+            queryString = methodName.substring("updateBy".length(), methodName.length() - (methodName.endsWith("As") ? "As".length() : 0));
+            operationType = OperationType.Update;
+            sb.append("    org.iternine.jeppetto.dao.updateobject.UpdateObject updateObject = (org.iternine.jeppetto.dao.updateobject.UpdateObject) argsIterator.next();\n\n");
         } else if (methodName.startsWith("deleteBy")) {
             queryString = methodName.substring("deleteBy".length(), methodName.length() - (methodName.endsWith("As") ? "As".length() : 0));
             operationType = OperationType.Delete;
@@ -589,8 +594,8 @@ public class DAOBuilder {
     }
 
 
-    private static void buildReferenceClause(StringBuilder sb) {
-        sb.append("\n    return referenceUsingQueryModel(queryModel);");
+    private static void buildUpdateClause(StringBuilder sb) {
+        sb.append("\n    return updateUsingQueryModel(updateObject, queryModel);");
     }
 
 

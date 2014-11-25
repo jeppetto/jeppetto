@@ -141,20 +141,19 @@ public class DummyQueryModelDAO<T, ID>
 
 
     @Override
-    public ReferenceSet<T> referenceUsingQueryModel(QueryModel queryModel)
-            throws JeppettoException {
+    public <U extends T> U getUpdateObject() {
         return null;
     }
 
 
     @Override
-    public ReferenceSet<T> referenceByIds(ID... id) {
-        return null;
+    public <U extends T> void updateByIds(U updateObject, ID... ids)
+            throws FailedBatchException, JeppettoException {
     }
 
 
     @Override
-    public void updateReferences(ReferenceSet<T> referenceSet)
+    public <U extends T> void updateUsingQueryModel(U updateObject, QueryModel queryModel)
             throws JeppettoException {
     }
 

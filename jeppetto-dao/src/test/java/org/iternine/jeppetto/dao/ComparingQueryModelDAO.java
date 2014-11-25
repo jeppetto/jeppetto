@@ -95,14 +95,14 @@ public class ComparingQueryModelDAO
 
 
     @Override
-    public ReferenceSet<Sample> referenceByIds(String... ids) {
+    public <U extends Sample> U getUpdateObject() {
         throw new UnsupportedOperationException();
     }
 
 
     @Override
-    public void updateReferences(ReferenceSet<Sample> referenceSet)
-            throws JeppettoException {
+    public <U extends Sample> void updateByIds(U updateObject, String... strings)
+            throws FailedBatchException, JeppettoException {
         throw new UnsupportedOperationException();
     }
 
@@ -153,11 +153,9 @@ public class ComparingQueryModelDAO
 
 
     @Override
-    public ReferenceSet<Sample> referenceUsingQueryModel(QueryModel queryModel)
+    public <U extends Sample> void updateUsingQueryModel(U updateObject, QueryModel queryModel)
             throws JeppettoException {
         compare(queryModel);
-
-        return null;
     }
 
 

@@ -36,9 +36,9 @@
 
     <!-- =================== Mongo DAOs =================== -->
 
-    <bean id="referenceSetDAO" class="org.iternine.jeppetto.dao.DAOBuilder" factory-method="buildDAO">
+    <bean id="updateObjectDAO" class="org.iternine.jeppetto.dao.DAOBuilder" factory-method="buildDAO">
         <constructor-arg index="0" value="org.iternine.jeppetto.dao.test.SimpleObject"/>
-        <constructor-arg index="1" value="org.iternine.jeppetto.dao.test.referenceset.ReferenceSetDAO"/>
+        <constructor-arg index="1" value="org.iternine.jeppetto.dao.test.updateobject.UpdateObjectDAO"/>
         <constructor-arg index="2" value="org.iternine.jeppetto.dao.mongodb.MongoDBQueryModelDAO"/>
         <constructor-arg index="3">
             <map>

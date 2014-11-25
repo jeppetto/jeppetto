@@ -86,9 +86,15 @@ public interface QueryModelDAO<T, ID> extends GenericDAO<T, ID> {
 
 
     /**
+     * Apply the set of changes described in the update object to persisted items that
+     * match the specified QueryModel.
      *
+     * @param updateObject that describes the set of changes to be applied.
+     * @param queryModel that contains the criteria for items to update
+     *
+     * @throws JeppettoException if any underlying failure occurs
      */
-    ReferenceSet<T> referenceUsingQueryModel(QueryModel queryModel)
+    <U extends T> void updateUsingQueryModel(U updateObject, QueryModel queryModel)
             throws JeppettoException;
 
 

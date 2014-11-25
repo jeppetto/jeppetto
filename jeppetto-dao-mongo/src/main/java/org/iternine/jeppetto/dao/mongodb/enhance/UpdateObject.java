@@ -20,7 +20,7 @@ package org.iternine.jeppetto.dao.mongodb.enhance;
 import com.mongodb.DBObject;
 
 
-public interface UpdateObject {
+public interface UpdateObject extends org.iternine.jeppetto.dao.updateobject.UpdateObject /* temporary hack */ {
 
     DBObject getUpdateClause();
 

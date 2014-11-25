@@ -35,15 +35,15 @@
     <!-- =================== DynamoDB DAOs =================== -->
 
     <!-- NB: Using lazy-init to avoid race between test case creating the table and DynamoDBQueryModelDAO reading it. -->
-    <bean id="dynamoDBReferenceSetDAO" class="org.iternine.jeppetto.dao.DAOBuilder" factory-method="buildDAO"  lazy-init="true">
+    <bean id="dynamoDBUpdateObjectDAO" class="org.iternine.jeppetto.dao.DAOBuilder" factory-method="buildDAO"  lazy-init="true">
         <constructor-arg index="0" value="org.iternine.jeppetto.dao.test.SimpleObject"/>
-        <constructor-arg index="1" value="org.iternine.jeppetto.dao.test.referenceset.ReferenceSetDAO"/>
+        <constructor-arg index="1" value="org.iternine.jeppetto.dao.test.updateobject.UpdateObjectDAO"/>
         <constructor-arg index="2" value="org.iternine.jeppetto.dao.dynamodb.DynamoDBQueryModelDAO"/>
         <constructor-arg index="3">
             <map>
                 <entry key="db" value-ref="dynamoDb"/>
                 <entry key="idGenerator"><bean class="org.iternine.jeppetto.dao.id.UUIDGenerator"/></entry>
-                <entry key="updateObject" value="org.iternine.jeppetto.dao.test.referenceset.SimpleUpdateObject"/>
+                <entry key="updateObject" value="org.iternine.jeppetto.dao.test.updateobject.SimpleUpdateObject"/>
             </map>
         </constructor-arg>
     </bean>
