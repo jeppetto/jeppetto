@@ -32,6 +32,8 @@ import org.iternine.jeppetto.dao.QueryModelDAO;
 import org.iternine.jeppetto.dao.Sort;
 import org.iternine.jeppetto.dao.SortDirection;
 import org.iternine.jeppetto.dao.TooManyItemsException;
+import org.iternine.jeppetto.dao.UpdateBehaviorDescriptor;
+import org.iternine.jeppetto.dao.ResultFromUpdate;
 import org.iternine.jeppetto.dao.dynamodb.iterable.BatchGetIterable;
 import org.iternine.jeppetto.dao.dynamodb.iterable.QueryIterable;
 import org.iternine.jeppetto.dao.dynamodb.iterable.ScanIterable;
@@ -52,10 +54,12 @@ import com.amazonaws.services.dynamodbv2.model.KeysAndAttributes;
 import com.amazonaws.services.dynamodbv2.model.LocalSecondaryIndexDescription;
 import com.amazonaws.services.dynamodbv2.model.PutItemRequest;
 import com.amazonaws.services.dynamodbv2.model.QueryRequest;
+import com.amazonaws.services.dynamodbv2.model.ReturnValue;
 import com.amazonaws.services.dynamodbv2.model.ScanRequest;
 import com.amazonaws.services.dynamodbv2.model.TableDescription;
 import com.amazonaws.services.dynamodbv2.model.UpdateItemRequest;
 
+import com.amazonaws.services.dynamodbv2.model.UpdateItemResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -231,7 +235,8 @@ public class DynamoDBQueryModelDAO<T, ID>
         if (!dynamoDBPersistable.__isPersisted(dynamoDB.toString())) {
             saveItem(dynamoDBPersistable);
         } else {
-            updateItem(getKeyFrom(dynamoDBPersistable), new UpdateExpressionBuilder(dynamoDBPersistable), null);
+            updateItem(getKeyFrom(dynamoDBPersistable), new UpdateExpressionBuilder(dynamoDBPersistable), null,
+                       ResultFromUpdate.ReturnNone);
         }
 
         dynamoDBPersistable.__markPersisted(dynamoDB.toString());
@@ -263,18 +268,21 @@ public class DynamoDBQueryModelDAO<T, ID>
     @Override
     public void deleteByIds(ID... ids)
             throws FailedBatchException, JeppettoException {
-        Map<ID, Exception> failedDeletes = new LinkedHashMap<ID, Exception>();
+        List<ID> succeeded = new ArrayList<ID>();
+        Map<ID, Exception> failed = new LinkedHashMap<ID, Exception>();
 
         for (ID id : ids) {
             try {
                 deleteItem(getKeyFrom(id));
+
+                succeeded.add(id);
             } catch (Exception e) {
-                failedDeletes.put(id, e);
+                failed.put(id, e);
             }
         }
 
-        if (failedDeletes.size() > 0) {
-            throw new FailedBatchException("Unable to delete all items", failedDeletes);
+        if (failed.size() > 0) {
+            throw new FailedBatchException("Unable to delete all items", succeeded, failed);
         }
     }
 
@@ -287,22 +295,49 @@ public class DynamoDBQueryModelDAO<T, ID>
 
 
     @Override
-    public <U extends T> void updateByIds(U updateObject, ID... ids)
-            throws FailedBatchException, JeppettoException {
-        UpdateExpressionBuilder updateExpressionBuilder = new UpdateExpressionBuilder((UpdateObject) updateObject);
-        Map<ID, Exception> failedUpdates = new LinkedHashMap<ID, Exception>();
+    public <U extends T> T updateById(U updateObject, ID id)
+            throws JeppettoException {
+        return updateItem(getKeyFrom(id), new UpdateExpressionBuilder((UpdateObject) updateObject), null,
+                          getResultFromUpdate(updateObject));
+    }
 
+
+    @Override
+    public <U extends T> Iterable<T> updateByIds(U updateObject, ID... ids)
+            throws FailedBatchException, JeppettoException {
+        List<?> succeeded;
+        Map<ID, Exception> failed = new LinkedHashMap<ID, Exception>();
+        ResultFromUpdate resultFromUpdate = getResultFromUpdate(updateObject);
+
+        if (resultFromUpdate == ResultFromUpdate.ReturnNone) {
+            succeeded = new ArrayList<ID>();
+        } else {
+            succeeded = new ArrayList<T>();
+        }
+
+        UpdateExpressionBuilder updateExpressionBuilder = new UpdateExpressionBuilder((UpdateObject) updateObject);
         for (ID id : ids) {
             try {
-                updateItem(getKeyFrom(id), updateExpressionBuilder, null);
+                T t = updateItem(getKeyFrom(id), updateExpressionBuilder, null, resultFromUpdate);
+
+                if (resultFromUpdate == ResultFromUpdate.ReturnNone) {
+                    //noinspection unchecked
+                    ((List<ID>) succeeded).add(id);
+                } else {
+                    //noinspection unchecked
+                    ((List<T>) succeeded).add(t);
+                }
             } catch (Exception e) {
-                failedUpdates.put(id, e);
+                failed.put(id, e);
             }
         }
 
-        if (failedUpdates.size() > 0) {
-            throw new FailedBatchException("Unable to update all items", failedUpdates);
+        if (failed.size() > 0) {
+            throw new FailedBatchException("Unable to update all items", succeeded, failed);
         }
+
+        //noinspection unchecked
+        return resultFromUpdate == ResultFromUpdate.ReturnNone ? null : (Iterable<T>) succeeded;
     }
 
 
@@ -379,13 +414,14 @@ public class DynamoDBQueryModelDAO<T, ID>
 
 
     @Override
-    public <U extends T> void updateUsingQueryModel(U updateObject, QueryModel queryModel)
+    public <U extends T> T updateUniqueUsingQueryModel(U updateObject, QueryModel queryModel)
             throws JeppettoException {
         UpdateExpressionBuilder updateExpressionBuilder = new UpdateExpressionBuilder((UpdateObject) updateObject);
         // For referencing an object, we can only identify an item by its actual range key, not one of the index fields.  For the
         // third parameter, pass in a singleton map that only contains the range field.
         ConditionExpressionBuilder conditionExpressionBuilder
                 = new ConditionExpressionBuilder(queryModel, hashKeyField, Collections.singletonMap(rangeKeyField, (String) null));
+        ResultFromUpdate resultFromUpdate = getResultFromUpdate(updateObject);
 
         Map<String, AttributeValue> key;
 
@@ -395,7 +431,20 @@ public class DynamoDBQueryModelDAO<T, ID>
             throw new JeppettoException("DynamoDB only supports updates where the condition uniquely identifies the item by its key.", e);
         }
 
-        updateItem(key, updateExpressionBuilder, conditionExpressionBuilder);
+        return updateItem(key, updateExpressionBuilder, conditionExpressionBuilder, resultFromUpdate);
+    }
+
+
+    @Override
+    public <U extends T> Iterable<T> updateUsingQueryModel(U updateObject, QueryModel queryModel)
+            throws JeppettoException {
+        T t = updateUniqueUsingQueryModel(updateObject, queryModel);
+
+        if (t == null) {
+            return null;
+        }
+
+        return Collections.singletonList(t);
     }
 
 
@@ -426,8 +475,8 @@ public class DynamoDBQueryModelDAO<T, ID>
     }
 
 
-    private void updateItem(Map<String, AttributeValue> key, UpdateExpressionBuilder updateExpressionBuilder,
-                            ConditionExpressionBuilder conditionExpressionBuilder) {
+    private T updateItem(Map<String, AttributeValue> key, UpdateExpressionBuilder updateExpressionBuilder,
+                         ConditionExpressionBuilder conditionExpressionBuilder, ResultFromUpdate resultFromUpdate) {
         try {
             UpdateItemRequest updateItemRequest = new UpdateItemRequest().withTableName(tableName)
                                                                          .withKey(key)
@@ -449,7 +498,22 @@ public class DynamoDBQueryModelDAO<T, ID>
                 updateItemRequest.withExpressionAttributeValues(attributeValues);
             }
 
-            dynamoDB.updateItem(updateItemRequest);
+            if (resultFromUpdate != ResultFromUpdate.ReturnNone) {
+                updateItemRequest.setReturnValues(resultFromUpdate == ResultFromUpdate.ReturnPreUpdate ? ReturnValue.ALL_OLD
+                                                                                                       : ReturnValue.ALL_NEW);
+
+                UpdateItemResult result = dynamoDB.updateItem(updateItemRequest);
+
+                T t = ConversionUtil.getObjectFromItem(result.getAttributes(), entityClass);
+
+                ((DynamoDBPersistable) t).__markPersisted(dynamoDB.toString());
+
+                return t;
+            } else {
+                dynamoDB.updateItem(updateItemRequest);
+
+                return null;
+            }
         } catch (Exception e) {
             throw new JeppettoException(e);
         }
@@ -526,6 +590,17 @@ public class DynamoDBQueryModelDAO<T, ID>
 //            scanRequest.setAttributesToGet();
 
         return new ScanIterable<T>(dynamoDB, persistableEnhancer, scanRequest, hashKeyField);
+    }
+
+
+    private <U extends T> ResultFromUpdate getResultFromUpdate(U updateObject) {
+        if (UpdateBehaviorDescriptor.class.isAssignableFrom(updateObject.getClass())) {
+            ResultFromUpdate resultFromUpdate = ((UpdateBehaviorDescriptor) updateObject).getResultFromUpdate();
+
+            return resultFromUpdate != null ? resultFromUpdate : ResultFromUpdate.ReturnNone;
+        } else {
+            return ResultFromUpdate.ReturnNone;
+        }
     }
 
 

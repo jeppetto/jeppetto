@@ -359,7 +359,14 @@ public class MongoDBQueryModelDAO<T, ID>
 
 
     @Override
-    public <U extends T> void updateByIds(U updateObject, ID... ids)
+    public <U extends T> T updateById(U updateObject, ID id)
+            throws JeppettoException {
+        throw new RuntimeException("To be implemented using findAndModify...");
+    }
+
+
+    @Override
+    public <U extends T> Iterable<T> updateByIds(U updateObject, ID... ids)
             throws FailedBatchException, JeppettoException {
         QueryModel queryModel = new QueryModel();
         queryModel.addCondition(buildIdCondition(Arrays.asList(ids)));
@@ -369,6 +376,8 @@ public class MongoDBQueryModelDAO<T, ID>
         }
 
         updateUsingQueryModel(updateObject, queryModel);
+
+        return null;    // TODO: implement...also, deal w/ modified FailedBatchException
     }
 
 
@@ -505,7 +514,14 @@ public class MongoDBQueryModelDAO<T, ID>
 
 
     @Override
-    public <U extends T> void updateUsingQueryModel(U updateObject, QueryModel queryModel)
+    public <U extends T> T updateUniqueUsingQueryModel(U updateObject, QueryModel queryModel)
+            throws JeppettoException {
+        throw new RuntimeException("To be implemented w/ findAndModify...");
+    }
+
+
+    @Override
+    public <U extends T> Iterable<T> updateUsingQueryModel(U updateObject, QueryModel queryModel)
             throws JeppettoException {
         DBObject updateClause = ((UpdateObject) updateObject).getUpdateClause();
         DBObject identifyingQuery = buildQueryObject(queryModel, AccessType.ReadWrite);
@@ -515,7 +531,7 @@ public class MongoDBQueryModelDAO<T, ID>
                 queryLogger.debug("Bypassing update identified by {}; no changes", identifyingQuery.toMap());
             }
 
-            return;
+            return Collections.emptyList();
         }
 
         if (queryLogger != null) {
@@ -528,6 +544,8 @@ public class MongoDBQueryModelDAO<T, ID>
         } catch (MongoException e) {
             throw new JeppettoException(e);
         }
+
+        return null;    // TODO: implement...
     }
 
 

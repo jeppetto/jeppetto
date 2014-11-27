@@ -60,6 +60,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -218,7 +219,8 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
         }
 
         if (failedDeletes.size() > 0) {
-            throw new FailedBatchException("Unable to delete all items", failedDeletes);
+            // TODO: fix emptyList()...
+            throw new FailedBatchException("Unable to delete all items", Collections.emptyList(), failedDeletes);
         }
     }
 
@@ -230,7 +232,14 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
 
 
     @Override
-    public <U extends T> void updateByIds(U updateObject, ID... ids)
+    public <U extends T> T updateById(U updateObject, ID id)
+            throws JeppettoException {
+        throw new RuntimeException("updateById not yet implemented");
+    }
+
+
+    @Override
+    public <U extends T> Iterable<T> updateByIds(U updateObject, ID... ids)
             throws FailedBatchException, JeppettoException {
         throw new RuntimeException("updateByIds not yet implemented");
     }
@@ -329,7 +338,14 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
 
 
     @Override
-    public <U extends T> void updateUsingQueryModel(U updateObject, QueryModel queryModel)
+    public <U extends T> T updateUniqueUsingQueryModel(U updateObject, QueryModel queryModel)
+            throws JeppettoException {
+        throw new RuntimeException("updateUniqueUsingQueryModel not yet implemented");
+    }
+
+
+    @Override
+    public <U extends T> Iterable<T> updateUsingQueryModel(U updateObject, QueryModel queryModel)
             throws JeppettoException {
         throw new RuntimeException("updateUsingQueryModel not yet implemented");
     }

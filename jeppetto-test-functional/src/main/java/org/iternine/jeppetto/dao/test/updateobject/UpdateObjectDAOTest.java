@@ -17,6 +17,7 @@
 package org.iternine.jeppetto.dao.test.updateobject;
 
 
+import org.iternine.jeppetto.dao.ResultFromUpdate;
 import org.iternine.jeppetto.dao.test.RelatedObject;
 import org.iternine.jeppetto.dao.test.SimpleEnum;
 import org.iternine.jeppetto.dao.test.SimpleObject;
@@ -627,6 +628,62 @@ public abstract class UpdateObjectDAOTest {
 
         assertEquals(3.75d, resultSimpleObject.getDoubleValue(), 0.0001d);
     }
+
+
+    @Test
+    public void incrementIntValueAndReturnAfterModified() {
+        SimpleObject simpleObject = new SimpleObject();
+        simpleObject.setIntValue(1);
+
+        getSimpleObjectReferencesDAO().save(simpleObject);
+
+        SimpleUpdateObject updateObject = getSimpleObjectReferencesDAO().getUpdateObject();
+        updateObject.addToIntValue(1);
+        updateObject.setResultFromUpdate(ResultFromUpdate.ReturnPostUpdate);
+
+        SimpleObject resultSimpleObject = getSimpleObjectReferencesDAO().updateById(updateObject, simpleObject.getId());
+
+        assertEquals(2, resultSimpleObject.getIntValue());
+    }
+
+
+    @Test
+    public void incrementIntValueAndReturnBeforeModified() {
+        SimpleObject simpleObject = new SimpleObject();
+        simpleObject.setIntValue(1);
+
+        getSimpleObjectReferencesDAO().save(simpleObject);
+
+        SimpleUpdateObject updateObject = getSimpleObjectReferencesDAO().getUpdateObject();
+        updateObject.addToIntValue(1);
+        updateObject.setResultFromUpdate(ResultFromUpdate.ReturnPreUpdate);
+
+        SimpleObject resultSimpleObject = getSimpleObjectReferencesDAO().updateById(updateObject, simpleObject.getId());
+
+        assertEquals(1, resultSimpleObject.getIntValue());
+    }
+
+
+    @Test
+    public void incrementIntValueAndReturnNone() {
+        SimpleObject simpleObject = new SimpleObject();
+        simpleObject.setIntValue(1);
+
+        getSimpleObjectReferencesDAO().save(simpleObject);
+
+        SimpleUpdateObject updateObject = getSimpleObjectReferencesDAO().getUpdateObject();
+        updateObject.addToIntValue(1);
+        updateObject.setResultFromUpdate(ResultFromUpdate.ReturnNone);
+
+        SimpleObject resultSimpleObject = getSimpleObjectReferencesDAO().updateById(updateObject, simpleObject.getId());
+
+        assertNull(resultSimpleObject);
+    }
+
+
+    // test iterables
+    // test when None
+    // exception scenarios -- some times 'succeeded' contains ids, sometimes T
 
 
     // TODO: index based operation on existing list

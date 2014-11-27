@@ -206,7 +206,8 @@ public class JDBCQueryModelDAO<T, ID>
         }
 
         if (failedDeletes.size() > 0) {
-            throw new FailedBatchException("Unable to delete all items", failedDeletes);
+            // TODO: fix emptyList()...
+            throw new FailedBatchException("Unable to delete all items", Collections.emptyList(), failedDeletes);
         }
     }
 
@@ -218,7 +219,14 @@ public class JDBCQueryModelDAO<T, ID>
 
 
     @Override
-    public <U extends T> void updateByIds(U updateObject, ID... ids)
+    public <U extends T> T updateById(U updateObject, ID id)
+            throws JeppettoException {
+        throw new RuntimeException("updateById not yet implemented");
+    }
+
+
+    @Override
+    public <U extends T> Iterable<T> updateByIds(U updateObject, ID... ids)
             throws FailedBatchException, JeppettoException {
         throw new RuntimeException("updateByIds not yet implemented");
     }
@@ -317,7 +325,14 @@ public class JDBCQueryModelDAO<T, ID>
 
 
     @Override
-    public <U extends T> void updateUsingQueryModel(U updateObject, QueryModel queryModel)
+    public <U extends T> T updateUniqueUsingQueryModel(U updateObject, QueryModel queryModel)
+            throws JeppettoException {
+        throw new RuntimeException("updateUniqueUsingQueryModel not yet implemented");
+    }
+
+
+    @Override
+    public <U extends T> Iterable<T> updateUsingQueryModel(U updateObject, QueryModel queryModel)
             throws JeppettoException {
         throw new RuntimeException("updateUsingQueryModel not yet implemented");
     }

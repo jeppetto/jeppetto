@@ -101,7 +101,14 @@ public class ComparingQueryModelDAO
 
 
     @Override
-    public <U extends Sample> void updateByIds(U updateObject, String... strings)
+    public <U extends Sample> Sample updateById(U updateObject, String s)
+            throws JeppettoException {
+        throw new UnsupportedOperationException();
+    }
+
+
+    @Override
+    public <U extends Sample> Iterable<Sample> updateByIds(U updateObject, String... strings)
             throws FailedBatchException, JeppettoException {
         throw new UnsupportedOperationException();
     }
@@ -153,9 +160,20 @@ public class ComparingQueryModelDAO
 
 
     @Override
-    public <U extends Sample> void updateUsingQueryModel(U updateObject, QueryModel queryModel)
+    public <U extends Sample> Sample updateUniqueUsingQueryModel(U updateObject, QueryModel queryModel)
             throws JeppettoException {
         compare(queryModel);
+
+        return null;
+    }
+
+
+    @Override
+    public <U extends Sample> Iterable<Sample> updateUsingQueryModel(U updateObject, QueryModel queryModel)
+            throws JeppettoException {
+        compare(queryModel);
+
+        return Collections.emptyList();
     }
 
 

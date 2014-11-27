@@ -126,6 +126,19 @@ public interface GenericDAO<T, ID> {
 
 
     /**
+     * Apply the set of changes described in the update object to the persisted item with the
+     * specified id.
+     *
+     * @param updateObject that describes the set of changes to be applied.
+     * @param id of the object to update.
+     *
+     * @throws JeppettoException if any underlying failure occurs
+     */
+    <U extends T> T updateById(U updateObject, ID id)
+            throws JeppettoException;
+
+
+    /**
      * Apply the set of changes described in the update object to persisted items with the
      * specified ids.
      *
@@ -136,7 +149,7 @@ public interface GenericDAO<T, ID> {
      *                              The exception contains a list of the ids that failed to update.
      * @throws JeppettoException if any underlying failure occurs
      */
-    <U extends T> void updateByIds(U updateObject, ID... ids)
+    <U extends T> Iterable<T> updateByIds(U updateObject, ID... ids)
             throws FailedBatchException, JeppettoException;
 
 

@@ -17,16 +17,51 @@
 package org.iternine.jeppetto.dao.test.updateobject;
 
 
+import org.iternine.jeppetto.dao.ResultFromUpdate;
+import org.iternine.jeppetto.dao.UpdateBehaviorDescriptor;
+import org.iternine.jeppetto.dao.annotation.Transient;
 import org.iternine.jeppetto.dao.test.SimpleObject;
 
 
 /**
  */
-public abstract class SimpleUpdateObject extends SimpleObject {
+public abstract class SimpleUpdateObject extends SimpleObject
+        implements UpdateBehaviorDescriptor {
+
+    //-------------------------------------------------------------
+    // Variables - Private
+    //-------------------------------------------------------------
+
+    private ResultFromUpdate resultFromUpdate = ResultFromUpdate.ReturnNone;
+
+
+    //-------------------------------------------------------------
+    // Methods - Abstract
+    //-------------------------------------------------------------
 
     public abstract void addToIntValue(int increment);
 
     public abstract void addToLongValue(long increment);
 
     public abstract void addToDoubleValue(double increment);
+
+
+    //-------------------------------------------------------------
+    // Implementation - UpdateBehaviorDescriptor
+    //-------------------------------------------------------------
+
+    @Override
+    @Transient  // TODO: remove once DynamoDB implementation uses core UpdateObject
+    public ResultFromUpdate getResultFromUpdate() {
+        return resultFromUpdate;
+    }
+
+
+    //-------------------------------------------------------------
+    // Methods - Getter/Setter
+    //-------------------------------------------------------------
+
+    public void setResultFromUpdate(ResultFromUpdate resultFromUpdate) {
+        this.resultFromUpdate = resultFromUpdate;
+    }
 }

@@ -147,14 +147,30 @@ public class DummyQueryModelDAO<T, ID>
 
 
     @Override
-    public <U extends T> void updateByIds(U updateObject, ID... ids)
-            throws FailedBatchException, JeppettoException {
+    public <U extends T> T updateById(U updateObject, ID id)
+            throws JeppettoException {
+        return null;
     }
 
 
     @Override
-    public <U extends T> void updateUsingQueryModel(U updateObject, QueryModel queryModel)
+    public <U extends T> Iterable<T> updateByIds(U updateObject, ID... ids)
+            throws FailedBatchException, JeppettoException {
+        return null;
+    }
+
+
+    @Override
+    public <U extends T> T updateUniqueUsingQueryModel(U updateObject, QueryModel queryModel)
             throws JeppettoException {
+        return null;
+    }
+
+
+    @Override
+    public <U extends T> Iterable<T> updateUsingQueryModel(U updateObject, QueryModel queryModel)
+            throws JeppettoException {
+        return null;
     }
 
 

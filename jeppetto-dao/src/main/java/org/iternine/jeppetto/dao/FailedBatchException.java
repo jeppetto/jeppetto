@@ -17,6 +17,7 @@
 package org.iternine.jeppetto.dao;
 
 
+import java.util.List;
 import java.util.Map;
 
 
@@ -28,17 +29,19 @@ public class FailedBatchException extends JeppettoException {
     // Variables - Private
     //-------------------------------------------------------------
 
-    private Map<?, ? extends Throwable> failedItems;
+    private List<?> succeeded;
+    private Map<?, ? extends Throwable> failed;
 
 
     //-------------------------------------------------------------
     // Constructors
     //-------------------------------------------------------------
 
-    public FailedBatchException(String message, Map<?, ? extends Throwable> failedItems) {
+    public FailedBatchException(String message, List<?> succeeded, Map<?, ? extends Throwable> failed) {
         super(message);
-        
-        this.failedItems = failedItems;
+
+        this.succeeded = succeeded;
+        this.failed = failed;
     }
 
 
@@ -46,7 +49,12 @@ public class FailedBatchException extends JeppettoException {
     // Methods - Getter/Setter
     //-------------------------------------------------------------
 
-    public Map<?, ? extends Throwable> getFailedItems() {
-        return failedItems;
+    public List<?> getSucceeded() {
+        return succeeded;
+    }
+
+
+    public Map<?, ? extends Throwable> getFailed() {
+        return failed;
     }
 }

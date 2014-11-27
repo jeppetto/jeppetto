@@ -93,4 +93,22 @@ public class MongoUpdateObjectDAOTest extends UpdateObjectDAOTest {
     @Test
     public void incrementDoubleValue() {
     }
+
+
+    @Ignore("Not yet implemented...")
+    @Test
+    public void incrementIntValueAndReturnAfterModified() {
+    }
+
+
+    @Ignore("Not yet implemented...")
+    @Test
+    public void incrementIntValueAndReturnBeforeModified() {
+    }
+
+
+    @Ignore("Not yet implemented...")
+    @Test
+    public void incrementIntValueAndReturnNone() {
+    }
 }
