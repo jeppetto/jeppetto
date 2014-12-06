@@ -36,7 +36,7 @@ public class DynamoDBConstraint {
     // Constructors
     //-------------------------------------------------------------
 
-    public DynamoDBConstraint(DynamoDBOperator operator, Object[] values) {
+    public DynamoDBConstraint(DynamoDBOperator operator, Object... values) {
         this.operator = operator;
         this.values = values;
     }

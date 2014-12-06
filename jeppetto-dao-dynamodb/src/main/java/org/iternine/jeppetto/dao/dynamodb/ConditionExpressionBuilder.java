@@ -43,15 +43,15 @@ public class ConditionExpressionBuilder {
     //-------------------------------------------------------------
 
     private static final Map<DynamoDBOperator, String> OPERATOR_EXPRESSIONS = new HashMap<DynamoDBOperator, String>(11) {{
-        put(DynamoDBOperator.NotEqual, "%s <> :a%d");
-        put(DynamoDBOperator.GreaterThanEqual, "%s >= :a%d");
-        put(DynamoDBOperator.LessThanEqual, "%s <= :a%d");
-        put(DynamoDBOperator.Equal, "%s = :a%d");
-        put(DynamoDBOperator.GreaterThan, "%s > :a%d");
-        put(DynamoDBOperator.LessThan, "%s < :a%d");
+        put(DynamoDBOperator.NotEqual, "%s <> :c%d");
+        put(DynamoDBOperator.GreaterThanEqual, "%s >= :c%d");
+        put(DynamoDBOperator.LessThanEqual, "%s <= :c%d");
+        put(DynamoDBOperator.Equal, "%s = :c%d");
+        put(DynamoDBOperator.GreaterThan, "%s > :c%d");
+        put(DynamoDBOperator.LessThan, "%s < :c%d");
         put(DynamoDBOperator.NotWithin, "NOT %s IN %s");
         put(DynamoDBOperator.Within, "%s IN %s");
-        put(DynamoDBOperator.Between, "%s BETWEEN :a%d AND :a%d");
+        put(DynamoDBOperator.Between, "%s BETWEEN :c%d AND :c%d");
         put(DynamoDBOperator.IsNull, "attribute_not_exists(%s)");
         put(DynamoDBOperator.IsNotNull, "attribute_exists(%s)");
     }};
@@ -75,12 +75,16 @@ public class ConditionExpressionBuilder {
     private Condition rangeKeyCondition;
     private StringBuilder expression = new StringBuilder();
     private Map<String, AttributeValue> attributeValues = new HashMap<String, AttributeValue>();
-    private int placeholderCount = 0;
+    private int attributeValueCounter = 0;
 
 
     //-------------------------------------------------------------
     // Constructors
     //-------------------------------------------------------------
+
+    public ConditionExpressionBuilder() {
+    }
+
 
     public ConditionExpressionBuilder(QueryModel queryModel, String hashKeyField, Map<String, String> localIndexes) {
         if (queryModel.getConditions() != null) {
@@ -182,16 +186,23 @@ public class ConditionExpressionBuilder {
     }
 
 
+    ConditionExpressionBuilder with(String field, DynamoDBConstraint constraint) {
+        add(field, constraint);
+
+        return this;
+    }
+
+
     //-------------------------------------------------------------
     // Methods - Private
     //-------------------------------------------------------------
 
-    private void add(String key, DynamoDBConstraint constraint) {
+    private void add(String field, DynamoDBConstraint constraint) {
         if (expression.length() > 0) {
             expression.append(" and ");
         }
 
-        expression.append(buildCondition(key, constraint));
+        expression.append(buildCondition(field, constraint));
 
         Map<String, AttributeValue> newValues = getExpressionAttributeValues(constraint);
         attributeValues.putAll(newValues);
@@ -205,9 +216,9 @@ public class ConditionExpressionBuilder {
         if (argumentCount == 0) {
             return String.format(operatorExpression, attribute);
         } else if (argumentCount == 1) {
-            return String.format(operatorExpression, attribute, placeholderCount);
+            return String.format(operatorExpression, attribute, attributeValueCounter);
         } else if (argumentCount == 2) {
-            return String.format(operatorExpression, attribute, placeholderCount, placeholderCount + 1);
+            return String.format(operatorExpression, attribute, attributeValueCounter, attributeValueCounter + 1);
         } else {    // N arguments
             StringBuilder placeholders = new StringBuilder("(");
             int itemCount = getItemCount(constraint.getValues()[0]);
@@ -217,7 +228,7 @@ public class ConditionExpressionBuilder {
                     placeholders.append(", ");
                 }
 
-                placeholders.append(":a").append(placeholderCount + i);
+                placeholders.append(":c").append(attributeValueCounter + i);
             }
 
             placeholders.append(')');
@@ -234,12 +245,12 @@ public class ConditionExpressionBuilder {
         if (argumentCount == 0) {
             return Collections.emptyMap();
         } else if (argumentCount == 1) {
-            return Collections.singletonMap(":a" + placeholderCount++, ConversionUtil.toAttributeValue(values[0]));
+            return Collections.singletonMap(":c" + attributeValueCounter++, ConversionUtil.toAttributeValue(values[0]));
         } else if (argumentCount == 2) {
             Map<String, AttributeValue> result = new HashMap<String, AttributeValue>(2);
 
-            result.put(":a" + placeholderCount++, ConversionUtil.toAttributeValue(values[0]));
-            result.put(":a" + (placeholderCount++), ConversionUtil.toAttributeValue(values[1]));
+            result.put(":c" + attributeValueCounter++, ConversionUtil.toAttributeValue(values[0]));
+            result.put(":c" + (attributeValueCounter++), ConversionUtil.toAttributeValue(values[1]));
 
             return result;
         } else {    // N arguments
@@ -247,7 +258,7 @@ public class ConditionExpressionBuilder {
             Map<String, AttributeValue> result = new HashMap<String, AttributeValue>(attributeValues.size());
 
             for (AttributeValue attributeValue : attributeValues) {
-                result.put(":a" + placeholderCount++, attributeValue);
+                result.put(":c" + attributeValueCounter++, attributeValue);
             }
 
             return result;

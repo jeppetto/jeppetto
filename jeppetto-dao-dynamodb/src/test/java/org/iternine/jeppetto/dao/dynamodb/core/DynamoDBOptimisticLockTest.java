@@ -17,21 +17,21 @@
 package org.iternine.jeppetto.dao.dynamodb.core;
 
 
+import com.amazonaws.services.dynamodbv2.model.AttributeDefinition;
+import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
+import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
+import com.amazonaws.services.dynamodbv2.model.KeyType;
+import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
+import com.amazonaws.services.dynamodbv2.model.ScalarAttributeType;
+
 import org.iternine.jeppetto.dao.GenericDAO;
 import org.iternine.jeppetto.dao.NoSuchItemException;
 import org.iternine.jeppetto.dao.test.RelatedObject;
 import org.iternine.jeppetto.dao.test.SimpleObject;
 import org.iternine.jeppetto.dao.test.core.GenericDAOTest;
+import org.iternine.jeppetto.dao.test.core.OptimisticLockTest;
 import org.iternine.jeppetto.testsupport.DynamoDBDatabaseProvider;
 import org.iternine.jeppetto.testsupport.TestContext;
-
-import com.amazonaws.services.dynamodbv2.model.AttributeDefinition;
-import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
-import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
-import com.amazonaws.services.dynamodbv2.model.KeyType;
-
-import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
-import com.amazonaws.services.dynamodbv2.model.ScalarAttributeType;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -42,7 +42,7 @@ import java.util.List;
 import static org.junit.Assert.assertEquals;
 
 
-public class DynamoDBGenericDAOTest extends GenericDAOTest {
+public class DynamoDBOptimisticLockTest extends OptimisticLockTest {
 
     //-------------------------------------------------------------
     // Variables - Private
@@ -58,7 +58,7 @@ public class DynamoDBGenericDAOTest extends GenericDAOTest {
 
 
     //-------------------------------------------------------------
-    // Implementation - GenericDAOTest
+    // Implementation - OptimisticLockTest
     //-------------------------------------------------------------
 
     @Override
@@ -81,37 +81,5 @@ public class DynamoDBGenericDAOTest extends GenericDAOTest {
 
             testContext = null;
         }
-    }
-
-
-    //-------------------------------------------------------------
-    // Tests
-    //-------------------------------------------------------------
-
-    @Ignore
-    @Test
-    public void uniqueConstraintCausesException() {
-    }
-
-
-    @Test
-    public void saveAndRetrieveLargeList()
-            throws NoSuchItemException {
-        SimpleObject simpleObject = new SimpleObject();
-        simpleObject.setIntValue(1234);
-
-        for (int i = 0; i < 120; i++) {
-            RelatedObject relatedObject = new RelatedObject();
-            relatedObject.setRelatedIntValue(i);
-
-            simpleObject.addRelatedObject(relatedObject);
-        }
-
-        getGenericDAO().save(simpleObject);
-
-        SimpleObject resultObject = getGenericDAO().findById(simpleObject.getId());
-
-        assertEquals(resultObject.getId(), simpleObject.getId());
-        assertEquals(120, resultObject.getRelatedObjects().size());
     }
 }

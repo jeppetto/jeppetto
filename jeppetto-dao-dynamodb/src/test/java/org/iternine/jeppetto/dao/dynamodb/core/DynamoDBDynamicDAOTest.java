@@ -52,7 +52,7 @@ public class DynamoDBDynamicDAOTest extends DynamicDAOTest {
 
 
     //-------------------------------------------------------------
-    // Implementation - SimpleObjectDAOTest
+    // Implementation - DynamicDAOTest
     //-------------------------------------------------------------
 
     @Override

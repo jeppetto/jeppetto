@@ -154,16 +154,16 @@ public class UpdateExpressionBuilder {
 
 
     private void addToSetExpression(Object object, String fullyQualifiedField) {
-        append(setExpression, fullyQualifiedField + " = :a" + attributeValueCounter);
-        attributeValues.put(":a" + attributeValueCounter, ConversionUtil.toAttributeValue(object));
+        append(setExpression, fullyQualifiedField + " = :u" + attributeValueCounter);
+        attributeValues.put(":u" + attributeValueCounter, ConversionUtil.toAttributeValue(object));
 
         attributeValueCounter++;
     }
 
 
     private void addListItemsToSetExpression(List<Object> adds, String fullyQualifiedField) {
-        append(setExpression, fullyQualifiedField + " = list_append(" + fullyQualifiedField + ", :a" + attributeValueCounter + ')');
-        attributeValues.put(":a" + attributeValueCounter, ConversionUtil.toAttributeValue(adds));
+        append(setExpression, fullyQualifiedField + " = list_append(" + fullyQualifiedField + ", :u" + attributeValueCounter + ')');
+        attributeValues.put(":u" + attributeValueCounter, ConversionUtil.toAttributeValue(adds));
 
         attributeValueCounter++;
     }
@@ -174,13 +174,13 @@ public class UpdateExpressionBuilder {
         String incrementString;
 
         if (numberString.charAt(0) == '-') {    // is negative
-            incrementString = " - :a" + attributeValueCounter;
+            incrementString = " - :u" + attributeValueCounter;
 
-            attributeValues.put(":a" + attributeValueCounter, new AttributeValue().withN(numberString.substring(1)));
+            attributeValues.put(":u" + attributeValueCounter, new AttributeValue().withN(numberString.substring(1)));
         } else {                                // is positive
-            incrementString = " + :a" + attributeValueCounter;
+            incrementString = " + :u" + attributeValueCounter;
 
-            attributeValues.put(":a" + attributeValueCounter, new AttributeValue().withN(numberString));
+            attributeValues.put(":u" + attributeValueCounter, new AttributeValue().withN(numberString));
         }
 
         append(setExpression, fullyQualifiedField + " = " + fullyQualifiedField + incrementString);

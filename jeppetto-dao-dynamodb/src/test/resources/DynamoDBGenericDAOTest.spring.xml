@@ -41,6 +41,8 @@
             <map>
                 <entry key="db" value-ref="dynamoDb"/>
                 <entry key="idGenerator"><bean class="org.iternine.jeppetto.dao.id.UUIDGenerator"/></entry>
+                <entry key="optimisticLockField" value="olv"/>
+                <entry key="verifyUniqueIds" value="true"/>
             </map>
         </constructor-arg>
     </bean>

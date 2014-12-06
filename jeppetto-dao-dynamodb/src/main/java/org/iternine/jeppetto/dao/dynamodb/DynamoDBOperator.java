@@ -60,19 +60,11 @@ public enum DynamoDBOperator {
     //-------------------------------------------------------------
 
     public DynamoDBConstraint buildConstraint(Iterator argsIterator) {
-        Object[] values;
-
-        if (argumentCount == 0) {
-            values = null;
-        } else if (argumentCount == 1) {
-            values = new Object[] { argsIterator.next() };
-        } else if (argumentCount == 2) {
-            values = new Object[] { argsIterator.next(), argsIterator.next() };
-        } else {    // N arguments
-            values = new Object[] { argsIterator.next() };
+        switch (argumentCount) {
+        case 0: return new DynamoDBConstraint(this);
+        case 2: return new DynamoDBConstraint(this, argsIterator.next(), argsIterator.next());
+        default: return new DynamoDBConstraint(this, argsIterator.next());
         }
-
-        return new DynamoDBConstraint(this, values);
     }
 
 

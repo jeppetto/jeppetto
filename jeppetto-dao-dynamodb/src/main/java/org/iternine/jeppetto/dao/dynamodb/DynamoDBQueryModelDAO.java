@@ -45,6 +45,7 @@ import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.dynamodbv2.model.BatchGetItemRequest;
+import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException;
 import com.amazonaws.services.dynamodbv2.model.DeleteItemRequest;
 import com.amazonaws.services.dynamodbv2.model.GetItemRequest;
 import com.amazonaws.services.dynamodbv2.model.GetItemResult;
@@ -98,6 +99,7 @@ public class DynamoDBQueryModelDAO<T, ID>
     private final String tableName;
     private final IdGenerator<ID> idGenerator;
     private final boolean consistentRead;
+    private final String optimisticLockField;
 
     private final String hashKeyField;
     private final String rangeKeyField;
@@ -105,6 +107,7 @@ public class DynamoDBQueryModelDAO<T, ID>
 //    private Map<Pair<String, String>, String> globalIndexes;
     private final Enhancer<T> persistableEnhancer;
     private final Enhancer<? extends T> updateObjectEnhancer;
+    private final String uniqueIdConditionExpression;
 
 
     //-------------------------------------------------------------
@@ -123,7 +126,8 @@ public class DynamoDBQueryModelDAO<T, ID>
         this.dynamoDB = (AmazonDynamoDB) daoProperties.get("db");
         this.tableName = daoProperties.containsKey("tableName") ? (String) daoProperties.get("tableName") : entityClass.getSimpleName();
         this.idGenerator = (IdGenerator<ID>) daoProperties.get("idGenerator");
-        this.consistentRead = Boolean.parseBoolean((String) daoProperties.get("consistentRead"));   // null okay
+        this.consistentRead = Boolean.parseBoolean((String) daoProperties.get("consistentRead"));   // null okay - defaults to false
+        this.optimisticLockField = (String) daoProperties.get("optimisticLockField");
 
         TableDescription tableDescription = dynamoDB.describeTable(tableName).getTable();
 
@@ -173,6 +177,18 @@ public class DynamoDBQueryModelDAO<T, ID>
             } catch (ClassNotFoundException e) {
                 throw new JeppettoException(e);
             }
+        }
+
+        if (Boolean.parseBoolean((String) daoProperties.get("verifyUniqueIds"))) {   // null okay - defaults to false
+            ConditionExpressionBuilder ceBuilder = new ConditionExpressionBuilder().with(hashKeyField, new DynamoDBConstraint(DynamoDBOperator.IsNull));
+
+            if (rangeKeyField != null) {
+                ceBuilder.with(rangeKeyField, new DynamoDBConstraint(DynamoDBOperator.IsNull));
+            }
+
+            this.uniqueIdConditionExpression = ceBuilder.getExpression();    // No attribute values needed
+        } else {
+            this.uniqueIdConditionExpression = null;
         }
     }
 
@@ -233,10 +249,44 @@ public class DynamoDBQueryModelDAO<T, ID>
         DynamoDBPersistable dynamoDBPersistable = (DynamoDBPersistable) persistableEnhancer.enhance(entity);
 
         if (!dynamoDBPersistable.__isPersisted(dynamoDB.toString())) {
+            if (optimisticLockField != null) {
+                dynamoDBPersistable.__put(optimisticLockField, new AttributeValue().withN("0"));
+            }
+
             saveItem(dynamoDBPersistable);
         } else {
-            updateItem(getKeyFrom(dynamoDBPersistable), new UpdateExpressionBuilder(dynamoDBPersistable), null,
-                       ResultFromUpdate.ReturnNone);
+            ConditionExpressionBuilder ceBuilder;
+
+            if (optimisticLockField != null) {
+                AttributeValue attributeValue = (AttributeValue) dynamoDBPersistable.__get(optimisticLockField);
+                int optimisticLockVersion;
+
+                if (attributeValue != null) {
+                    optimisticLockVersion = Integer.parseInt(attributeValue.getN());
+
+                    ceBuilder = new ConditionExpressionBuilder();
+
+                    ceBuilder.with(optimisticLockField, new DynamoDBConstraint(DynamoDBOperator.Equal, optimisticLockVersion));
+                } else {
+                    optimisticLockVersion = -1;
+
+                    ceBuilder = null;
+                }
+
+                dynamoDBPersistable.__put(optimisticLockField, new AttributeValue().withN(Integer.toString(optimisticLockVersion + 1)));
+            } else {
+                ceBuilder = null;
+            }
+
+            try {
+                updateItem(getKeyFrom(dynamoDBPersistable), new UpdateExpressionBuilder(dynamoDBPersistable), ceBuilder, ResultFromUpdate.ReturnNone);
+            } catch (JeppettoException e) {
+                if (optimisticLockField != null && e.getCause() instanceof ConditionalCheckFailedException) {
+                    throw new OptimisticLockException(e.getCause());
+                } else {
+                    throw e;
+                }
+            }
         }
 
         dynamoDBPersistable.__markPersisted(dynamoDB.toString());
@@ -277,6 +327,7 @@ public class DynamoDBQueryModelDAO<T, ID>
 
                 succeeded.add(id);
             } catch (Exception e) {
+                //noinspection ThrowableResultOfMethodCallIgnored
                 failed.put(id, e);
             }
         }
@@ -297,8 +348,7 @@ public class DynamoDBQueryModelDAO<T, ID>
     @Override
     public <U extends T> T updateById(U updateObject, ID id)
             throws JeppettoException {
-        return updateItem(getKeyFrom(id), new UpdateExpressionBuilder((UpdateObject) updateObject), null,
-                          getResultFromUpdate(updateObject));
+        return updateItem(getKeyFrom(id), new UpdateExpressionBuilder((UpdateObject) updateObject), null, getResultFromUpdate(updateObject));
     }
 
 
@@ -328,6 +378,7 @@ public class DynamoDBQueryModelDAO<T, ID>
                     ((List<T>) succeeded).add(t);
                 }
             } catch (Exception e) {
+                //noinspection ThrowableResultOfMethodCallIgnored
                 failed.put(id, e);
             }
         }
@@ -468,7 +519,11 @@ public class DynamoDBQueryModelDAO<T, ID>
         generateIdIfNeeded(dynamoDBPersistable);
 
         try {
-            dynamoDB.putItem(new PutItemRequest(tableName, ConversionUtil.getItemFromObject(dynamoDBPersistable)));
+            PutItemRequest putItemRequest = new PutItemRequest().withTableName(tableName)
+                                                                .withItem(ConversionUtil.getItemFromObject(dynamoDBPersistable))
+                                                                .withConditionExpression(uniqueIdConditionExpression);
+
+            dynamoDB.putItem(putItemRequest);
         } catch (Exception e) {
             throw new JeppettoException(e);
         }

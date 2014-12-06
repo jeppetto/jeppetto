@@ -192,11 +192,11 @@ public $_.cls("${baseName}$DynamoDBPersistable").ext($base).impl("org.iternine.j
     $_.method("
     public void __put(String field, com.amazonaws.services.dynamodbv2.model.AttributeValue v) {
         #foreach ( $getter in $getters )
-            #set ( $field = $_.fieldFor($getter.getName()) )
-            #set ( $setterName = $_.asSetter($field) )
-            #set ( $returnType = $_.returnTypeOf($getter) )
-            #set ( $returnTypeName = $returnType.getName() )
-            #set ( $collectionType = $_.collectionType($getter) )
+        #set ( $field = $_.fieldFor($getter.getName()) )
+        #set ( $setterName = $_.asSetter($field) )
+        #set ( $returnType = $_.returnTypeOf($getter) )
+        #set ( $returnTypeName = $returnType.getName() )
+        #set ( $collectionType = $_.collectionType($getter) )
         if (${Q}$field${Q}.equals(field)) {
             #if ( $returnType.isPrimitive() )
             Object o = org.iternine.jeppetto.dao.dynamodb.ConversionUtil.fromAttributeValue(v, ${returnTypeName}.class, null);
@@ -218,6 +218,7 @@ public $_.cls("${baseName}$DynamoDBPersistable").ext($base).impl("org.iternine.j
         #end
     
         __fields.add(field);
+        __dirtyFields.add(field);
         __extraValues.put(field, v);
     }")
 
