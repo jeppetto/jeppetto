@@ -103,8 +103,10 @@ public class DynamoDBQueryModelDAO<T, ID>
 
     private final String hashKeyField;
     private final String rangeKeyField;
+    private ProjectionExpressionBuilder projectionExpressionBuilder;
     private final Map<String, String> localIndexes;
 //    private Map<Pair<String, String>, String> globalIndexes;
+    private final Map<String, Boolean> indexCoversEntity;
     private final Enhancer<T> persistableEnhancer;
     private final Enhancer<? extends T> updateObjectEnhancer;
     private final String uniqueIdConditionExpression;
@@ -135,18 +137,29 @@ public class DynamoDBQueryModelDAO<T, ID>
         this.hashKeyField = primaryKeyAttributeNames.getFirst();
         this.rangeKeyField = primaryKeyAttributeNames.getSecond();
 
+        if (Boolean.parseBoolean((String) daoProperties.get("projectionObject"))) {   // null okay - defaults to false
+            this.projectionExpressionBuilder = new ProjectionExpressionBuilder(entityClass, hashKeyField, rangeKeyField, optimisticLockField);
+        }
+
         List<LocalSecondaryIndexDescription> localSecondaryIndexes = tableDescription.getLocalSecondaryIndexes();
         if (localSecondaryIndexes != null) {
             this.localIndexes = new HashMap<String, String>(localSecondaryIndexes.size() + 1);
+            this.indexCoversEntity = new HashMap<String, Boolean>(localSecondaryIndexes.size() + 1);
 
             for (LocalSecondaryIndexDescription description : localSecondaryIndexes) {
-                localIndexes.put(getKeyAttributeNames(description.getKeySchema()).getSecond(), description.getIndexName());
+                String indexField = getKeyAttributeNames(description.getKeySchema()).getSecond();
+
+                localIndexes.put(indexField, description.getIndexName());
+                indexCoversEntity.put(indexField, description.getProjection().getProjectionType().equals("ALL")
+                                                  || projectionExpressionBuilder != null && projectionExpressionBuilder.isCoveredBy(description.getProjection()));
             }
 
-            // We include the primary range key as an local index (w/o an index name) to make findUsingQueryModel() code below simpler
+            // We include the primary range key as a local index (w/o an index name) to make findUsingQueryModel() code below simpler
             localIndexes.put(rangeKeyField, null);
+            indexCoversEntity.put(rangeKeyField, Boolean.TRUE);
         } else {
             this.localIndexes = Collections.singletonMap(rangeKeyField, null);
+            this.indexCoversEntity = Collections.singletonMap(rangeKeyField, Boolean.TRUE);
         }
 
         // TODO: Handle GSIs
@@ -203,7 +216,13 @@ public class DynamoDBQueryModelDAO<T, ID>
         GetItemResult result;
 
         try {
-            result = dynamoDB.getItem(new GetItemRequest(tableName, getKeyFrom(id)));
+            GetItemRequest getItemRequest = new GetItemRequest(tableName, getKeyFrom(id));
+
+            if (projectionExpressionBuilder != null) {
+                getItemRequest.setProjectionExpression(projectionExpressionBuilder.getExpression());
+            }
+
+            result = dynamoDB.getItem(getItemRequest);
         } catch (AmazonClientException e) {
             throw new JeppettoException(e);
         }
@@ -229,8 +248,13 @@ public class DynamoDBQueryModelDAO<T, ID>
             keys.add(getKeyFrom(id));
         }
 
-        Map<String, KeysAndAttributes> requestItems = Collections.singletonMap(tableName, new KeysAndAttributes().withKeys(keys));
-        BatchGetItemRequest batchGetItemRequest = new BatchGetItemRequest().withRequestItems(requestItems);
+        KeysAndAttributes keysAndAttributes = new KeysAndAttributes().withKeys(keys);
+
+        if (projectionExpressionBuilder != null) {
+            keysAndAttributes.setProjectionExpression(projectionExpressionBuilder.getExpression());
+        }
+
+        BatchGetItemRequest batchGetItemRequest = new BatchGetItemRequest().withRequestItems(Collections.singletonMap(tableName, keysAndAttributes));
 
         return new BatchGetIterable<T>(dynamoDB, persistableEnhancer, batchGetItemRequest, tableName);
     }
@@ -432,7 +456,7 @@ public class DynamoDBQueryModelDAO<T, ID>
         if (conditionExpressionBuilder.hasHashKeyCondition()) {
             return queryItems(queryModel, conditionExpressionBuilder);
         } else {
-            logger.warn("Condition does not have a hash key specified -- using 'scan' to search.");
+            logger.warn("Condition does not specify a hash key -- using 'scan' to search.");
 
             conditionExpressionBuilder.convertRangeKeyConditionToExpression();
 
@@ -489,6 +513,7 @@ public class DynamoDBQueryModelDAO<T, ID>
     @Override
     public <U extends T> Iterable<T> updateUsingQueryModel(U updateObject, QueryModel queryModel)
             throws JeppettoException {
+        // DynamoDB only supports updating a single item at a time.
         T t = updateUniqueUsingQueryModel(updateObject, queryModel);
 
         if (t == null) {
@@ -537,20 +562,20 @@ public class DynamoDBQueryModelDAO<T, ID>
                                                                          .withKey(key)
                                                                          .withUpdateExpression(updateExpressionBuilder.getExpression());
 
-            Map<String, AttributeValue> attributeValues;
+            Map<String, AttributeValue> expressionAttributeValues;
 
             if (conditionExpressionBuilder == null) {
-                attributeValues = updateExpressionBuilder.getAttributeValues();
+                expressionAttributeValues = updateExpressionBuilder.getExpressionAttributeValues();
             } else {
-                attributeValues = new LinkedHashMap<String, AttributeValue>();
-                attributeValues.putAll(updateExpressionBuilder.getAttributeValues());
-                attributeValues.putAll(conditionExpressionBuilder.getAttributeValues());
+                expressionAttributeValues = new LinkedHashMap<String, AttributeValue>();
+                expressionAttributeValues.putAll(updateExpressionBuilder.getExpressionAttributeValues());
+                expressionAttributeValues.putAll(conditionExpressionBuilder.getExpressionAttributeValues());
 
                 updateItemRequest.withConditionExpression(conditionExpressionBuilder.getExpression());
             }
 
-            if (!attributeValues.isEmpty()) {
-                updateItemRequest.withExpressionAttributeValues(attributeValues);
+            if (!expressionAttributeValues.isEmpty()) {
+                updateItemRequest.withExpressionAttributeValues(expressionAttributeValues);
             }
 
             if (resultFromUpdate != ResultFromUpdate.ReturnNone) {
@@ -586,10 +611,17 @@ public class DynamoDBQueryModelDAO<T, ID>
 
     private Iterable<T> queryItems(QueryModel queryModel, ConditionExpressionBuilder conditionExpressionBuilder) {
         QueryRequest queryRequest = new QueryRequest(tableName);
+        String indexField = conditionExpressionBuilder.getRangeKey();
 
         queryRequest.setKeyConditions(conditionExpressionBuilder.getKeyConditions());
-        queryRequest.setIndexName(localIndexes.get(conditionExpressionBuilder.getRangeKey()));
+        queryRequest.setIndexName(localIndexes.get(indexField));
         queryRequest.setConsistentRead(consistentRead);
+
+        if (indexField != null && !indexCoversEntity.get(indexField)) {
+            logger.warn(
+                    "Query using index {} incurs additional costs to fully fetch a {} type. Use a projected object DAO to avoid this overhead.",
+                    localIndexes.get(indexField), entityClass.getSimpleName());
+        }
 
         if (queryModel.getFirstResult() > 0) {
             logger.warn("DynamoDB does not support skipping results.  Call setPosition() on DynamoDBIterable instead.");
@@ -601,7 +633,7 @@ public class DynamoDBQueryModelDAO<T, ID>
 
         if (queryModel.getSorts() != null) {
             for (Sort sort : queryModel.getSorts()) {
-                if (!sort.getField().equals(conditionExpressionBuilder.getRangeKey())) {
+                if (!sort.getField().equals(indexField)) {
                     logger.warn("Unable to sort on other than the acting range key. Ignoring sort on " + sort.getField());
                 }
 
@@ -611,11 +643,14 @@ public class DynamoDBQueryModelDAO<T, ID>
 
         if (conditionExpressionBuilder.hasExpression()) {
             queryRequest.setFilterExpression(conditionExpressionBuilder.getExpression());
-            queryRequest.setExpressionAttributeValues(conditionExpressionBuilder.getAttributeValues());
+            queryRequest.setExpressionAttributeValues(conditionExpressionBuilder.getExpressionAttributeValues());
         }
 
-        // TODO: if partial object, add attributes to fetch
-//            queryRequest.setAttributesToGet();
+        if (projectionExpressionBuilder != null) {
+            queryRequest.setProjectionExpression(projectionExpressionBuilder.getExpression());
+        }
+
+        // TODO: handle expression names
 
         return new QueryIterable<T>(dynamoDB, persistableEnhancer, queryRequest, hashKeyField);
     }
@@ -638,11 +673,14 @@ public class DynamoDBQueryModelDAO<T, ID>
 
         if (conditionExpressionBuilder.hasExpression()) {
             scanRequest.setFilterExpression(conditionExpressionBuilder.getExpression());
-            scanRequest.setExpressionAttributeValues(conditionExpressionBuilder.getAttributeValues());
+            scanRequest.setExpressionAttributeValues(conditionExpressionBuilder.getExpressionAttributeValues());
         }
 
-        // TODO: if partial object, add attributes to fetch
-//            scanRequest.setAttributesToGet();
+        if (projectionExpressionBuilder != null) {
+            scanRequest.setProjectionExpression(projectionExpressionBuilder.getExpression());
+        }
+
+        // TODO: handle expression names
 
         return new ScanIterable<T>(dynamoDB, persistableEnhancer, scanRequest, hashKeyField);
     }

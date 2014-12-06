@@ -18,13 +18,11 @@ package org.iternine.jeppetto.dao.dynamodb;
 
 
 import org.iternine.jeppetto.dao.Condition;
-import org.iternine.jeppetto.dao.JeppettoException;
 import org.iternine.jeppetto.dao.QueryModel;
 
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.dynamodbv2.model.ComparisonOperator;
 
-import java.lang.reflect.Array;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -36,27 +34,27 @@ import java.util.Set;
 
 /**
  */
-public class ConditionExpressionBuilder {
+public class ConditionExpressionBuilder extends ExpressionBuilder {
 
     //-------------------------------------------------------------
     // Constants
     //-------------------------------------------------------------
 
     private static final Map<DynamoDBOperator, String> OPERATOR_EXPRESSIONS = new HashMap<DynamoDBOperator, String>(11) {{
-        put(DynamoDBOperator.NotEqual, "%s <> :c%d");
-        put(DynamoDBOperator.GreaterThanEqual, "%s >= :c%d");
-        put(DynamoDBOperator.LessThanEqual, "%s <= :c%d");
-        put(DynamoDBOperator.Equal, "%s = :c%d");
-        put(DynamoDBOperator.GreaterThan, "%s > :c%d");
-        put(DynamoDBOperator.LessThan, "%s < :c%d");
+        put(DynamoDBOperator.NotEqual, "%s <> %s");
+        put(DynamoDBOperator.GreaterThanEqual, "%s >= %s");
+        put(DynamoDBOperator.LessThanEqual, "%s <= %s");
+        put(DynamoDBOperator.Equal, "%s = %s");
+        put(DynamoDBOperator.GreaterThan, "%s > %s");
+        put(DynamoDBOperator.LessThan, "%s < %s");
         put(DynamoDBOperator.NotWithin, "NOT %s IN %s");
         put(DynamoDBOperator.Within, "%s IN %s");
-        put(DynamoDBOperator.Between, "%s BETWEEN :c%d AND :c%d");
+        put(DynamoDBOperator.Between, "%s BETWEEN %s AND %s");
         put(DynamoDBOperator.IsNull, "attribute_not_exists(%s)");
         put(DynamoDBOperator.IsNotNull, "attribute_exists(%s)");
     }};
 
-    private static final Set<ComparisonOperator> RANGE_KEY_COMPARISON_OPERATORS = new HashSet<ComparisonOperator>() {{
+    private static final Set<ComparisonOperator> RANGE_KEY_COMPARISON_OPERATORS = new HashSet<ComparisonOperator>(7) {{
         add(ComparisonOperator.EQ);
         add(ComparisonOperator.LE);
         add(ComparisonOperator.LT);
@@ -66,6 +64,8 @@ public class ConditionExpressionBuilder {
         add(ComparisonOperator.BETWEEN);
     }};
 
+    private static final String EXPRESSION_ATTRIBUTE_KEY_PREFIX = ":c";
+
 
     //-------------------------------------------------------------
     // Variables - Private
@@ -73,20 +73,21 @@ public class ConditionExpressionBuilder {
 
     private Condition hashKeyCondition;
     private Condition rangeKeyCondition;
-    private StringBuilder expression = new StringBuilder();
-    private Map<String, AttributeValue> attributeValues = new HashMap<String, AttributeValue>();
-    private int attributeValueCounter = 0;
+    private final StringBuilder expression = new StringBuilder();
 
 
     //-------------------------------------------------------------
     // Constructors
     //-------------------------------------------------------------
 
-    public ConditionExpressionBuilder() {
+    ConditionExpressionBuilder() {
+        super(true);
     }
 
 
-    public ConditionExpressionBuilder(QueryModel queryModel, String hashKeyField, Map<String, String> localIndexes) {
+    ConditionExpressionBuilder(QueryModel queryModel, String hashKeyField, Map<String, String> localIndexes) {
+        super(true);
+
         if (queryModel.getConditions() != null) {
             for (Condition condition : queryModel.getConditions()) {
                 DynamoDBConstraint dynamoDBConstraint = (DynamoDBConstraint) condition.getConstraint();
@@ -111,6 +112,28 @@ public class ConditionExpressionBuilder {
                 }
             }
         }
+    }
+
+
+    //-------------------------------------------------------------
+    // Implementation - ExpressionBuilder
+    //-------------------------------------------------------------
+
+    @Override
+    boolean hasExpression() {
+        return expression.length() > 0;
+    }
+
+
+    @Override
+    String getExpression() {
+        return expression.toString();
+    }
+
+
+    @Override
+    String getExpressionAttributePrefix() {
+        return EXPRESSION_ATTRIBUTE_KEY_PREFIX;
     }
 
 
@@ -171,21 +194,6 @@ public class ConditionExpressionBuilder {
     }
 
 
-    boolean hasExpression() {
-        return expression.length() > 0;
-    }
-
-
-    String getExpression() {
-        return expression.toString();
-    }
-
-
-    Map<String, AttributeValue> getAttributeValues() {
-        return attributeValues;
-    }
-
-
     ConditionExpressionBuilder with(String field, DynamoDBConstraint constraint) {
         add(field, constraint);
 
@@ -197,82 +205,43 @@ public class ConditionExpressionBuilder {
     // Methods - Private
     //-------------------------------------------------------------
 
-    private void add(String field, DynamoDBConstraint constraint) {
+    private void add(String attribute, DynamoDBConstraint constraint) {
         if (expression.length() > 0) {
             expression.append(" and ");
         }
 
-        expression.append(buildCondition(field, constraint));
-
-        Map<String, AttributeValue> newValues = getExpressionAttributeValues(constraint);
-        attributeValues.putAll(newValues);
-    }
-
-
-    private String buildCondition(String attribute, DynamoDBConstraint constraint) {
-        int argumentCount = constraint.getOperator().getArgumentCount();
         String operatorExpression = OPERATOR_EXPRESSIONS.get(constraint.getOperator());
-
-        if (argumentCount == 0) {
-            return String.format(operatorExpression, attribute);
-        } else if (argumentCount == 1) {
-            return String.format(operatorExpression, attribute, attributeValueCounter);
-        } else if (argumentCount == 2) {
-            return String.format(operatorExpression, attribute, attributeValueCounter, attributeValueCounter + 1);
-        } else {    // N arguments
-            StringBuilder placeholders = new StringBuilder("(");
-            int itemCount = getItemCount(constraint.getValues()[0]);
-
-            for (int i = 0; i < itemCount; i++) {
-                if (i > 0) {
-                    placeholders.append(", ");
-                }
-
-                placeholders.append(":c").append(attributeValueCounter + i);
-            }
-
-            placeholders.append(')');
-
-            return String.format(operatorExpression, attribute, placeholders.toString());
-        }
-    }
-
-
-    private Map<String, AttributeValue> getExpressionAttributeValues(DynamoDBConstraint constraint) {
         int argumentCount = constraint.getOperator().getArgumentCount();
         Object[] values = constraint.getValues();
 
         if (argumentCount == 0) {
-            return Collections.emptyMap();
+            expression.append(String.format(operatorExpression, attribute));
         } else if (argumentCount == 1) {
-            return Collections.singletonMap(":c" + attributeValueCounter++, ConversionUtil.toAttributeValue(values[0]));
+            String expressionAttributeKey = putExpressionAttributeValue(ConversionUtil.toAttributeValue(values[0]));
+
+            expression.append(String.format(operatorExpression, attribute, expressionAttributeKey));
         } else if (argumentCount == 2) {
-            Map<String, AttributeValue> result = new HashMap<String, AttributeValue>(2);
+            String expressionAttributeKey0 = putExpressionAttributeValue(ConversionUtil.toAttributeValue(values[0]));
+            String expressionAttributeKey1 = putExpressionAttributeValue(ConversionUtil.toAttributeValue(values[1]));
 
-            result.put(":c" + attributeValueCounter++, ConversionUtil.toAttributeValue(values[0]));
-            result.put(":c" + (attributeValueCounter++), ConversionUtil.toAttributeValue(values[1]));
-
-            return result;
+            expression.append(String.format(operatorExpression, attribute, expressionAttributeKey0, expressionAttributeKey1));
         } else {    // N arguments
+            StringBuilder placeholders = new StringBuilder("(");
             Collection<AttributeValue> attributeValues = ConversionUtil.toAttributeValueList(values[0]);
-            Map<String, AttributeValue> result = new HashMap<String, AttributeValue>(attributeValues.size());
 
             for (AttributeValue attributeValue : attributeValues) {
-                result.put(":c" + attributeValueCounter++, attributeValue);
+                if (placeholders.length() > 1) {
+                    placeholders.append(", ");
+                }
+
+                String expressionAttributeKey = putExpressionAttributeValue(attributeValue);
+
+                placeholders.append(expressionAttributeKey);
             }
 
-            return result;
-        }
-    }
+            placeholders.append(')');
 
-
-    private int getItemCount(Object value) {
-        if (value.getClass().isArray()) {
-            return Array.getLength(value);
-        } else if (Collection.class.isAssignableFrom(value.getClass())) {
-            return ((Collection) value).size();
-        } else {
-            throw new JeppettoException("Expected either array or Collection object.");
+            expression.append(String.format(operatorExpression, attribute, placeholders.toString()));
         }
     }
 }

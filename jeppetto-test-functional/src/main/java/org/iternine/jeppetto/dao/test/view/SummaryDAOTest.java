@@ -25,6 +25,9 @@ import org.iternine.jeppetto.dao.test.core.DynamicDAO;
 import org.junit.After;
 import org.junit.Test;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import static org.junit.Assert.assertEquals;
 
 
@@ -95,5 +98,51 @@ public abstract class SummaryDAOTest {
         SimpleObject resultSimpleObject = getDynamicDAO().findById(simpleObject.getId());
 
         assertEquals(999, resultSimpleObject.getIntValue());
+    }
+
+
+    @Test
+    public void findMultiple() {
+        Set<Integer> intValues = new HashSet<Integer>(10);
+
+        for (int i = 0; i < 10; i++) {
+            SimpleObject simpleObject = new SimpleObject();
+            simpleObject.setIntValue(i);
+
+            getDynamicDAO().save(simpleObject);
+
+            intValues.add(i);
+        }
+
+        Iterable<SummarySimpleObject> results = getSummaryDAO().findAll();
+
+        for (SummarySimpleObject result : results) {
+            intValues.remove(result.getIntValue());
+        }
+
+        assertEquals(0, intValues.size());
+    }
+
+
+    @Test
+    public void findMultipleById() {
+        Set<String> ids = new HashSet<String>(3);
+
+        for (int i = 0; i < 3; i++) {
+            SimpleObject simpleObject = new SimpleObject();
+            simpleObject.setIntValue(i);
+
+            getDynamicDAO().save(simpleObject);
+
+            ids.add(simpleObject.getId());
+        }
+
+        Iterable<SummarySimpleObject> results = getSummaryDAO().findByIds(ids.toArray(new String[3]));
+
+        for (SummarySimpleObject result : results) {
+            ids.remove(result.getId());
+        }
+
+        assertEquals(0, ids.size());
     }
 }

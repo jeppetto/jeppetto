@@ -27,23 +27,27 @@ import org.iternine.jeppetto.dao.updateobject.UpdateObject;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 
 /**
  */
-public class UpdateExpressionBuilder {
+public class UpdateExpressionBuilder extends ExpressionBuilder {
+
+    //-------------------------------------------------------------
+    // Constants
+    //-------------------------------------------------------------
+
+    private static final String EXPRESSION_ATTRIBUTE_KEY_PREFIX = ":u";
+
 
     //-------------------------------------------------------------
     // Variables - Private
     //-------------------------------------------------------------
 
-    private StringBuilder setExpression = new StringBuilder();
-    private StringBuilder removeExpression = new StringBuilder();
-    private Map<String, AttributeValue> attributeValues = new LinkedHashMap<String, AttributeValue>();
-    private int attributeValueCounter = 0;
+    private final StringBuilder setExpression = new StringBuilder();
+    private final StringBuilder removeExpression = new StringBuilder();
 
 
     //-------------------------------------------------------------
@@ -51,19 +55,30 @@ public class UpdateExpressionBuilder {
     //-------------------------------------------------------------
 
     public UpdateExpressionBuilder(DynamoDBPersistable dynamoDBPersistable) {
+        super(true);
+
         extractUpdateDetails(dynamoDBPersistable, "");
     }
 
 
     public UpdateExpressionBuilder(UpdateObject updateObject) {
+        super(true);
+
         extractUpdateDetails(updateObject, "");
     }
 
 
     //-------------------------------------------------------------
-    // Methods - Package
+    // Implementation - ExpressionBuilder
     //-------------------------------------------------------------
 
+    @Override
+    boolean hasExpression() {
+        return setExpression.length() > 0 || removeExpression.length() > 0;
+    }
+
+
+    @Override
     String getExpression() {
         StringBuilder expression = new StringBuilder();
 
@@ -85,8 +100,9 @@ public class UpdateExpressionBuilder {
     }
 
 
-    Map<String, AttributeValue> getAttributeValues() {
-        return attributeValues;
+    @Override
+    String getExpressionAttributePrefix() {
+        return EXPRESSION_ATTRIBUTE_KEY_PREFIX;
     }
 
 
@@ -154,18 +170,16 @@ public class UpdateExpressionBuilder {
 
 
     private void addToSetExpression(Object object, String fullyQualifiedField) {
-        append(setExpression, fullyQualifiedField + " = :u" + attributeValueCounter);
-        attributeValues.put(":u" + attributeValueCounter, ConversionUtil.toAttributeValue(object));
+        String expressionAttributeKey = putExpressionAttributeValue(ConversionUtil.toAttributeValue(object));
 
-        attributeValueCounter++;
+        append(setExpression, fullyQualifiedField + " = " + expressionAttributeKey);
     }
 
 
     private void addListItemsToSetExpression(List<Object> adds, String fullyQualifiedField) {
-        append(setExpression, fullyQualifiedField + " = list_append(" + fullyQualifiedField + ", :u" + attributeValueCounter + ')');
-        attributeValues.put(":u" + attributeValueCounter, ConversionUtil.toAttributeValue(adds));
+        String expressionAttributeKey = putExpressionAttributeValue(ConversionUtil.toAttributeValue(adds));
 
-        attributeValueCounter++;
+        append(setExpression, fullyQualifiedField + " = list_append(" + fullyQualifiedField + ", " + expressionAttributeKey + ')');
     }
 
 
@@ -174,18 +188,16 @@ public class UpdateExpressionBuilder {
         String incrementString;
 
         if (numberString.charAt(0) == '-') {    // is negative
-            incrementString = " - :u" + attributeValueCounter;
+            String expressionAttributeKey = putExpressionAttributeValue(new AttributeValue().withN(numberString.substring(1)));
 
-            attributeValues.put(":u" + attributeValueCounter, new AttributeValue().withN(numberString.substring(1)));
+            incrementString = " - " + expressionAttributeKey;
         } else {                                // is positive
-            incrementString = " + :u" + attributeValueCounter;
+            String expressionAttributeKey = putExpressionAttributeValue(new AttributeValue().withN(numberString));
 
-            attributeValues.put(":u" + attributeValueCounter, new AttributeValue().withN(numberString));
+            incrementString = " + " + expressionAttributeKey;
         }
 
         append(setExpression, fullyQualifiedField + " = " + fullyQualifiedField + incrementString);
-
-        attributeValueCounter++;
     }
 
 

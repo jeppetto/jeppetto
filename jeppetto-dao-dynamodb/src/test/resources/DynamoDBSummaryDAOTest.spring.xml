@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2011-2014 Jeppetto and Jonathan Thompson
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~    http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd">
+
+    <!-- =================== DynamoDB ======================== -->
+
+    <bean id="dynamoDb" class="com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient">
+        <constructor-arg type="com.amazonaws.auth.AWSCredentials" index="0">
+            <bean class="com.amazonaws.auth.BasicAWSCredentials">
+                <constructor-arg index="0" value="${dynamodb.accessKey}"/>
+                <constructor-arg index="1" value="${dynamodb.secretKey}"/>
+            </bean>
+        </constructor-arg>
+        <property name="endpoint" value="${dynamodb.endpoint}"/>
+    </bean>
+
+
+    <!-- =================== DynamoDB DAOs =================== -->
+
+    <!-- NB: Using lazy-init to avoid race between test case creating the table and DynamoDBQueryModelDAO reading it. -->
+    <bean id="dynamoDBDynamicDAO" class="org.iternine.jeppetto.dao.DAOBuilder" factory-method="buildDAO" lazy-init="true">
+        <constructor-arg index="0" value="org.iternine.jeppetto.dao.test.SimpleObject"/>
+        <constructor-arg index="1" value="org.iternine.jeppetto.dao.test.core.DynamicDAO"/>
+        <constructor-arg index="2" value="org.iternine.jeppetto.dao.dynamodb.DynamoDBQueryModelDAO"/>
+        <constructor-arg index="3">
+            <map>
+                <entry key="db" value-ref="dynamoDb"/>
+                <entry key="idGenerator"><bean class="org.iternine.jeppetto.dao.id.UUIDGenerator"/></entry>
+            </map>
+        </constructor-arg>
+    </bean>
+
+    <!-- NB: Using lazy-init to avoid race between test case creating the table and DynamoDBQueryModelDAO reading it. -->
+    <bean id="dynamoDBSummaryDAO" class="org.iternine.jeppetto.dao.DAOBuilder" factory-method="buildDAO" lazy-init="true">
+        <constructor-arg index="0" value="org.iternine.jeppetto.dao.test.view.SummarySimpleObject"/>
+        <constructor-arg index="1" value="org.iternine.jeppetto.dao.test.view.SummaryDAO"/>
+        <constructor-arg index="2" value="org.iternine.jeppetto.dao.dynamodb.DynamoDBQueryModelDAO"/>
+        <constructor-arg index="3">
+            <map>
+                <entry key="db" value-ref="dynamoDb"/>
+                <entry key="projectionObject" value="true"/>
+                <entry key="tableName" value="SimpleObject"/>
+            </map>
+        </constructor-arg>
+    </bean>
+
+    <!-- NB: Using lazy-init to avoid race between test case creating the table and DynamoDBQueryModelDAO reading it. -->
+    <bean id="dynamoDBDynamicDAO2" class="org.iternine.jeppetto.dao.DAOBuilder" factory-method="buildDAO" lazy-init="true">
+        <constructor-arg index="0" value="org.iternine.jeppetto.dao.test.SimpleObject"/>
+        <constructor-arg index="1" value="org.iternine.jeppetto.dao.test.core.DynamicDAO"/>
+        <constructor-arg index="2" value="org.iternine.jeppetto.dao.dynamodb.DynamoDBQueryModelDAO"/>
+        <constructor-arg index="3">
+            <map>
+                <entry key="db" value-ref="dynamoDb"/>
+                <entry key="idGenerator">
+                    <bean class="org.iternine.jeppetto.dao.id.PairGenerator">
+                        <property name="firstIdGenerator"><bean class="org.iternine.jeppetto.dao.id.UUIDGenerator"/></property>
+                        <property name="secondIdGenerator"><bean class="org.iternine.jeppetto.dao.id.UUIDGenerator"/></property>
+                    </bean>
+                </entry>
+            </map>
+        </constructor-arg>
+    </bean>
+
+    <!-- NB: Using lazy-init to avoid race between test case creating the table and DynamoDBQueryModelDAO reading it. -->
+    <bean id="dynamoDBSummaryDAO2" class="org.iternine.jeppetto.dao.DAOBuilder" factory-method="buildDAO" lazy-init="true">
+        <constructor-arg index="0" value="org.iternine.jeppetto.dao.test.view.SummarySimpleObject"/>
+        <constructor-arg index="1" value="org.iternine.jeppetto.dao.test.view.SummaryDAO"/>
+        <constructor-arg index="2" value="org.iternine.jeppetto.dao.dynamodb.DynamoDBQueryModelDAO"/>
+        <constructor-arg index="3">
+            <map>
+                <entry key="db" value-ref="dynamoDb"/>
+                <entry key="projectionObject" value="true"/>
+                <entry key="tableName" value="SimpleObject"/>
+            </map>
+        </constructor-arg>
+    </bean>
+
+</beans>

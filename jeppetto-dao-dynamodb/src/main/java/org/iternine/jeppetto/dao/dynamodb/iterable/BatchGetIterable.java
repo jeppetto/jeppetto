@@ -24,10 +24,13 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.dynamodbv2.model.BatchGetItemRequest;
 import com.amazonaws.services.dynamodbv2.model.BatchGetItemResult;
+import com.amazonaws.services.dynamodbv2.model.ConsumedCapacity;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 
@@ -81,10 +84,12 @@ public class BatchGetIterable<T> extends DynamoDBIterable<T> {
         batchGetItemRequest.withRequestItems(currentBatchGetItemResult.getUnprocessedKeys());    // Prepare for next query
 
         if (logger.isDebugEnabled()) {
+            List<ConsumedCapacity> consumedCapacities = currentBatchGetItemResult.getConsumedCapacity();
+
             logger.debug("Queried {} using {}.  Took {} read capacity units, retrieved {} items, more items {} available.",
                          getEnhancer().getBaseClass().getSimpleName(),
                          batchGetItemRequest,
-                         currentBatchGetItemResult.getConsumedCapacity().get(0).getCapacityUnits(), // Only expecting 1 table
+                         consumedCapacities == null ? null : consumedCapacities.get(0), // Only expecting 1 table
                          currentBatchGetItemResult.getResponses().get(tableName).size(),
                          currentBatchGetItemResult.getUnprocessedKeys() == null ? "are not" : "are");
         }
@@ -95,6 +100,6 @@ public class BatchGetIterable<T> extends DynamoDBIterable<T> {
 
     @Override
     protected boolean moreAvailable() {
-        return batchGetItemRequest.getRequestItems() != null;
+        return batchGetItemRequest.getRequestItems() != null && batchGetItemRequest.getRequestItems().size() > 0;
     }
 }
