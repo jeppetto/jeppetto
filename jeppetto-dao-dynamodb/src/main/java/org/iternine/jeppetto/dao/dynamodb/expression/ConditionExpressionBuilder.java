@@ -14,11 +14,14 @@
  * limitations under the License.
  */
 
-package org.iternine.jeppetto.dao.dynamodb;
+package org.iternine.jeppetto.dao.dynamodb.expression;
 
 
 import org.iternine.jeppetto.dao.Condition;
 import org.iternine.jeppetto.dao.QueryModel;
+import org.iternine.jeppetto.dao.dynamodb.ConversionUtil;
+import org.iternine.jeppetto.dao.dynamodb.DynamoDBConstraint;
+import org.iternine.jeppetto.dao.dynamodb.DynamoDBOperator;
 
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.dynamodbv2.model.ComparisonOperator;
@@ -80,12 +83,12 @@ public class ConditionExpressionBuilder extends ExpressionBuilder {
     // Constructors
     //-------------------------------------------------------------
 
-    ConditionExpressionBuilder() {
+    public ConditionExpressionBuilder() {
         super(true);
     }
 
 
-    ConditionExpressionBuilder(QueryModel queryModel, String hashKeyField, Map<String, String> localIndexes) {
+    public ConditionExpressionBuilder(QueryModel queryModel, String hashKeyField, Map<String, String> localIndexes) {
         super(true);
 
         if (queryModel.getConditions() != null) {
@@ -120,33 +123,33 @@ public class ConditionExpressionBuilder extends ExpressionBuilder {
     //-------------------------------------------------------------
 
     @Override
-    boolean hasExpression() {
+    public boolean hasExpression() {
         return expression.length() > 0;
     }
 
 
     @Override
-    String getExpression() {
+    public String getExpression() {
         return expression.toString();
     }
 
 
     @Override
-    String getExpressionAttributePrefix() {
+    public String getExpressionAttributePrefix() {
         return EXPRESSION_ATTRIBUTE_KEY_PREFIX;
     }
 
 
     //-------------------------------------------------------------
-    // Methods - Package
+    // Methods - Public
     //-------------------------------------------------------------
 
-    boolean hasHashKeyCondition() {
+    public boolean hasHashKeyCondition() {
         return hashKeyCondition != null;
     }
 
 
-    Map<String, com.amazonaws.services.dynamodbv2.model.Condition> getKeyConditions() {
+    public Map<String, com.amazonaws.services.dynamodbv2.model.Condition> getKeyConditions() {
         if (rangeKeyCondition == null) {
             return Collections.singletonMap(hashKeyCondition.getField(), ((DynamoDBConstraint) hashKeyCondition.getConstraint()).asCondition());
         } else {
@@ -160,7 +163,7 @@ public class ConditionExpressionBuilder extends ExpressionBuilder {
     }
 
 
-    String getRangeKey() {
+    public String getRangeKey() {
         if (rangeKeyCondition == null) {
             return null;
         }
@@ -169,7 +172,7 @@ public class ConditionExpressionBuilder extends ExpressionBuilder {
     }
 
 
-    void convertRangeKeyConditionToExpression() {
+    public void convertRangeKeyConditionToExpression() {
         if (rangeKeyCondition == null) {
             return;
         }
@@ -178,11 +181,12 @@ public class ConditionExpressionBuilder extends ExpressionBuilder {
     }
 
 
-    Map<String, AttributeValue> getKey() {
+    public Map<String, AttributeValue> getKey() {
         Map<String, AttributeValue> key;
 
         if (rangeKeyCondition == null) {
-            key = Collections.singletonMap(hashKeyCondition.getField(), ConversionUtil.toAttributeValue(((DynamoDBConstraint) hashKeyCondition.getConstraint()).getValues()[0]));
+            key = Collections.singletonMap(hashKeyCondition.getField(), ConversionUtil
+                    .toAttributeValue(((DynamoDBConstraint) hashKeyCondition.getConstraint()).getValues()[0]));
         } else {
             key = new HashMap<String, AttributeValue>(2);
 
@@ -194,7 +198,7 @@ public class ConditionExpressionBuilder extends ExpressionBuilder {
     }
 
 
-    ConditionExpressionBuilder with(String field, DynamoDBConstraint constraint) {
+    public ConditionExpressionBuilder with(String field, DynamoDBConstraint constraint) {
         add(field, constraint);
 
         return this;

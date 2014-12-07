@@ -14,10 +14,12 @@
  * limitations under the License.
  */
 
-package org.iternine.jeppetto.dao.dynamodb;
+package org.iternine.jeppetto.dao.dynamodb.expression;
 
 
 import org.iternine.jeppetto.dao.JeppettoException;
+import org.iternine.jeppetto.dao.dynamodb.ConversionUtil;
+import org.iternine.jeppetto.dao.dynamodb.DynamoDBPersistable;
 import org.iternine.jeppetto.dao.persistable.PersistableList;
 import org.iternine.jeppetto.dao.updateobject.NumericIncrement;
 import org.iternine.jeppetto.dao.updateobject.UpdateList;
@@ -73,13 +75,13 @@ public class UpdateExpressionBuilder extends ExpressionBuilder {
     //-------------------------------------------------------------
 
     @Override
-    boolean hasExpression() {
+    public boolean hasExpression() {
         return setExpression.length() > 0 || removeExpression.length() > 0;
     }
 
 
     @Override
-    String getExpression() {
+    public String getExpression() {
         StringBuilder expression = new StringBuilder();
 
         if (setExpression.length() > 0) {
@@ -101,7 +103,7 @@ public class UpdateExpressionBuilder extends ExpressionBuilder {
 
 
     @Override
-    String getExpressionAttributePrefix() {
+    public String getExpressionAttributePrefix() {
         return EXPRESSION_ATTRIBUTE_KEY_PREFIX;
     }
 

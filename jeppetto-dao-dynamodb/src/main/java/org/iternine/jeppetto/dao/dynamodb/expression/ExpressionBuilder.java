@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.iternine.jeppetto.dao.dynamodb;
+package org.iternine.jeppetto.dao.dynamodb.expression;
 
 
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
@@ -48,11 +48,11 @@ public abstract class ExpressionBuilder {
     // Methods - Abstract
     //-------------------------------------------------------------
 
-    abstract boolean hasExpression();
+    abstract public boolean hasExpression();
 
-    abstract String getExpression();
+    abstract public String getExpression();
 
-    abstract String getExpressionAttributePrefix();
+    abstract public String getExpressionAttributePrefix();
 
 
     //-------------------------------------------------------------
@@ -72,7 +72,7 @@ public abstract class ExpressionBuilder {
     // Methods - Getters
     //-------------------------------------------------------------
 
-    Map<String, AttributeValue> getExpressionAttributeValues() {
+    public Map<String, AttributeValue> getExpressionAttributeValues() {
         return expressionAttributeValues;
     }
 

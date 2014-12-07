@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.iternine.jeppetto.dao.dynamodb;
+package org.iternine.jeppetto.dao.dynamodb.expression;
 
 
 import com.amazonaws.services.dynamodbv2.model.Projection;
@@ -80,7 +80,7 @@ public class ProjectionExpressionBuilder extends ExpressionBuilder {
     // Constructors
     //-------------------------------------------------------------
 
-    ProjectionExpressionBuilder(Class<?> entityClass, String hashKeyField, String rangeKeyField, String optimisticLockField) {
+    public ProjectionExpressionBuilder(Class<?> entityClass, String hashKeyField, String rangeKeyField, String optimisticLockField) {
         super(false);
 
         this.nonKeyAttributes = new HashSet<String>();
@@ -114,13 +114,13 @@ public class ProjectionExpressionBuilder extends ExpressionBuilder {
     //-------------------------------------------------------------
 
     @Override
-    boolean hasExpression() {
+    public boolean hasExpression() {
         return expression.length() > 0;
     }
 
 
     @Override
-    String getExpression() {
+    public String getExpression() {
         // NB: nonKeyAttributes no longer used once the expression is fetched.  Could make variable non-final and set to null here.
 
         return expression;
@@ -128,16 +128,16 @@ public class ProjectionExpressionBuilder extends ExpressionBuilder {
 
 
     @Override
-    String getExpressionAttributePrefix() {
+    public String getExpressionAttributePrefix() {
         throw new RuntimeException("Should not be called");
     }
 
 
     //-------------------------------------------------------------
-    // Methods - Package
+    // Methods - Public
     //-------------------------------------------------------------
 
-    Boolean isCoveredBy(Projection projection) {
+    public Boolean isCoveredBy(Projection projection) {
         switch (ProjectionType.valueOf(projection.getProjectionType())) {
         case ALL:
             return Boolean.TRUE;
