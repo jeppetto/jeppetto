@@ -31,8 +31,9 @@ public abstract class ExpressionBuilder {
     //-------------------------------------------------------------
 
     private Map<String, AttributeValue> expressionAttributeValues;
+    private Map<String, String> expressionAttributeNames = new HashMap<String, String>();
     private int expressionAttributeValueCounter = 0;
-//    private int attributeNameCounter = 0;
+    private int expressionAttributeNameCounter = 0;
 
 
     //-------------------------------------------------------------
@@ -52,20 +53,9 @@ public abstract class ExpressionBuilder {
 
     abstract public String getExpression();
 
-    abstract public String getExpressionAttributePrefix();
+    abstract public String getExpressionAttributeValuePrefix();
 
-
-    //-------------------------------------------------------------
-    // Methods - Protected
-    //-------------------------------------------------------------
-
-    protected String putExpressionAttributeValue(AttributeValue expressionAttributeValue) {
-        String expressionAttributeKey = getExpressionAttributePrefix() + expressionAttributeValueCounter++;
-
-        expressionAttributeValues.put(expressionAttributeKey, expressionAttributeValue);
-
-        return expressionAttributeKey;
-    }
+    abstract public String getExpressionAttributeNamePrefix();
 
 
     //-------------------------------------------------------------
@@ -77,5 +67,33 @@ public abstract class ExpressionBuilder {
     }
 
 
-    // Map<String, String> getExpressionAttributeNames();
+    public Map<String, String> getExpressionAttributeNames() {
+        return expressionAttributeNames;
+    }
+
+
+    //-------------------------------------------------------------
+    // Methods - Protected
+    //-------------------------------------------------------------
+
+    protected String putExpressionAttributeValue(AttributeValue expressionAttributeValue) {
+        String expressionAttributeValueKey = getExpressionAttributeValuePrefix() + expressionAttributeValueCounter++;
+
+        expressionAttributeValues.put(expressionAttributeValueKey, expressionAttributeValue);
+
+        return expressionAttributeValueKey;
+    }
+
+
+    protected String getExpressionAttributeName(String attributeName) {
+        if (DynamoDBReservedWords.isReserved(attributeName)) {
+            String expressionAttributeName = getExpressionAttributeNamePrefix() + expressionAttributeNameCounter++;
+
+            expressionAttributeNames.put(expressionAttributeName, attributeName);
+
+            return expressionAttributeName;
+        }
+
+        return attributeName;
+    }
 }

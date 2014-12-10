@@ -41,7 +41,8 @@ public class UpdateExpressionBuilder extends ExpressionBuilder {
     // Constants
     //-------------------------------------------------------------
 
-    private static final String EXPRESSION_ATTRIBUTE_KEY_PREFIX = ":u";
+    private static final String EXPRESSION_ATTRIBUTE_VALUE_PREFIX = ":u";
+    private static final String EXPRESSION_ATTRIBUTE_NAME_PREFIX = "#u";
 
 
     //-------------------------------------------------------------
@@ -103,8 +104,14 @@ public class UpdateExpressionBuilder extends ExpressionBuilder {
 
 
     @Override
-    public String getExpressionAttributePrefix() {
-        return EXPRESSION_ATTRIBUTE_KEY_PREFIX;
+    public String getExpressionAttributeValuePrefix() {
+        return EXPRESSION_ATTRIBUTE_VALUE_PREFIX;
+    }
+
+
+    @Override
+    public String getExpressionAttributeNamePrefix() {
+        return EXPRESSION_ATTRIBUTE_NAME_PREFIX;
     }
 
 
@@ -116,7 +123,7 @@ public class UpdateExpressionBuilder extends ExpressionBuilder {
         for (Iterator<String> dirtyFieldsIterator = dynamoDBPersistable.__getDirtyFields(); dirtyFieldsIterator.hasNext(); ) {
             String field = dirtyFieldsIterator.next();
             Object object = dynamoDBPersistable.__get(field);
-            String fullyQualifiedField = prefix + field;
+            String fullyQualifiedField = prefix + getExpressionAttributeName(field);
 
             if (object == null) {
                 append(removeExpression, fullyQualifiedField);
@@ -134,7 +141,7 @@ public class UpdateExpressionBuilder extends ExpressionBuilder {
 
     private void extractUpdateDetails(UpdateObject updateObject, String prefix) {
         for (Map.Entry<String, Object> updateEntry : updateObject.__getUpdates().entrySet()) {
-            String fullyQualifiedField = prefix + updateEntry.getKey();
+            String fullyQualifiedField = prefix + getExpressionAttributeName(updateEntry.getKey());
             Object object = updateEntry.getValue();
 
             if (object == null) {
@@ -172,16 +179,16 @@ public class UpdateExpressionBuilder extends ExpressionBuilder {
 
 
     private void addToSetExpression(Object object, String fullyQualifiedField) {
-        String expressionAttributeKey = putExpressionAttributeValue(ConversionUtil.toAttributeValue(object));
+        String expressionAttributeValueKey = putExpressionAttributeValue(ConversionUtil.toAttributeValue(object));
 
-        append(setExpression, fullyQualifiedField + " = " + expressionAttributeKey);
+        append(setExpression, fullyQualifiedField + " = " + expressionAttributeValueKey);
     }
 
 
     private void addListItemsToSetExpression(List<Object> adds, String fullyQualifiedField) {
-        String expressionAttributeKey = putExpressionAttributeValue(ConversionUtil.toAttributeValue(adds));
+        String expressionAttributeValueKey = putExpressionAttributeValue(ConversionUtil.toAttributeValue(adds));
 
-        append(setExpression, fullyQualifiedField + " = list_append(" + fullyQualifiedField + ", " + expressionAttributeKey + ')');
+        append(setExpression, fullyQualifiedField + " = list_append(" + fullyQualifiedField + ", " + expressionAttributeValueKey + ')');
     }
 
 
@@ -190,13 +197,13 @@ public class UpdateExpressionBuilder extends ExpressionBuilder {
         String incrementString;
 
         if (numberString.charAt(0) == '-') {    // is negative
-            String expressionAttributeKey = putExpressionAttributeValue(new AttributeValue().withN(numberString.substring(1)));
+            String expressionAttributeValueKey = putExpressionAttributeValue(new AttributeValue().withN(numberString.substring(1)));
 
-            incrementString = " - " + expressionAttributeKey;
+            incrementString = " - " + expressionAttributeValueKey;
         } else {                                // is positive
-            String expressionAttributeKey = putExpressionAttributeValue(new AttributeValue().withN(numberString));
+            String expressionAttributeValueKey = putExpressionAttributeValue(new AttributeValue().withN(numberString));
 
-            incrementString = " + " + expressionAttributeKey;
+            incrementString = " + " + expressionAttributeValueKey;
         }
 
         append(setExpression, fullyQualifiedField + " = " + fullyQualifiedField + incrementString);

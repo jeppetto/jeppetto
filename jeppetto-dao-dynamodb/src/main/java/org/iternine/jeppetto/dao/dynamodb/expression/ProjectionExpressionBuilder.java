@@ -67,6 +67,8 @@ public class ProjectionExpressionBuilder extends ExpressionBuilder {
         add(Double.class);
     }};
 
+    private static final String EXPRESSION_ATTRIBUTE_NAME_PREFIX = "#p";
+
 
     //-------------------------------------------------------------
     // Variables - Private
@@ -93,14 +95,14 @@ public class ProjectionExpressionBuilder extends ExpressionBuilder {
             nonKeyAttributes.add(optimisticLockField);
         }
 
-        StringBuilder expressionStringBuilder = new StringBuilder(hashKeyField);
+        StringBuilder expressionStringBuilder = new StringBuilder(getExpressionAttributeName(hashKeyField));
 
         if (rangeKeyField != null) {
-            expressionStringBuilder.append(", ").append(rangeKeyField);
+            expressionStringBuilder.append(", ").append(getExpressionAttributeName(rangeKeyField));
         }
 
         for (String nonKeyAttribute : nonKeyAttributes) {
-            expressionStringBuilder.append(", ").append(nonKeyAttribute);
+            expressionStringBuilder.append(", ").append(getExpressionAttributeName(nonKeyAttribute));
         }
 
         this.expression = expressionStringBuilder.toString();
@@ -126,8 +128,14 @@ public class ProjectionExpressionBuilder extends ExpressionBuilder {
 
 
     @Override
-    public String getExpressionAttributePrefix() {
+    public String getExpressionAttributeValuePrefix() {
         throw new RuntimeException("Should not be called");
+    }
+
+
+    @Override
+    public String getExpressionAttributeNamePrefix() {
+        return EXPRESSION_ATTRIBUTE_NAME_PREFIX;
     }
 
 

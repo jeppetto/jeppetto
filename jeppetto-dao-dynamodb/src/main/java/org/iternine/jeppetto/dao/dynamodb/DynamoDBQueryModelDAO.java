@@ -108,6 +108,7 @@ public class DynamoDBQueryModelDAO<T, ID>
     private final String hashKeyField;
     private final String rangeKeyField;
     private final String projectionExpression;
+    private final Map<String, String> projectionExpressionNames;
     private final Map<String, Map<String, String>> indexes;
     private final Map<String, Map<String, String>> tableIndexOnly;
     private final Map<String, Boolean> indexProjectsOverEntity;
@@ -145,9 +146,11 @@ public class DynamoDBQueryModelDAO<T, ID>
         if (Boolean.parseBoolean((String) daoProperties.get("projectionObject"))) {   // null okay - defaults to false
             projectionExpressionBuilder = new ProjectionExpressionBuilder(entityClass, hashKeyField, rangeKeyField, optimisticLockField);
             this.projectionExpression = projectionExpressionBuilder.getExpression();
+            this.projectionExpressionNames = projectionExpressionBuilder.getExpressionAttributeNames();
         } else {
             projectionExpressionBuilder = null;
             this.projectionExpression = null;
+            this.projectionExpressionNames = Collections.emptyMap();
         }
 
         this.indexProjectsOverEntity = new HashMap<String, Boolean>();
@@ -261,6 +264,10 @@ public class DynamoDBQueryModelDAO<T, ID>
 
             getItemRequest.setProjectionExpression(projectionExpression);
 
+            if (!projectionExpressionNames.isEmpty()) {
+                getItemRequest.setExpressionAttributeNames(projectionExpressionNames);
+            }
+
             result = dynamoDB.getItem(getItemRequest);
         } catch (AmazonClientException e) {
             throw new JeppettoException(e);
@@ -291,6 +298,10 @@ public class DynamoDBQueryModelDAO<T, ID>
 
         keysAndAttributes.setProjectionExpression(projectionExpression);
 
+        if (!projectionExpressionNames.isEmpty()) {
+            keysAndAttributes.setExpressionAttributeNames(projectionExpressionNames);
+        }
+
         BatchGetItemRequest batchGetItemRequest = new BatchGetItemRequest().withRequestItems(Collections.singletonMap(tableName, keysAndAttributes));
 
         return new BatchGetIterable<T>(dynamoDB, persistableEnhancer, batchGetItemRequest, tableName);
@@ -316,7 +327,7 @@ public class DynamoDBQueryModelDAO<T, ID>
 
             saveItem(dynamoDBPersistable);
         } else {
-            ConditionExpressionBuilder ceBuilder;
+            ConditionExpressionBuilder conditionExpressionBuilder;
 
             if (optimisticLockField != null) {
                 AttributeValue attributeValue = (AttributeValue) dynamoDBPersistable.__get(optimisticLockField);
@@ -325,22 +336,24 @@ public class DynamoDBQueryModelDAO<T, ID>
                 if (attributeValue != null) {
                     optimisticLockVersion = Integer.parseInt(attributeValue.getN());
 
-                    ceBuilder = new ConditionExpressionBuilder();
+                    conditionExpressionBuilder = new ConditionExpressionBuilder();
 
-                    ceBuilder.with(optimisticLockField, new DynamoDBConstraint(DynamoDBOperator.Equal, optimisticLockVersion));
+                    conditionExpressionBuilder.with(optimisticLockField, new DynamoDBConstraint(DynamoDBOperator.Equal, optimisticLockVersion));
                 } else {
                     optimisticLockVersion = -1;
 
-                    ceBuilder = null;
+                    conditionExpressionBuilder = null;
                 }
 
                 dynamoDBPersistable.__put(optimisticLockField, new AttributeValue().withN(Integer.toString(optimisticLockVersion + 1)));
             } else {
-                ceBuilder = null;
+                conditionExpressionBuilder = null;
             }
 
             try {
-                updateItem(getKeyFrom(dynamoDBPersistable), new UpdateExpressionBuilder(dynamoDBPersistable), ceBuilder, ResultFromUpdate.ReturnNone);
+                UpdateExpressionBuilder updateExpressionBuilder = new UpdateExpressionBuilder(dynamoDBPersistable);
+
+                updateItem(getKeyFrom(dynamoDBPersistable), updateExpressionBuilder, conditionExpressionBuilder, ResultFromUpdate.ReturnNone);
             } catch (JeppettoException e) {
                 if (optimisticLockField != null && e.getCause() instanceof ConditionalCheckFailedException) {
                     throw new OptimisticLockException(e.getCause());
@@ -531,10 +544,8 @@ public class DynamoDBQueryModelDAO<T, ID>
         UpdateExpressionBuilder updateExpressionBuilder = new UpdateExpressionBuilder((UpdateObject) updateObject);
         // For referencing an object, we can only identify an item by its actual range key, not one of the index fields.  For the
         // third parameter, pass in a singleton map that only contains the range field.
-        ConditionExpressionBuilder conditionExpressionBuilder = new ConditionExpressionBuilder(queryModel,
-                                                                                               tableIndexOnly);
+        ConditionExpressionBuilder conditionExpressionBuilder = new ConditionExpressionBuilder(queryModel, tableIndexOnly);
         ResultFromUpdate resultFromUpdate = getResultFromUpdate(updateObject);
-
         Map<String, AttributeValue> key;
 
         try {
@@ -600,19 +611,30 @@ public class DynamoDBQueryModelDAO<T, ID>
                                                                          .withUpdateExpression(updateExpressionBuilder.getExpression());
 
             Map<String, AttributeValue> expressionAttributeValues;
+            Map<String, String> expressionAttributeNames;
 
             if (conditionExpressionBuilder == null) {
                 expressionAttributeValues = updateExpressionBuilder.getExpressionAttributeValues();
+                expressionAttributeNames = updateExpressionBuilder.getExpressionAttributeNames();
             } else {
                 expressionAttributeValues = new LinkedHashMap<String, AttributeValue>();
-                expressionAttributeValues.putAll(updateExpressionBuilder.getExpressionAttributeValues());
-                expressionAttributeValues.putAll(conditionExpressionBuilder.getExpressionAttributeValues());
+                expressionAttributeNames = new LinkedHashMap<String, String>();
 
-                updateItemRequest.withConditionExpression(conditionExpressionBuilder.getExpression());
+                expressionAttributeValues.putAll(updateExpressionBuilder.getExpressionAttributeValues());
+                expressionAttributeNames.putAll(updateExpressionBuilder.getExpressionAttributeNames());
+
+                expressionAttributeValues.putAll(conditionExpressionBuilder.getExpressionAttributeValues());
+                expressionAttributeNames.putAll(conditionExpressionBuilder.getExpressionAttributeNames());
+
+                updateItemRequest.setConditionExpression(conditionExpressionBuilder.getExpression());
             }
 
             if (!expressionAttributeValues.isEmpty()) {
-                updateItemRequest.withExpressionAttributeValues(expressionAttributeValues);
+                updateItemRequest.setExpressionAttributeValues(expressionAttributeValues);
+            }
+
+            if (!expressionAttributeNames.isEmpty()) {
+                updateItemRequest.setExpressionAttributeNames(expressionAttributeNames);
             }
 
             if (resultFromUpdate != ResultFromUpdate.ReturnNone) {
@@ -655,7 +677,6 @@ public class DynamoDBQueryModelDAO<T, ID>
         queryRequest.setKeyConditions(conditionExpressionBuilder.getKeyConditions());
         queryRequest.setIndexName(indexName);
         queryRequest.setConsistentRead(consistentRead);
-        queryRequest.setProjectionExpression(projectionExpression);
 
         if (indexName != null && !indexProjectsOverEntity.get(indexName)) {
             logger.warn("Query using index {} incurs additional costs to fully fetch a {} type. Use a projected object DAO to avoid this overhead.",
@@ -695,12 +716,30 @@ public class DynamoDBQueryModelDAO<T, ID>
             }
         }
 
+        Map<String, String> expressionAttributeNames;
+
+        queryRequest.setProjectionExpression(projectionExpression);
+
         if (conditionExpressionBuilder.hasExpression()) {
             queryRequest.setFilterExpression(conditionExpressionBuilder.getExpression());
             queryRequest.setExpressionAttributeValues(conditionExpressionBuilder.getExpressionAttributeValues());
+
+            if (projectionExpressionNames.isEmpty()) {
+                expressionAttributeNames = conditionExpressionBuilder.getExpressionAttributeNames();
+            } else if (conditionExpressionBuilder.getExpressionAttributeNames().isEmpty()) {
+                expressionAttributeNames = projectionExpressionNames;
+            } else {
+                expressionAttributeNames = new LinkedHashMap<String, String>();
+                expressionAttributeNames.putAll(conditionExpressionBuilder.getExpressionAttributeNames());
+                expressionAttributeNames.putAll(projectionExpressionNames);
+            }
+        } else {
+            expressionAttributeNames = projectionExpressionNames;
         }
 
-        // TODO: handle expression names
+        if (!expressionAttributeNames.isEmpty()) {
+            queryRequest.setExpressionAttributeNames(expressionAttributeNames);
+        }
 
         return new QueryIterable<T>(dynamoDB, persistableEnhancer, queryRequest, hashKeyField);
     }
@@ -708,8 +747,6 @@ public class DynamoDBQueryModelDAO<T, ID>
 
     private Iterable<T> scanItems(QueryModel queryModel, ConditionExpressionBuilder conditionExpressionBuilder) {
         ScanRequest scanRequest = new ScanRequest(tableName);
-
-        scanRequest.setProjectionExpression(projectionExpression);
 
         if (queryModel.getFirstResult() > 0) {
             logger.warn("DynamoDB does not support skipping results.  Call setPosition() on DynamoDBIterable instead.");
@@ -723,12 +760,30 @@ public class DynamoDBQueryModelDAO<T, ID>
             logger.warn("Not able to sort when performing a 'scan' operation.  Ignoring... ");
         }
 
+        Map<String, String> expressionAttributeNames;
+
+        scanRequest.setProjectionExpression(projectionExpression);
+
         if (conditionExpressionBuilder.hasExpression()) {
             scanRequest.setFilterExpression(conditionExpressionBuilder.getExpression());
             scanRequest.setExpressionAttributeValues(conditionExpressionBuilder.getExpressionAttributeValues());
+
+            if (projectionExpressionNames.isEmpty()) {
+                expressionAttributeNames = conditionExpressionBuilder.getExpressionAttributeNames();
+            } else if (conditionExpressionBuilder.getExpressionAttributeNames().isEmpty()) {
+                expressionAttributeNames = projectionExpressionNames;
+            } else {
+                expressionAttributeNames = new LinkedHashMap<String, String>();
+                expressionAttributeNames.putAll(conditionExpressionBuilder.getExpressionAttributeNames());
+                expressionAttributeNames.putAll(projectionExpressionNames);
+            }
+        } else {
+            expressionAttributeNames = projectionExpressionNames;
         }
 
-        // TODO: handle expression names
+        if (!expressionAttributeNames.isEmpty()) {
+            scanRequest.setExpressionAttributeNames(expressionAttributeNames);
+        }
 
         return new ScanIterable<T>(dynamoDB, persistableEnhancer, scanRequest, hashKeyField);
     }

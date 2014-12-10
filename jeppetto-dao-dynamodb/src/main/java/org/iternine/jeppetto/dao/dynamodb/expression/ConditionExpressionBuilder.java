@@ -67,7 +67,8 @@ public class ConditionExpressionBuilder extends ExpressionBuilder {
         add(ComparisonOperator.BETWEEN);
     }};
 
-    private static final String EXPRESSION_ATTRIBUTE_KEY_PREFIX = ":c";
+    private static final String EXPRESSION_ATTRIBUTE_VALUE_PREFIX = ":c";
+    private static final String EXPRESSION_ATTRIBUTE_NAME_PREFIX = "#c";
 
 
     //-------------------------------------------------------------
@@ -136,8 +137,14 @@ public class ConditionExpressionBuilder extends ExpressionBuilder {
 
 
     @Override
-    public String getExpressionAttributePrefix() {
-        return EXPRESSION_ATTRIBUTE_KEY_PREFIX;
+    public String getExpressionAttributeValuePrefix() {
+        return EXPRESSION_ATTRIBUTE_VALUE_PREFIX;
+    }
+
+
+    @Override
+    public String getExpressionAttributeNamePrefix() {
+        return EXPRESSION_ATTRIBUTE_NAME_PREFIX;
     }
 
 
@@ -224,21 +231,22 @@ public class ConditionExpressionBuilder extends ExpressionBuilder {
             expression.append(" and ");
         }
 
+        String expressionAttributeName = getExpressionAttributeName(attribute);
         String operatorExpression = OPERATOR_EXPRESSIONS.get(constraint.getOperator());
         int argumentCount = constraint.getOperator().getArgumentCount();
         Object[] values = constraint.getValues();
 
         if (argumentCount == 0) {
-            expression.append(String.format(operatorExpression, attribute));
+            expression.append(String.format(operatorExpression, expressionAttributeName));
         } else if (argumentCount == 1) {
             String expressionAttributeKey = putExpressionAttributeValue(ConversionUtil.toAttributeValue(values[0]));
 
-            expression.append(String.format(operatorExpression, attribute, expressionAttributeKey));
+            expression.append(String.format(operatorExpression, expressionAttributeName, expressionAttributeKey));
         } else if (argumentCount == 2) {
             String expressionAttributeKey0 = putExpressionAttributeValue(ConversionUtil.toAttributeValue(values[0]));
             String expressionAttributeKey1 = putExpressionAttributeValue(ConversionUtil.toAttributeValue(values[1]));
 
-            expression.append(String.format(operatorExpression, attribute, expressionAttributeKey0, expressionAttributeKey1));
+            expression.append(String.format(operatorExpression, expressionAttributeName, expressionAttributeKey0, expressionAttributeKey1));
         } else {    // N arguments
             StringBuilder placeholders = new StringBuilder("(");
             Collection<AttributeValue> attributeValues = ConversionUtil.toAttributeValueList(values[0]);
@@ -255,7 +263,7 @@ public class ConditionExpressionBuilder extends ExpressionBuilder {
 
             placeholders.append(')');
 
-            expression.append(String.format(operatorExpression, attribute, placeholders.toString()));
+            expression.append(String.format(operatorExpression, expressionAttributeName, placeholders.toString()));
         }
     }
 }
