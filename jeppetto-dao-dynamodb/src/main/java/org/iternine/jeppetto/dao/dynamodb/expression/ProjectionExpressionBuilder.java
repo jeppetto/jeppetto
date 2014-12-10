@@ -83,9 +83,7 @@ public class ProjectionExpressionBuilder extends ExpressionBuilder {
     public ProjectionExpressionBuilder(Class<?> entityClass, String hashKeyField, String rangeKeyField, String optimisticLockField) {
         super(false);
 
-        this.nonKeyAttributes = new HashSet<String>();
-
-        collectFields(entityClass, "", nonKeyAttributes);
+        this.nonKeyAttributes = collectFields(entityClass, "", new HashSet<String>());
 
         nonKeyAttributes.remove(hashKeyField);
         nonKeyAttributes.remove(rangeKeyField);
@@ -155,7 +153,7 @@ public class ProjectionExpressionBuilder extends ExpressionBuilder {
     // Methods - Private
     //-------------------------------------------------------------
 
-    private void collectFields(Class clazz, String fieldPrefix, Set<String> fields) {
+    private Set<String> collectFields(Class clazz, String fieldPrefix, Set<String> fields) {
         Map<String, Class> fieldsAndClasses = getFieldsAndClasses(clazz, fieldPrefix);
 
         for (Map.Entry<String, Class> entry : fieldsAndClasses.entrySet()) {
@@ -169,6 +167,8 @@ public class ProjectionExpressionBuilder extends ExpressionBuilder {
                 collectFields(fieldClass, field + ".", fields);
             }
         }
+
+        return fields;
     }
 
 

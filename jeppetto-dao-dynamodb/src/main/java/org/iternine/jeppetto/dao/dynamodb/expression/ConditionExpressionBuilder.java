@@ -88,7 +88,7 @@ public class ConditionExpressionBuilder extends ExpressionBuilder {
     }
 
 
-    public ConditionExpressionBuilder(QueryModel queryModel, String hashKeyField, Map<String, String> localIndexes) {
+    public ConditionExpressionBuilder(QueryModel queryModel, Map<String, Map<String, String>> indexes) {
         super(true);
 
         if (queryModel.getConditions() != null) {
@@ -96,10 +96,11 @@ public class ConditionExpressionBuilder extends ExpressionBuilder {
                 DynamoDBConstraint dynamoDBConstraint = (DynamoDBConstraint) condition.getConstraint();
                 ComparisonOperator comparisonOperator = dynamoDBConstraint.getOperator().getComparisonOperator();
 
-                if (condition.getField().equals(hashKeyField) && comparisonOperator == ComparisonOperator.EQ) {
+                if (indexes.containsKey(condition.getField()) && comparisonOperator == ComparisonOperator.EQ) {
                     this.hashKeyCondition = condition;
-                } else if (rangeKeyCondition == null     // First one wins...
-                           && localIndexes.containsKey(condition.getField())
+                } else if (hashKeyCondition != null
+                           && rangeKeyCondition == null     // First one wins...
+                           && indexes.get(hashKeyCondition.getField()).containsKey(condition.getField())
                            && RANGE_KEY_COMPARISON_OPERATORS.contains(comparisonOperator)) {
                     this.rangeKeyCondition = condition;
                 } else {
@@ -160,6 +161,15 @@ public class ConditionExpressionBuilder extends ExpressionBuilder {
 
             return keyConditions;
         }
+    }
+
+
+    public String getHashKey() {
+        if (hashKeyCondition == null) {
+            return null;
+        }
+
+        return hashKeyCondition.getField();
     }
 
 
