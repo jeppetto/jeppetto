@@ -20,13 +20,13 @@
 
     <name>Jeppetto Tests: Functional</name>
     <artifactId>jeppetto-test-functional</artifactId>
-    <version>0.9-rc1</version>
+    <version>0.9-rc2-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <parent>
         <artifactId>jeppetto</artifactId>
         <groupId>org.iternine</groupId>
-        <version>0.9-rc1</version>
+        <version>0.9-rc2-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -34,7 +34,7 @@
         <dependency>
             <groupId>org.iternine</groupId>
             <artifactId>jeppetto-dao</artifactId>
-            <version>0.9-rc1</version>
+            <version>0.9-rc2-SNAPSHOT</version>
         </dependency>
 
         <dependency>
