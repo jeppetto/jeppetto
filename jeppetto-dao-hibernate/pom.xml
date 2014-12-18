@@ -19,13 +19,13 @@
 
     <name>Jeppetto DAO for Hibernate</name>
     <artifactId>jeppetto-dao-hibernate</artifactId>
-    <version>0.9-SNAPSHOT</version>
+    <version>0.9-rc1</version>
     <packaging>jar</packaging>
 
     <parent>
         <groupId>org.iternine</groupId>
         <artifactId>jeppetto</artifactId>
-        <version>0.9-SNAPSHOT</version>
+        <version>0.9-rc1</version>
     </parent>
 
     <dependencies>
@@ -33,7 +33,7 @@
         <dependency>
             <groupId>org.iternine</groupId>
             <artifactId>jeppetto-dao</artifactId>
-            <version>0.9-SNAPSHOT</version>
+            <version>0.9-rc1</version>
         </dependency>
 
         <dependency>
@@ -98,14 +98,14 @@
         <dependency>
             <groupId>org.iternine</groupId>
             <artifactId>jeppetto-test-functional</artifactId>
-            <version>0.9-SNAPSHOT</version>
+            <version>0.9-rc1</version>
             <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>org.iternine</groupId>
             <artifactId>jeppetto-test-support</artifactId>
-            <version>0.9-SNAPSHOT</version>
+            <version>0.9-rc1</version>
             <scope>test</scope>
         </dependency>
 

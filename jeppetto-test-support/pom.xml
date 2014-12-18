@@ -19,13 +19,13 @@
 
     <name>Jeppetto Test Support</name>
     <artifactId>jeppetto-test-support</artifactId>
-    <version>0.9-SNAPSHOT</version>
+    <version>0.9-rc1</version>
     <packaging>jar</packaging>
 
     <parent>
         <groupId>org.iternine</groupId>
         <artifactId>jeppetto</artifactId>
-        <version>0.9-SNAPSHOT</version>
+        <version>0.9-rc1</version>
     </parent>
 
     <dependencies>

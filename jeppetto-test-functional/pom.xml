@@ -15,20 +15,18 @@
   ~ limitations under the License.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <name>Jeppetto Tests: Functional</name>
     <artifactId>jeppetto-test-functional</artifactId>
-    <version>0.9-SNAPSHOT</version>
+    <version>0.9-rc1</version>
     <packaging>jar</packaging>
 
     <parent>
         <artifactId>jeppetto</artifactId>
         <groupId>org.iternine</groupId>
-        <version>0.9-SNAPSHOT</version>
+        <version>0.9-rc1</version>
     </parent>
 
     <dependencies>
@@ -36,7 +34,7 @@
         <dependency>
             <groupId>org.iternine</groupId>
             <artifactId>jeppetto-dao</artifactId>
-            <version>0.9-SNAPSHOT</version>
+            <version>0.9-rc1</version>
         </dependency>
 
         <dependency>
