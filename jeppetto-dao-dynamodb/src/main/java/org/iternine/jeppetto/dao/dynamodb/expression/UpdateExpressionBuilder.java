@@ -17,10 +17,10 @@
 package org.iternine.jeppetto.dao.dynamodb.expression;
 
 
-import org.iternine.jeppetto.dao.JeppettoException;
 import org.iternine.jeppetto.dao.dynamodb.ConversionUtil;
 import org.iternine.jeppetto.dao.dynamodb.DynamoDBPersistable;
 import org.iternine.jeppetto.dao.persistable.PersistableList;
+import org.iternine.jeppetto.dao.persistable.PersistableMap;
 import org.iternine.jeppetto.dao.updateobject.NumericIncrement;
 import org.iternine.jeppetto.dao.updateobject.UpdateList;
 import org.iternine.jeppetto.dao.updateobject.UpdateMap;
@@ -120,21 +120,49 @@ public class UpdateExpressionBuilder extends ExpressionBuilder {
     //-------------------------------------------------------------
 
     private void extractUpdateDetails(DynamoDBPersistable dynamoDBPersistable, String prefix) {
-        for (Iterator<String> dirtyFieldsIterator = dynamoDBPersistable.__getDirtyFields(); dirtyFieldsIterator.hasNext(); ) {
-            String field = dirtyFieldsIterator.next();
-            Object object = dynamoDBPersistable.__get(field);
-            String fullyQualifiedField = prefix + getExpressionAttributeName(field);
+        for (Iterator<String> dirtyFields = dynamoDBPersistable.__getDirtyFields(); dirtyFields.hasNext(); ) {
+            String dirtyField = dirtyFields.next();
 
-            if (object == null) {
-                append(removeExpression, fullyQualifiedField);
-            } else if (PersistableList.class.isAssignableFrom(object.getClass())) {
-                // TODO: implement
-                throw new JeppettoException("Not yet implemented");
-            } else if (DynamoDBPersistable.class.isAssignableFrom(object.getClass())) {     // Includes PersistableMap as well
-                extractUpdateDetails((DynamoDBPersistable) object, fullyQualifiedField + ".");
-            } else {
-                addToSetExpression(object, fullyQualifiedField);
-            }
+            processDirtyObject(dynamoDBPersistable.__get(dirtyField), prefix + getExpressionAttributeName(dirtyField));
+        }
+    }
+
+
+    private void extractUpdateDetails(PersistableMap persistableMap, String prefix) {
+        for (Iterator<String> dirtyFields = persistableMap.__getDirtyFields(); dirtyFields.hasNext(); ) {
+            String dirtyField = dirtyFields.next();
+
+            processDirtyObject(persistableMap.get(dirtyField), prefix + getExpressionAttributeName(dirtyField));
+        }
+    }
+
+
+    private void extractUpdateDetails(PersistableList persistableList, String prefix) {
+        if (persistableList.isRewrite()) {
+            addToSetExpression(persistableList, prefix);
+
+            return;
+        }
+
+        for (Iterator<String> dirtyIndexes = persistableList.__getDirtyFields(); dirtyIndexes.hasNext(); ) {
+            int dirtyIndex = Integer.parseInt(dirtyIndexes.next());
+
+            processDirtyObject(persistableList.get(dirtyIndex), prefix +'[' + dirtyIndex + ']');
+        }
+    }
+
+
+    private void processDirtyObject(Object dirtyObject, String fullyQualifiedField) {
+        if (dirtyObject == null) {
+            append(removeExpression, fullyQualifiedField);
+        } else if (PersistableList.class.isAssignableFrom(dirtyObject.getClass())) {
+            extractUpdateDetails((PersistableList) dirtyObject, fullyQualifiedField);
+        } else if (PersistableMap.class.isAssignableFrom(dirtyObject.getClass())) {
+            extractUpdateDetails((PersistableMap) dirtyObject, fullyQualifiedField + ".");
+        } else if (DynamoDBPersistable.class.isAssignableFrom(dirtyObject.getClass())) {
+            extractUpdateDetails((DynamoDBPersistable) dirtyObject, fullyQualifiedField + ".");
+        } else {
+            addToSetExpression(dirtyObject, fullyQualifiedField);
         }
     }
 

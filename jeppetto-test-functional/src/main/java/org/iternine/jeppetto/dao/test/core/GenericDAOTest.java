@@ -213,6 +213,65 @@ public abstract class GenericDAOTest {
 
 
     @Test
+    public void addToListAcrossSaves() {
+        SimpleObject simpleObject = new SimpleObject();
+        simpleObject.setId("id");
+
+        simpleObject.setRelatedObjects(new ArrayList<RelatedObject>());
+        RelatedObject relatedObject1 = new RelatedObject();
+        relatedObject1.setRelatedIntValue(123);
+        RelatedObject relatedObject2 = new RelatedObject();
+        relatedObject2.setRelatedIntValue(345);
+
+        simpleObject.addRelatedObject(relatedObject1);
+        getGenericDAO().save(simpleObject);
+
+        SimpleObject result1 = getGenericDAO().findById("id");
+        result1.addRelatedObject(relatedObject2);
+        getGenericDAO().save(result1);
+
+        SimpleObject result2 = getGenericDAO().findById("id");
+        result2.addRelatedObject(relatedObject2);
+        getGenericDAO().save(result2);
+
+        SimpleObject finalResult= getGenericDAO().findById("id");
+        assertEquals(3, finalResult.getRelatedObjects().size());
+        assertEquals(123, finalResult.getRelatedObjects().get(0).getRelatedIntValue());
+        assertEquals(345, finalResult.getRelatedObjects().get(1).getRelatedIntValue());
+        assertEquals(345, finalResult.getRelatedObjects().get(2).getRelatedIntValue());
+    }
+
+
+    @Test
+    public void addToMapAcrossSaves() {
+        SimpleObject simpleObject = new SimpleObject();
+        simpleObject.setId("id");
+
+        simpleObject.setRelatedObjectMap(new HashMap<String, RelatedObject>());
+        RelatedObject relatedObject1 = new RelatedObject();
+        relatedObject1.setRelatedIntValue(123);
+        RelatedObject relatedObject2 = new RelatedObject();
+        relatedObject2.setRelatedIntValue(345);
+
+        simpleObject.getRelatedObjectMap().put("first", relatedObject1);
+        getGenericDAO().save(simpleObject);
+
+        SimpleObject result1 = getGenericDAO().findById("id");
+        result1.getRelatedObjectMap().put("second", relatedObject2);
+        getGenericDAO().save(result1);
+
+        SimpleObject result2 = getGenericDAO().findById("id");
+        result2.getRelatedObjectMap().put("third", relatedObject2);
+        getGenericDAO().save(result2);
+
+        SimpleObject finalResult= getGenericDAO().findById("id");
+        assertEquals(123, finalResult.getRelatedObjectMap().get("first").getRelatedIntValue());
+        assertEquals(345, finalResult.getRelatedObjectMap().get("second").getRelatedIntValue());
+        assertEquals(345, finalResult.getRelatedObjectMap().get("third").getRelatedIntValue());
+    }
+
+
+    @Test
     public void saveAndUpdateComplexObject()
             throws NoSuchItemException {
         SimpleObject simpleObject = new SimpleObject();

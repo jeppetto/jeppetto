@@ -23,6 +23,8 @@ import org.iternine.jeppetto.dao.test.core.GenericDAOTest;
 import org.iternine.jeppetto.testsupport.TestContext;
 
 import org.hibernate.SessionFactory;
+import org.junit.Ignore;
+import org.junit.Test;
 
 
 public class HibernateGenericDAOTest extends GenericDAOTest {
@@ -59,5 +61,21 @@ public class HibernateGenericDAOTest extends GenericDAOTest {
 
             testContext = null;
         }
+    }
+
+
+    //-------------------------------------------------------------
+    // Tests
+    //-------------------------------------------------------------
+
+    @Ignore
+    @Test
+    public void addToListAcrossSaves() {
+    }
+
+
+    @Ignore
+    @Test
+    public void addToMapAcrossSaves() {
     }
 }
