@@ -139,6 +139,8 @@ public class UpdateExpressionBuilder extends ExpressionBuilder {
 
     private void extractUpdateDetails(PersistableList persistableList, String prefix) {
         if (persistableList.isRewrite()) {
+            persistableList.__markPersisted(null);      // Mark not persisted as the entire list needs to be rewritten.
+
             addToSetExpression(persistableList, prefix);
 
             return;

@@ -216,8 +216,8 @@ public abstract class GenericDAOTest {
     public void addToListAcrossSaves() {
         SimpleObject simpleObject = new SimpleObject();
         simpleObject.setId("id");
-
         simpleObject.setRelatedObjects(new ArrayList<RelatedObject>());
+
         RelatedObject relatedObject1 = new RelatedObject();
         relatedObject1.setRelatedIntValue(123);
         RelatedObject relatedObject2 = new RelatedObject();
@@ -243,11 +243,36 @@ public abstract class GenericDAOTest {
 
 
     @Test
+    public void addToListUsingIndexAcrossSaves() {
+        SimpleObject simpleObject = new SimpleObject();
+        simpleObject.setId("id");
+        simpleObject.setRelatedObjects(new ArrayList<RelatedObject>());
+
+        RelatedObject relatedObject1 = new RelatedObject();
+        relatedObject1.setRelatedIntValue(123);
+        RelatedObject relatedObject2 = new RelatedObject();
+        relatedObject2.setRelatedIntValue(345);
+
+        simpleObject.addRelatedObject(relatedObject1);
+        getGenericDAO().save(simpleObject);
+
+        SimpleObject result1 = getGenericDAO().findById("id");
+        result1.getRelatedObjects().add(0, relatedObject2);
+        getGenericDAO().save(result1);
+
+        SimpleObject finalResult= getGenericDAO().findById("id");
+        assertEquals(2, finalResult.getRelatedObjects().size());
+        assertEquals(345, finalResult.getRelatedObjects().get(0).getRelatedIntValue());
+        assertEquals(123, finalResult.getRelatedObjects().get(1).getRelatedIntValue());
+    }
+
+
+    @Test
     public void addToMapAcrossSaves() {
         SimpleObject simpleObject = new SimpleObject();
         simpleObject.setId("id");
-
         simpleObject.setRelatedObjectMap(new HashMap<String, RelatedObject>());
+
         RelatedObject relatedObject1 = new RelatedObject();
         relatedObject1.setRelatedIntValue(123);
         RelatedObject relatedObject2 = new RelatedObject();

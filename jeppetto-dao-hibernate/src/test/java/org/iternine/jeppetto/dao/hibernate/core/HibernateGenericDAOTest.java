@@ -76,6 +76,12 @@ public class HibernateGenericDAOTest extends GenericDAOTest {
 
     @Ignore
     @Test
+    public void addToListUsingIndexAcrossSaves() {
+    }
+
+
+    @Ignore
+    @Test
     public void addToMapAcrossSaves() {
     }
 }
