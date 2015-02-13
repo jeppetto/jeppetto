@@ -179,6 +179,67 @@ public class DynamoDBForumTest extends ForumTest {
     }
 
 
+    @Test
+    public void testPaging() {
+        createData();
+        createAdditionalData();
+
+        String replyId = DYNAMODB_FORUM + "#" + DYNAMODB_THREAD_1;
+        int pageSize = 2;
+
+        int totalItems = 0;
+
+        DynamoDBIterable<Reply> iterable = (DynamoDBIterable<Reply>) getReplyDAO().findByIdAndLimit(replyId, pageSize);
+
+        iterable.setLimit(pageSize);
+
+        for (Reply reply : iterable) {
+            Assert.assertEquals(replyId, reply.getId());
+
+            totalItems++;
+        }
+
+        Assert.assertEquals(2, totalItems);
+        Assert.assertTrue(iterable.hasResultsPastLimit());
+    }
+
+
+    @Test
+    public void testPosition2() {
+        createData();
+        createAdditionalData();
+
+        String replyId = DYNAMODB_FORUM + "#" + DYNAMODB_THREAD_1;
+        int pageSize = 2;
+
+        int page = 0;
+        String queryPosition = null;
+        int totalItems = 0;
+
+        DynamoDBIterable<Reply> iterable;
+
+        do {
+            iterable = (DynamoDBIterable<Reply>) getReplyDAO().findByIdAndLimit(replyId, pageSize + 1);
+
+            iterable.setPosition(queryPosition);
+            iterable.setLimit(pageSize);
+
+            page++;
+
+            for (Reply reply : iterable) {
+                Assert.assertEquals(replyId, reply.getId());
+
+                totalItems++;
+            }
+
+            queryPosition = iterable.getPosition();
+        } while (iterable.hasResultsPastLimit());
+
+        Assert.assertEquals(3, page);
+        Assert.assertEquals(6, totalItems);
+    }
+
+
     //-------------------------------------------------------------
     // Methods - Private
     //-------------------------------------------------------------

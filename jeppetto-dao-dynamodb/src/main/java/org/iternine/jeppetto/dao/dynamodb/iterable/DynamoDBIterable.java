@@ -32,6 +32,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 
 public abstract class DynamoDBIterable<T> implements Iterable<T> {
@@ -43,8 +44,8 @@ public abstract class DynamoDBIterable<T> implements Iterable<T> {
     private AmazonDynamoDB dynamoDB;
     private Enhancer<T> enhancer;
     private String hashKeyField;
-    private Iterator<Map<String, AttributeValue>> iterator;
-    private Map<String, AttributeValue> lastItem;
+    private int limit = -1;
+    private DynamoDBIterator dynamoDBIterator;
 
 
     //-------------------------------------------------------------
@@ -77,45 +78,9 @@ public abstract class DynamoDBIterable<T> implements Iterable<T> {
 
     @Override
     public Iterator<T> iterator() {
-        return new Iterator<T>() {
-            {
-                iterator = fetchItems();
-            }
+        dynamoDBIterator = new DynamoDBIterator(limit);
 
-            @Override
-            public boolean hasNext() {
-                if (iterator.hasNext()) {
-                    return true;
-                }
-
-                // No items in the current iterator.  If more items are available, fetch them and recheck the (new)
-                // current iterator.
-                if (moreAvailable()) {
-                    iterator = fetchItems();
-                }
-
-                return iterator.hasNext();
-            }
-
-
-            @Override
-            public T next() {
-                lastItem = iterator.next();
-
-                T t = enhancer.newInstance();
-
-                ((DynamoDBPersistable) t).__putAll(lastItem);
-                ((DynamoDBPersistable) t).__markPersisted(dynamoDB.toString());
-
-                return t;
-            }
-
-
-            @Override
-            public void remove() {
-                throw new UnsupportedOperationException();
-            }
-        };
+        return dynamoDBIterator;
     }
 
 
@@ -163,7 +128,7 @@ public abstract class DynamoDBIterable<T> implements Iterable<T> {
 
 
     public void setPosition(String position, String hashKeyValue) {
-        if (iterator != null) {
+        if (dynamoDBIterator != null) {
             throw new JeppettoException("setPosition() only valid on a new DynamoDBIterable.");
         }
 
@@ -203,6 +168,22 @@ public abstract class DynamoDBIterable<T> implements Iterable<T> {
     }
 
 
+    public void setLimit(int limit) {
+        if (dynamoDBIterator != null) {
+            throw new JeppettoException("setLimit() only valid on a new DynamoDBIterable.");
+        }
+
+        this.limit = limit;
+
+        // TODO: Should this limit be applied to the underlying query/scan?  If so, add 'plus one' parameter
+    }
+
+
+    public boolean hasResultsPastLimit() {
+        return dynamoDBIterator.hasNext0();
+    }
+
+
     //-------------------------------------------------------------
     // Methods - Protected
     //-------------------------------------------------------------
@@ -218,7 +199,7 @@ public abstract class DynamoDBIterable<T> implements Iterable<T> {
 
 
     //-------------------------------------------------------------
-    // Methods - Protected
+    // Methods - Private
     //-------------------------------------------------------------
 
     private Map<String, AttributeValue> getLastExaminedKey() {
@@ -235,7 +216,7 @@ public abstract class DynamoDBIterable<T> implements Iterable<T> {
         Map<String, AttributeValue> generatedKey = new HashMap<String, AttributeValue>(lastEvaluatedKey.size());
 
         for (String key : lastEvaluatedKey.keySet()) {
-            generatedKey.put(key, lastItem.get(key));
+            generatedKey.put(key, dynamoDBIterator.getLastItem().get(key));
         }
 
         return generatedKey;
@@ -266,6 +247,91 @@ public abstract class DynamoDBIterable<T> implements Iterable<T> {
             return new AttributeValue().withN(URLDecoder.decode(encoded.substring(1), StandardCharsets.UTF_8.name()));
         } else {
             throw new JeppettoException("Can only handle 'S' and 'N' scalar types: " + encoded);
+        }
+    }
+
+
+    //-------------------------------------------------------------
+    // Inner Class - DynamoDBIterator
+    //-------------------------------------------------------------
+
+    class DynamoDBIterator implements Iterator<T> {
+
+        //-------------------------------------------------------------
+        // Variables - Private
+        //-------------------------------------------------------------
+
+        private Iterator<Map<String, AttributeValue>> iterator;
+        private int remaining;
+        private Map<String, AttributeValue> lastItem;
+
+
+        //-------------------------------------------------------------
+        // Constructors
+        //-------------------------------------------------------------
+
+        DynamoDBIterator(int limit) {
+            this.iterator = fetchItems();
+            this.remaining = limit;
+        }
+
+
+        //-------------------------------------------------------------
+        // Implementation - Iterator
+        //-------------------------------------------------------------
+
+        @Override
+        public boolean hasNext() {
+            return remaining != 0 && hasNext0();
+        }
+
+
+        @Override
+        public T next() {
+            if (remaining == 0) {
+                throw new NoSuchElementException("Limit for query was reached.");
+            }
+
+            remaining--;
+
+            lastItem = iterator.next();
+
+            T t = enhancer.newInstance();
+
+            ((DynamoDBPersistable) t).__putAll(lastItem);
+            ((DynamoDBPersistable) t).__markPersisted(dynamoDB.toString());
+
+            return t;
+        }
+
+
+        @Override
+        public void remove() {
+            throw new UnsupportedOperationException();
+        }
+
+
+        //-------------------------------------------------------------
+        // Methods - Private
+        //-------------------------------------------------------------
+
+        private boolean hasNext0() {
+            if (iterator.hasNext()) {
+                return true;
+            }
+
+            // No items in the current iterator.  If more items are available, fetch them and recheck the (new)
+            // current iterator.
+            if (moreAvailable()) {
+                iterator = fetchItems();
+            }
+
+            return iterator.hasNext();
+        }
+
+
+        private Map<String, AttributeValue> getLastItem() {
+            return lastItem;
         }
     }
 }
