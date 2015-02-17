@@ -35,4 +35,8 @@ public interface ReplyDAO extends GenericDAO<Reply, Pair<String, String>> {
     Iterable<Reply> findByIdAndLimit(String id, int limit);
 
     List<Reply> findByIdAndPostedBy(String id, String postedBy);
+
+    List<Reply> findByIdOrderByReplyDateDesc(String id);
+
+    List<Reply> findByIdOrderByPostedByAsc(String id);
 }

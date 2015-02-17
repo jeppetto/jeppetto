@@ -240,6 +240,50 @@ public class DynamoDBForumTest extends ForumTest {
     }
 
 
+    @Test
+    public void testSortByReplyDate() {
+        createData();
+        createAdditionalData();
+
+        String replyId = DYNAMODB_FORUM + "#" + DYNAMODB_THREAD_1;
+
+        List<Reply> results = getReplyDAO().findByIdOrderByReplyDateDesc(replyId);
+
+        Assert.assertEquals(6, results.size());
+
+        Date previousReplyDate = null;
+        for (Reply reply : results) {
+            if (previousReplyDate != null) {
+                Assert.assertTrue(previousReplyDate.after(reply.getReplyDate()));
+            }
+
+            previousReplyDate = reply.getReplyDate();
+        }
+    }
+
+
+    @Test
+    public void testSortByPostedBy() {
+        createData();
+        createAdditionalData();
+
+        String replyId = DYNAMODB_FORUM + "#" + DYNAMODB_THREAD_1;
+
+        List<Reply> results = getReplyDAO().findByIdOrderByPostedByAsc(replyId);
+
+        Assert.assertEquals(6, results.size());
+
+        String previousPostedBy = null;
+        for (Reply reply : results) {
+            if (previousPostedBy != null) {
+                Assert.assertTrue(previousPostedBy.compareTo(reply.getPostedBy()) <= 0);
+            }
+
+            previousPostedBy = reply.getPostedBy();
+        }
+    }
+
+
     //-------------------------------------------------------------
     // Methods - Private
     //-------------------------------------------------------------

@@ -66,4 +66,7 @@ public interface DynamicDAO extends GenericDAO<SimpleObject, String> {
 
 
     void deleteByIntValueWithin(List<Integer> someInts);
+
+
+    List<SimpleObject> findByRelatedObjectIsNotNull();
 }

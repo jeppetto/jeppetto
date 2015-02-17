@@ -670,18 +670,9 @@ public class DynamoDBQueryModelDAO<T, ID>
 
     private Iterable<T> queryItems(QueryModel queryModel, ConditionExpressionBuilder conditionExpressionBuilder) {
         QueryRequest queryRequest = new QueryRequest(tableName);
-        String hashKey = conditionExpressionBuilder.getHashKey();
-        String rangeKey = conditionExpressionBuilder.getRangeKey();
-        String indexName = indexes.get(hashKey).get(rangeKey);
 
         queryRequest.setKeyConditions(conditionExpressionBuilder.getKeyConditions());
-        queryRequest.setIndexName(indexName);
         queryRequest.setConsistentRead(consistentRead);
-
-        if (indexName != null && !indexProjectsOverEntity.get(indexName)) {
-            logger.warn("Query using index {} incurs additional costs to fully fetch a {} type. Use a projected object DAO to avoid this overhead.",
-                        indexName, entityClass.getSimpleName());
-        }
 
         if (queryModel.getFirstResult() > 0) {
             logger.warn("DynamoDB does not support skipping results.  Call setPosition() on DynamoDBIterable instead.");
@@ -691,30 +682,39 @@ public class DynamoDBQueryModelDAO<T, ID>
             queryRequest.setLimit(queryModel.getMaxResults());
         }
 
+        String hashKey = conditionExpressionBuilder.getHashKey();
+        String rangeKey = conditionExpressionBuilder.getRangeKey();
+        String indexName;
+
+        // DynamoDB can only sort on the effective range key.  If no range key is specified, let the sort key become the range key.  If a range
+        // key is specified, ensure the range key and sort key are the same.  In both cases, use the selected key to determine the index to use
+        // while querying.
         List<Sort> sorts = queryModel.getSorts();
         if (sorts != null && !sorts.isEmpty()) {
             if (sorts.size() > 1) {
-                logger.warn("DynamoDB supports only one sort value.  Ignoring sorts.");
-            } else if (rangeKey != null) {
-                logger.warn("Nothing to sort when a range key is specified.");
-            } else {
-                Sort sort = sorts.get(0);
-
-                if (indexName != null) {
-                    if (indexName.equals(indexes.get(hashKey).get(sort.getField()))) {
-                        queryRequest.setScanIndexForward(sort.getSortDirection() == SortDirection.Ascending);
-                    } else {
-                        logger.warn("Can only sort on the effective range key. Ignoring sort on " + sort.getField());
-                    }
-                } else {
-                    if (sort.getField().equals(rangeKeyField)) {
-                        queryRequest.setScanIndexForward(sort.getSortDirection() == SortDirection.Ascending);
-                    } else {
-                        logger.warn("Can only sort on the range key when not using an index.");
-                    }
-                }
+                logger.warn("DynamoDB supports only one sort value.  Ignoring all but the first item.");
             }
+
+            Sort sort = sorts.get(0);
+            String sortKey = sort.getField();
+
+            if (rangeKey == null || rangeKey.equals(sortKey)) {
+                queryRequest.setScanIndexForward(sort.getSortDirection() == SortDirection.Ascending);
+                indexName = indexes.get(hashKey).get(sortKey);
+            } else {
+                logger.warn("Can only sort on the effective range key. Ignoring sort on " + sortKey);
+                indexName = indexes.get(hashKey).get(rangeKey);
+            }
+        } else {
+            indexName = indexes.get(hashKey).get(rangeKey);
         }
+
+        if (indexName != null && !indexProjectsOverEntity.get(indexName)) {
+            logger.warn("Query using index {} incurs additional costs to fully fetch a {} type. Use a projected object DAO to avoid this overhead.",
+                        indexName, entityClass.getSimpleName());
+        }
+
+        queryRequest.setIndexName(indexName);
 
         Map<String, String> expressionAttributeNames;
 
@@ -722,7 +722,10 @@ public class DynamoDBQueryModelDAO<T, ID>
 
         if (conditionExpressionBuilder.hasExpression()) {
             queryRequest.setFilterExpression(conditionExpressionBuilder.getExpression());
-            queryRequest.setExpressionAttributeValues(conditionExpressionBuilder.getExpressionAttributeValues());
+
+            if (!conditionExpressionBuilder.getExpressionAttributeValues().isEmpty()) {
+                queryRequest.setExpressionAttributeValues(conditionExpressionBuilder.getExpressionAttributeValues());
+            }
 
             if (projectionExpressionNames.isEmpty()) {
                 expressionAttributeNames = conditionExpressionBuilder.getExpressionAttributeNames();
@@ -766,7 +769,10 @@ public class DynamoDBQueryModelDAO<T, ID>
 
         if (conditionExpressionBuilder.hasExpression()) {
             scanRequest.setFilterExpression(conditionExpressionBuilder.getExpression());
-            scanRequest.setExpressionAttributeValues(conditionExpressionBuilder.getExpressionAttributeValues());
+
+            if (!conditionExpressionBuilder.getExpressionAttributeValues().isEmpty()) {
+                scanRequest.setExpressionAttributeValues(conditionExpressionBuilder.getExpressionAttributeValues());
+            }
 
             if (projectionExpressionNames.isEmpty()) {
                 expressionAttributeNames = conditionExpressionBuilder.getExpressionAttributeNames();
@@ -804,6 +810,10 @@ public class DynamoDBQueryModelDAO<T, ID>
         if (dynamoDBPersistable.__get(hashKeyField) != null
          /* && rangeKeyField != null && dynamoDBPersistable.__get(rangeKeyField) != null */) {
             return;
+        }
+
+        if (idGenerator == null) {
+            throw new JeppettoException();
         }
 
         // TODO: handle case when part of the key is there (e.g. code generates range key, but wants to generate hash key)
