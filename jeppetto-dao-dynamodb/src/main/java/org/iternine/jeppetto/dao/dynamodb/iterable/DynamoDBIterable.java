@@ -321,12 +321,16 @@ public abstract class DynamoDBIterable<T> implements Iterable<T> {
             }
 
             // No items in the current iterator.  If more items are available, fetch them and recheck the (new)
-            // current iterator.
-            if (moreAvailable()) {
+            // current iterator.  Continue until no more.
+            while (moreAvailable()) {
                 iterator = fetchItems();
+
+                if (iterator.hasNext()) {
+                    return true;
+                }
             }
 
-            return iterator.hasNext();
+            return false;
         }
 
 

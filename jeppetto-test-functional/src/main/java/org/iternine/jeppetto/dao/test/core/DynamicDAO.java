@@ -69,4 +69,7 @@ public interface DynamicDAO extends GenericDAO<SimpleObject, String> {
 
 
     List<SimpleObject> findByRelatedObjectIsNotNull();
+
+
+    SimpleObject findByRelatedObjectIsNull();
 }

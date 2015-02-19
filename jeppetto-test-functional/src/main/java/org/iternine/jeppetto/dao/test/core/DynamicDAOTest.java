@@ -304,6 +304,30 @@ public abstract class DynamicDAOTest {
     }
 
 
+    @Test
+    public void findByRelatedObjectIsNull() {
+        for (int i = 0; i < 100; i++) {
+            RelatedObject relatedObject = new RelatedObject();
+            relatedObject.setRelatedIntValue(i);
+
+            SimpleObject simpleObject = new SimpleObject();
+            simpleObject.setIntValue(i);
+            simpleObject.setRelatedObject(relatedObject);
+
+            getDynamicDAO().save(simpleObject);
+        }
+
+        SimpleObject simpleObject = new SimpleObject();
+        simpleObject.setIntValue(100);
+
+        getDynamicDAO().save(simpleObject);
+
+        SimpleObject result = getDynamicDAO().findByRelatedObjectIsNull();
+
+        Assert.assertNotNull(result);
+    }
+
+
     //-------------------------------------------------------------
     // Methods - Protected
     //-------------------------------------------------------------

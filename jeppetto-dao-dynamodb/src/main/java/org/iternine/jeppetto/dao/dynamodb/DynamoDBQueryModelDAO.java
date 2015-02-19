@@ -38,6 +38,7 @@ import org.iternine.jeppetto.dao.dynamodb.expression.ConditionExpressionBuilder;
 import org.iternine.jeppetto.dao.dynamodb.expression.ProjectionExpressionBuilder;
 import org.iternine.jeppetto.dao.dynamodb.expression.UpdateExpressionBuilder;
 import org.iternine.jeppetto.dao.dynamodb.iterable.BatchGetIterable;
+import org.iternine.jeppetto.dao.dynamodb.iterable.DynamoDBIterable;
 import org.iternine.jeppetto.dao.dynamodb.iterable.QueryIterable;
 import org.iternine.jeppetto.dao.dynamodb.iterable.ScanIterable;
 import org.iternine.jeppetto.dao.id.IdGenerator;
@@ -480,9 +481,11 @@ public class DynamoDBQueryModelDAO<T, ID>
     @Override
     public T findUniqueUsingQueryModel(QueryModel queryModel)
             throws NoSuchItemException, TooManyItemsException, JeppettoException {
-        queryModel.setMaxResults(2);
+        DynamoDBIterable<T> dynamoDBIterable = (DynamoDBIterable<T>) findUsingQueryModel(queryModel);
 
-        Iterator<T> results = findUsingQueryModel(queryModel).iterator();
+        dynamoDBIterable.setLimit(1);
+
+        Iterator<T> results = dynamoDBIterable.iterator();
 
         if (!results.hasNext()) {
             throw new NoSuchItemException();
@@ -490,7 +493,7 @@ public class DynamoDBQueryModelDAO<T, ID>
 
         T result = results.next();
 
-        if (results.hasNext()) {
+        if (dynamoDBIterable.hasResultsPastLimit()) {
             throw new TooManyItemsException();
         }
 
