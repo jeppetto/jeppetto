@@ -28,6 +28,7 @@
         <property name="intValue"/>
         <property name="anotherIntValue"/>
         <property name="longValue"/>
+        <property name="stringValue"/>
 
         <many-to-one name="relatedObject" column="relatedObjectId" unique="true" not-null="false" cascade="all" lazy="false"/>
 

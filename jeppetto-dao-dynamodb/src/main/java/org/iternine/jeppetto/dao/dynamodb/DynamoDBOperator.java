@@ -38,7 +38,8 @@ public enum DynamoDBOperator {
     Within(ComparisonOperator.IN, -1),
     Between(ComparisonOperator.BETWEEN, 2),
     IsNull(ComparisonOperator.NOT_NULL, 0),
-    IsNotNull(ComparisonOperator.NULL, 0);
+    IsNotNull(ComparisonOperator.NULL, 0),
+    BeginsWith(ComparisonOperator.BEGINS_WITH, 1);
 
 
     //-------------------------------------------------------------

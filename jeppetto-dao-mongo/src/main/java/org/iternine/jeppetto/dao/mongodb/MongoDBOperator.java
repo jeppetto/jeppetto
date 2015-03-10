@@ -44,6 +44,7 @@ public enum MongoDBOperator {
     Between(null),
     IsNull(null),
     IsNotNull(null),
+    BeginsWith(null),
     ElementMatches("$elemMatch");
 
 
@@ -106,6 +107,10 @@ public enum MongoDBOperator {
             notNullConstraint.put("$not", new BasicDBObject("$type", 10));
 
             return notNullConstraint;
+
+        case BeginsWith:
+            // TODO: Escape argsIterator.next()
+            return new BasicDBObject("$regex", "^" + argsIterator.next() + ".*");
 
         default:
             throw new IllegalArgumentException("Unexpected enumeration: " + this);

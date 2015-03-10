@@ -31,5 +31,6 @@ public enum ConditionType {
     Within,
     Between,
     IsNull,
-    IsNotNull
+    IsNotNull,
+    BeginsWith
 }

@@ -72,4 +72,10 @@ public interface DynamicDAO extends GenericDAO<SimpleObject, String> {
 
 
     SimpleObject findByRelatedObjectIsNull();
+
+
+    List<SimpleObject> findByStringValueBeginsWith(String prefix);
+
+
+    List<SimpleObject> findByHavingRelatedObjectWithRelatedStringValueBeginsWith(String prefix);
 }

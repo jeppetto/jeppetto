@@ -55,6 +55,7 @@ public class ConditionExpressionBuilder extends ExpressionBuilder {
         put(DynamoDBOperator.Between, "%s BETWEEN %s AND %s");
         put(DynamoDBOperator.IsNull, "attribute_not_exists(%s)");
         put(DynamoDBOperator.IsNotNull, "attribute_exists(%s)");
+        put(DynamoDBOperator.BeginsWith, "begins_with(%s, %s)");
     }};
 
     private static final Set<ComparisonOperator> RANGE_KEY_COMPARISON_OPERATORS = new HashSet<ComparisonOperator>(7) {{
@@ -202,8 +203,10 @@ public class ConditionExpressionBuilder extends ExpressionBuilder {
         Map<String, AttributeValue> key;
 
         if (rangeKeyCondition == null) {
-            key = Collections.singletonMap(hashKeyCondition.getField(), ConversionUtil
-                    .toAttributeValue(((DynamoDBConstraint) hashKeyCondition.getConstraint()).getValues()[0]));
+            key = Collections.singletonMap(hashKeyCondition.getField(),
+                                           ConversionUtil.toAttributeValue(
+                                                   ((DynamoDBConstraint) hashKeyCondition.getConstraint())
+                                                           .getValues()[0]));
         } else {
             key = new HashMap<String, AttributeValue>(2);
 

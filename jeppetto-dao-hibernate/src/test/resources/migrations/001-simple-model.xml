@@ -29,6 +29,7 @@
             </column>
             <column name="anotherIntValue" type="INT"/>
             <column name="longValue" type="BIGINT"/>
+            <column name="stringValue" type="VARCHAR(255)"/>
             <column name="relatedObjectId" type="VARCHAR(32)"/>
             <column name="simpleEnum" type="VARCHAR(255)"/>
         </createTable>

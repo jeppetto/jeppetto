@@ -461,7 +461,7 @@ public class DAOBuilder {
             orderParts = queryString.substring(orderByIndex + "OrderBy".length());
         }
 
-        if (queryParts != null) {
+        if (queryParts[0] != null) {
             if (queryParts[0].length() > 0) {
                 String[] conditionStrings = queryParts[0].split("And");
 

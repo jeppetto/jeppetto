@@ -230,7 +230,8 @@ public abstract class DynamicDAOTest {
     public void limit() {
         createData();
 
-        List<SimpleObject> results = getDynamicDAO().findByHavingRelatedObjectsWithRelatedIntValueLessThanOrderByIntValueAndLimit(19, 1);
+        List<SimpleObject> results = getDynamicDAO().findByHavingRelatedObjectsWithRelatedIntValueLessThanOrderByIntValueAndLimit(
+                19, 1);
 
         assertEquals(1, results.size());
         assertEquals(2, results.get(0).getIntValue());
@@ -241,7 +242,8 @@ public abstract class DynamicDAOTest {
     public void limitAndSkip() {
         createData();
 
-        List<SimpleObject> results = getDynamicDAO().findByHavingRelatedObjectsWithRelatedIntValueLessThanOrderByIntValueAndLimitAndSkip(19, 1, 1);
+        List<SimpleObject> results = getDynamicDAO().findByHavingRelatedObjectsWithRelatedIntValueLessThanOrderByIntValueAndLimitAndSkip(
+                19, 1, 1);
 
         assertEquals(1, results.size());
         assertEquals(3, results.get(0).getIntValue());
@@ -325,6 +327,47 @@ public abstract class DynamicDAOTest {
         SimpleObject result = getDynamicDAO().findByRelatedObjectIsNull();
 
         Assert.assertNotNull(result);
+    }
+
+
+    @Test
+    public void testBeginsWith() {
+        List<String> strings = Arrays.asList("abcdef", "abbcdef", "defabc", "abcxyz", "defabcghi", "abc123");
+
+        int intValue = 0;
+        for (String string : strings) {
+            SimpleObject simpleObject = new SimpleObject();
+            simpleObject.setIntValue(intValue++);
+            simpleObject.setStringValue(string);
+
+            getDynamicDAO().save(simpleObject);
+        }
+
+        Assert.assertEquals(3, getDynamicDAO().findByStringValueBeginsWith("abc").size());
+        Assert.assertEquals(2, getDynamicDAO().findByStringValueBeginsWith("defabc").size());
+        Assert.assertEquals(0, getDynamicDAO().findByStringValueBeginsWith("123").size());
+    }
+
+
+    @Test
+    public void testNestedBeginsWith() {
+        List<String> strings = Arrays.asList("abcdef", "abbcdef", "defabc", "abcxyz", "defabcghi", "abc123");
+
+        int intValue = 0;
+        for (String string : strings) {
+            RelatedObject relatedObject = new RelatedObject();
+            relatedObject.setRelatedStringValue(string);
+
+            SimpleObject simpleObject = new SimpleObject();
+            simpleObject.setIntValue(intValue++);
+            simpleObject.setRelatedObject(relatedObject);
+
+            getDynamicDAO().save(simpleObject);
+        }
+
+        Assert.assertEquals(3, getDynamicDAO().findByHavingRelatedObjectWithRelatedStringValueBeginsWith("abc").size());
+        Assert.assertEquals(2, getDynamicDAO().findByHavingRelatedObjectWithRelatedStringValueBeginsWith("defabc").size());
+        Assert.assertEquals(0, getDynamicDAO().findByHavingRelatedObjectWithRelatedStringValueBeginsWith("123").size());
     }
 
 

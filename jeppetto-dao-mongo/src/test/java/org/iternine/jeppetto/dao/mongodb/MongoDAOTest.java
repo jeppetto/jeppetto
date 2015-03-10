@@ -231,6 +231,7 @@ public class MongoDAOTest {
                                         "intValue",
                                         "longValue",
                                         "doubleValue",
+                                        "stringValue",
                                         "anotherIntValue");
 
         assertEquals(knownFields, dbo.keySet());

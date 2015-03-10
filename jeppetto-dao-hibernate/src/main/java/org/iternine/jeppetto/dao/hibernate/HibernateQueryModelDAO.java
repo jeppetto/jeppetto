@@ -352,9 +352,7 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
 
 
     @Override
-    public Condition buildCondition(String conditionField,
-                                    ConditionType conditionType,
-                                    Iterator argsIterator) {
+    public Condition buildCondition(String conditionField, ConditionType conditionType, Iterator argsIterator) {
         Condition condition = new Condition();
 
         condition.setField(conditionField);
@@ -403,6 +401,11 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
         case Within:
             condition.setConstraint(Restrictions.in(conditionField, (Collection) argsIterator.next()));
             break;
+
+        case BeginsWith:
+            // TODO: Escape argsIterator.next()
+            condition.setConstraint(Restrictions.like(conditionField, argsIterator.next().toString() + '%'));
+            break;
         }
 
         return condition;
@@ -410,9 +413,7 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
 
 
     @Override
-    public Projection buildProjection(String projectionField,
-                                      ProjectionType projectionType,
-                                      Iterator argsIterator) {
+    public Projection buildProjection(String projectionField, ProjectionType projectionType, Iterator argsIterator) {
         Projection projection = new Projection();
 
         projection.setField(projectionField);

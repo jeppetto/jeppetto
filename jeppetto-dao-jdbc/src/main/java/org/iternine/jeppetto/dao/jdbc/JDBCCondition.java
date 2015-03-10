@@ -41,7 +41,8 @@ public enum JDBCCondition {
     Within(" IN "),
     Between(" BETWEEN ? AND ? "),
     IsNull(" IS NULL "),
-    IsNotNull(" IS NOT NULL ");
+    IsNotNull(" IS NOT NULL "),
+    BeginsWith(" LIKE ");
 
 
     //-------------------------------------------------------------
@@ -92,6 +93,12 @@ public enum JDBCCondition {
         case IsNull:
         case IsNotNull:
             // No parameters
+
+            break;
+
+        case BeginsWith:
+            // TODO: Escape argsIterator.next()
+            jdbcConstraint.setParameter1(argsIterator.next().toString() + '%');
 
             break;
 
