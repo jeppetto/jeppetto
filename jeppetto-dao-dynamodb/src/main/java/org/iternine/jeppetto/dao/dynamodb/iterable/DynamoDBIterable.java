@@ -173,6 +173,10 @@ public abstract class DynamoDBIterable<T> implements Iterable<T> {
             throw new JeppettoException("setLimit() only valid on a new DynamoDBIterable.");
         }
 
+        if (limit < 1) {
+            throw new JeppettoException("limit value must be a positive integer");
+        }
+
         this.limit = limit;
 
         // TODO: Should this limit be applied to the underlying query/scan?  If so, add 'plus one' parameter
@@ -180,6 +184,11 @@ public abstract class DynamoDBIterable<T> implements Iterable<T> {
 
 
     public boolean hasResultsPastLimit() {
+        if (limit == -1) {
+            throw new JeppettoException("An iterable limit wasn't specified with setLimit()");
+        }
+
+        // TODO: the result is only valid if the iterator was finished.  Should we try to detect and error if not?
         return dynamoDBIterator.hasNext0();
     }
 
@@ -323,9 +332,13 @@ public abstract class DynamoDBIterable<T> implements Iterable<T> {
             // No items in the current iterator.  If more items are available, fetch them and recheck the (new)
             // current iterator.  Continue until no more.
             while (moreAvailable()) {
+                Map<String, AttributeValue> lastEvaluatedKey = getLastEvaluatedKey();
+
                 iterator = fetchItems();
 
                 if (iterator.hasNext()) {
+                    setExclusiveStartKey(lastEvaluatedKey);
+
                     return true;
                 }
             }

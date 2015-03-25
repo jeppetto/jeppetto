@@ -155,27 +155,24 @@ public class DynamoDBForumTest extends ForumTest {
             page++;
             itemCounter = 0;
 
-            for (Iterator<Reply> iterator = iterable.iterator(); iterator.hasNext(); ) {
-                Reply reply = iterator.next();
-
+            for (Reply reply : iterable) {
                 Assert.assertEquals(DYNAMODB_FORUM + "#" + DYNAMODB_THREAD_1, reply.getId());
+
+                System.out.println(reply.getMessage());
 
                 itemCounter++;
                 totalItems++;
 
                 if (itemCounter == pageSize) {
-                    queryPosition = ((DynamoDBIterable) iterable).getPosition();
-
-                    if (iterator.hasNext()) {
-                        // another page
-                        break;
-                    }
+                    break;
                 }
             }
+
+            queryPosition = ((DynamoDBIterable) iterable).getPosition();
         } while (queryPosition != null);
 
-        Assert.assertEquals(3, page);
-        Assert.assertEquals(6, totalItems);
+        Assert.assertEquals(4, page);
+        Assert.assertEquals(7, totalItems);
     }
 
 
@@ -210,33 +207,13 @@ public class DynamoDBForumTest extends ForumTest {
         createAdditionalData();
 
         String replyId = DYNAMODB_FORUM + "#" + DYNAMODB_THREAD_1;
-        int pageSize = 2;
+        int pageSize = 3;
 
-        int page = 0;
-        String queryPosition = null;
-        int totalItems = 0;
+        String queryPosition = getReplyPage(replyId, pageSize, null, 3);        // First page, no existing queryPosition
+        queryPosition = getReplyPage(replyId, pageSize, queryPosition, 3);
+        queryPosition = getReplyPage(replyId, pageSize, queryPosition, 1);
 
-        DynamoDBIterable<Reply> iterable;
-
-        do {
-            iterable = (DynamoDBIterable<Reply>) getReplyDAO().findByIdAndLimit(replyId, pageSize + 1);
-
-            iterable.setPosition(queryPosition);
-            iterable.setLimit(pageSize);
-
-            page++;
-
-            for (Reply reply : iterable) {
-                Assert.assertEquals(replyId, reply.getId());
-
-                totalItems++;
-            }
-
-            queryPosition = iterable.getPosition();
-        } while (iterable.hasResultsPastLimit());
-
-        Assert.assertEquals(3, page);
-        Assert.assertEquals(6, totalItems);
+        Assert.assertNull(queryPosition);
     }
 
 
@@ -249,7 +226,7 @@ public class DynamoDBForumTest extends ForumTest {
 
         List<Reply> results = getReplyDAO().findByIdOrderByReplyDateDesc(replyId);
 
-        Assert.assertEquals(6, results.size());
+        Assert.assertEquals(7, results.size());
 
         Date previousReplyDate = null;
         for (Reply reply : results) {
@@ -271,7 +248,7 @@ public class DynamoDBForumTest extends ForumTest {
 
         List<Reply> results = getReplyDAO().findByIdOrderByPostedByAsc(replyId);
 
-        Assert.assertEquals(6, results.size());
+        Assert.assertEquals(7, results.size());
 
         String previousPostedBy = null;
         for (Reply reply : results) {
@@ -291,11 +268,31 @@ public class DynamoDBForumTest extends ForumTest {
     private void createAdditionalData() {
         Date seventeenDaysAgo = new Date((new Date()).getTime() - (17*24*60*60*1000));
         Date tenDaysAgo = new Date((new Date()).getTime() - (10*24*60*60*1000));
+        Date twoDaysAgo = new Date((new Date()).getTime() - (2*24*60*60*1000));
 
         // Add more Replies
         getReplyDAO().save(new Reply(DYNAMODB_FORUM + "#" + DYNAMODB_THREAD_1, "DynamoDB Thread 1 Reply 3 text", USER_A, seventeenDaysAgo));
         getReplyDAO().save(new Reply(DYNAMODB_FORUM + "#" + DYNAMODB_THREAD_1, "DynamoDB Thread 1 Reply 4 text", USER_B, tenDaysAgo));
-        getReplyDAO().save(new Reply(DYNAMODB_FORUM + "#" + DYNAMODB_THREAD_1, "DynamoDB Thread 2 Reply 5 text", USER_A, sevenDaysAgo));
-        getReplyDAO().save(new Reply(DYNAMODB_FORUM + "#" + DYNAMODB_THREAD_1, "DynamoDB Thread 2 Reply 6 text", USER_A, oneDayAgo));
+        getReplyDAO().save(new Reply(DYNAMODB_FORUM + "#" + DYNAMODB_THREAD_1, "DynamoDB Thread 1 Reply 5 text", USER_A, sevenDaysAgo));
+        getReplyDAO().save(new Reply(DYNAMODB_FORUM + "#" + DYNAMODB_THREAD_1, "DynamoDB Thread 1 Reply 6 text", USER_A, twoDaysAgo));
+        getReplyDAO().save(new Reply(DYNAMODB_FORUM + "#" + DYNAMODB_THREAD_1, "DynamoDB Thread 1 Reply 7 text", USER_A, oneDayAgo));
+    }
+
+
+    private String getReplyPage(String replyId, int pageSize, String queryPosition, int expected) {
+        DynamoDBIterable<Reply> iterable = (DynamoDBIterable<Reply>) getReplyDAO().findByIdAndLimit(replyId, pageSize);
+
+        iterable.setPosition(queryPosition);
+        iterable.setLimit(pageSize);
+
+        int count = 0;
+        for (Reply reply : iterable) {
+            Assert.assertEquals(replyId, reply.getId());
+            count++;
+        }
+
+        Assert.assertEquals(expected, count);
+
+        return iterable.hasResultsPastLimit() ? iterable.getPosition() : null;
     }
 }
