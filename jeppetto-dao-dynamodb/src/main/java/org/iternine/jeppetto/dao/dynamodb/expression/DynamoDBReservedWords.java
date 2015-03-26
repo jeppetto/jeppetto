@@ -19,6 +19,7 @@ package org.iternine.jeppetto.dao.dynamodb.expression;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 
 /**
@@ -610,12 +611,16 @@ public enum DynamoDBReservedWords {
         }
     }};
 
+    private static Pattern nonWordCharacter = Pattern.compile("\\W");
+
 
     //-------------------------------------------------------------
     // Methods - Public - Static
     //-------------------------------------------------------------
 
     public static boolean isReserved(String word) {
-        return reservedWords.contains(word.toLowerCase());
+        return Character.isDigit(word.charAt(0))
+               || nonWordCharacter.matcher(word).find()
+               || reservedWords.contains(word.toLowerCase());
     }
 }
