@@ -29,6 +29,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -63,13 +64,13 @@ public abstract class DynamoDBIterable<T> implements Iterable<T> {
     // Methods - Abstract
     //-------------------------------------------------------------
 
-    protected abstract Map<String, AttributeValue> getLastEvaluatedKey();
-
     protected abstract void setExclusiveStartKey(Map<String, AttributeValue> exclusiveStartKey);
 
     protected abstract Iterator<Map<String, AttributeValue>> fetchItems();
 
     protected abstract boolean moreAvailable();
+
+    protected abstract Collection<String> getKeyFields();
 
 
     //-------------------------------------------------------------
@@ -212,20 +213,14 @@ public abstract class DynamoDBIterable<T> implements Iterable<T> {
     //-------------------------------------------------------------
 
     private Map<String, AttributeValue> getLastExaminedKey() {
-        // TODO: update based on value of last.  Might need to grab range key and index key to build the right value...
-        Map<String, AttributeValue> lastEvaluatedKey = getLastEvaluatedKey();
+        Map<String, AttributeValue> generatedKey = new HashMap<String, AttributeValue>(3);  // hash, range, index keys
 
-        if (lastEvaluatedKey == null) {
-            // what if read partially onto the last 'page' and dynamo says no more stuff, but we may still want to
-            // create a lastEvaluatedKey...  Do we need to hold on to one of these as a "template"?
-            // TODO: is there a scenario where we could read and never terminate?
+        if (!dynamoDBIterator.hasNext0()) {
             return null;
         }
 
-        Map<String, AttributeValue> generatedKey = new HashMap<String, AttributeValue>(lastEvaluatedKey.size());
-
-        for (String key : lastEvaluatedKey.keySet()) {
-            generatedKey.put(key, dynamoDBIterator.getLastItem().get(key));
+        for (String keyField : getKeyFields()) {
+            generatedKey.put(keyField, dynamoDBIterator.getLastItem().get(keyField));
         }
 
         return generatedKey;
@@ -332,13 +327,9 @@ public abstract class DynamoDBIterable<T> implements Iterable<T> {
             // No items in the current iterator.  If more items are available, fetch them and recheck the (new)
             // current iterator.  Continue until no more.
             while (moreAvailable()) {
-                Map<String, AttributeValue> lastEvaluatedKey = getLastEvaluatedKey();
-
                 iterator = fetchItems();
 
                 if (iterator.hasNext()) {
-                    setExclusiveStartKey(lastEvaluatedKey);
-
                     return true;
                 }
             }

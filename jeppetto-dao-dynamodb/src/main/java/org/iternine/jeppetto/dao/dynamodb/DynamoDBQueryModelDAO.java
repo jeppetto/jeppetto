@@ -747,7 +747,7 @@ public class DynamoDBQueryModelDAO<T, ID>
             queryRequest.setExpressionAttributeNames(expressionAttributeNames);
         }
 
-        return new QueryIterable<T>(dynamoDB, persistableEnhancer, queryRequest, hashKeyField);
+        return new QueryIterable<T>(dynamoDB, persistableEnhancer, queryRequest, hashKeyField, rangeKeyField, rangeKey);
     }
 
 
@@ -794,7 +794,7 @@ public class DynamoDBQueryModelDAO<T, ID>
             scanRequest.setExpressionAttributeNames(expressionAttributeNames);
         }
 
-        return new ScanIterable<T>(dynamoDB, persistableEnhancer, scanRequest, hashKeyField);
+        return new ScanIterable<T>(dynamoDB, persistableEnhancer, scanRequest, hashKeyField, rangeKeyField);
     }
 
 
@@ -816,7 +816,7 @@ public class DynamoDBQueryModelDAO<T, ID>
         }
 
         if (idGenerator == null) {
-            throw new JeppettoException();
+            throw new JeppettoException("No id provided, and no id generator available.");
         }
 
         // TODO: handle case when part of the key is there (e.g. code generates range key, but wants to generate hash key)

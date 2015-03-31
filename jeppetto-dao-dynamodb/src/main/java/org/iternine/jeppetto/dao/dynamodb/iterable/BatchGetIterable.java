@@ -29,6 +29,7 @@ import com.amazonaws.services.dynamodbv2.model.ConsumedCapacity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -63,12 +64,6 @@ public class BatchGetIterable<T> extends DynamoDBIterable<T> {
     //-------------------------------------------------------------
 
     @Override
-    public Map<String, AttributeValue> getLastEvaluatedKey() {
-        throw new JeppettoException("LastEvaluatedKey not used by BatchGet");
-    }
-
-
-    @Override
     protected void setExclusiveStartKey(Map<String, AttributeValue> exclusiveStartKey) {
         throw new JeppettoException("ExclusiveStartKey not used by BatchGet");
     }
@@ -101,5 +96,11 @@ public class BatchGetIterable<T> extends DynamoDBIterable<T> {
     @Override
     protected boolean moreAvailable() {
         return batchGetItemRequest.getRequestItems() != null && batchGetItemRequest.getRequestItems().size() > 0;
+    }
+
+
+    @Override
+    protected Collection<String> getKeyFields() {
+        throw new JeppettoException("KeyFields not used by BatchGet");
     }
 }

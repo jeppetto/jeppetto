@@ -26,6 +26,9 @@ import com.amazonaws.services.dynamodbv2.model.ScanResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -37,6 +40,7 @@ public class ScanIterable<T> extends DynamoDBIterable<T> {
     //-------------------------------------------------------------
 
     private ScanRequest scanRequest;
+    private Collection<String> keyFields;
 
     private final Logger logger = LoggerFactory.getLogger(ScanIterable.class);
 
@@ -45,22 +49,19 @@ public class ScanIterable<T> extends DynamoDBIterable<T> {
     // Constructors
     //-------------------------------------------------------------
 
-    public ScanIterable(AmazonDynamoDB dynamoDB, Enhancer<T> enhancer, ScanRequest scanRequest, String hashKeyField) {
+    public ScanIterable(AmazonDynamoDB dynamoDB, Enhancer<T> enhancer, ScanRequest scanRequest,
+                        String hashKeyField, String rangeKeyField) {
         super(dynamoDB, enhancer, hashKeyField);
 
         this.scanRequest = scanRequest;
+
+        this.keyFields = rangeKeyField == null ? Collections.singleton(hashKeyField) : Arrays.asList(hashKeyField, rangeKeyField);
     }
 
 
     //-------------------------------------------------------------
     // Methods - Implementation
     //-------------------------------------------------------------
-
-    @Override
-    public Map<String, AttributeValue> getLastEvaluatedKey() {
-        return scanRequest.getExclusiveStartKey();  // We store lastEvaluatedKey in scanRequest's exclusiveStartKey field
-    }
-
 
     @Override
     protected void setExclusiveStartKey(Map<String, AttributeValue> exclusiveStartKey) {
@@ -91,5 +92,11 @@ public class ScanIterable<T> extends DynamoDBIterable<T> {
     @Override
     protected boolean moreAvailable() {
         return scanRequest.getExclusiveStartKey() != null;
+    }
+
+
+    @Override
+    protected Collection<String> getKeyFields() {
+        return keyFields;
     }
 }

@@ -204,9 +204,7 @@ public class ConditionExpressionBuilder extends ExpressionBuilder {
 
         if (rangeKeyCondition == null) {
             key = Collections.singletonMap(hashKeyCondition.getField(),
-                                           ConversionUtil.toAttributeValue(
-                                                   ((DynamoDBConstraint) hashKeyCondition.getConstraint())
-                                                           .getValues()[0]));
+                                           ConversionUtil.toAttributeValue(((DynamoDBConstraint) hashKeyCondition.getConstraint()).getValues()[0]));
         } else {
             key = new HashMap<String, AttributeValue>(2);
 

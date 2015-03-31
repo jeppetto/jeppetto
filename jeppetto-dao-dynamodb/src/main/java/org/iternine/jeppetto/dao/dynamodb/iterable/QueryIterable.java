@@ -26,7 +26,9 @@ import com.amazonaws.services.dynamodbv2.model.QueryResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashMap;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -38,6 +40,7 @@ public class QueryIterable<T> extends DynamoDBIterable<T> {
     //-------------------------------------------------------------
 
     private QueryRequest queryRequest;
+    private Collection<String> keyFields;
 
     private final Logger logger = LoggerFactory.getLogger(QueryIterable.class);
 
@@ -46,22 +49,30 @@ public class QueryIterable<T> extends DynamoDBIterable<T> {
     // Constructors
     //-------------------------------------------------------------
 
-    public QueryIterable(AmazonDynamoDB dynamoDB, Enhancer<T> enhancer, QueryRequest queryRequest, String hashKeyField) {
+    public QueryIterable(AmazonDynamoDB dynamoDB, Enhancer<T> enhancer, QueryRequest queryRequest,
+                         String hashKeyField, String rangeKeyField, String indexField) {
         super(dynamoDB, enhancer, hashKeyField);
 
         this.queryRequest = queryRequest;
+
+        if (rangeKeyField == null) {
+            this.keyFields = Collections.singleton(hashKeyField);
+        } else {
+            this.keyFields = new HashSet<String>(3);
+
+            keyFields.add(hashKeyField);
+            keyFields.add(rangeKeyField);
+
+            if (indexField != null) {
+                keyFields.add(indexField);
+            }
+        }
     }
 
 
     //-------------------------------------------------------------
     // Methods - Implementation
     //-------------------------------------------------------------
-
-    @Override
-    public Map<String, AttributeValue> getLastEvaluatedKey() {
-        return queryRequest.getExclusiveStartKey(); // We store lastEvaluatedKey in queryRequest's exclusiveStartKey field
-    }
-
 
     @Override
     protected void setExclusiveStartKey(Map<String, AttributeValue> exclusiveStartKey) {
@@ -92,5 +103,11 @@ public class QueryIterable<T> extends DynamoDBIterable<T> {
     @Override
     protected boolean moreAvailable() {
         return queryRequest.getExclusiveStartKey() != null;
+    }
+
+
+    @Override
+    protected Collection<String> getKeyFields() {
+        return keyFields;
     }
 }
