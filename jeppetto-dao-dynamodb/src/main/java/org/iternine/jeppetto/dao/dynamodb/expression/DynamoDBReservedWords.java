@@ -612,7 +612,7 @@ public enum DynamoDBReservedWords {
     }};
 
     private static Pattern nonWordCharacter = Pattern.compile("\\W");
-    private static Pattern allowablePatterns = Pattern.compile("\\[\\d+\\]|\\w+.\\w+");
+    private static Pattern allowablePatterns = Pattern.compile("\\[\\d+\\]|\\w+\\.\\w+");
 
 
     //-------------------------------------------------------------
