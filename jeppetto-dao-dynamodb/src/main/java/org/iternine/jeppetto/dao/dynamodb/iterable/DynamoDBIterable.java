@@ -95,7 +95,7 @@ public abstract class DynamoDBIterable<T> implements Iterable<T> {
 
 
     public String getPosition(boolean removeHashKey) {
-        Map<String, AttributeValue> lastExaminedKey = getLastExaminedKey();
+        Map<String, AttributeValue> lastExaminedKey = getLastExaminedKey(removeHashKey);
 
         if (lastExaminedKey == null) {
             return null;
@@ -105,10 +105,6 @@ public abstract class DynamoDBIterable<T> implements Iterable<T> {
 
         try {
             for (Map.Entry<String, AttributeValue> entry : lastExaminedKey.entrySet()) {
-                if (removeHashKey && entry.getKey().equals(hashKeyField)) {
-                    continue;
-                }
-
                 if (sb.length() > 0) {
                     sb.append("&");
                 }
@@ -212,7 +208,7 @@ public abstract class DynamoDBIterable<T> implements Iterable<T> {
     // Methods - Private
     //-------------------------------------------------------------
 
-    private Map<String, AttributeValue> getLastExaminedKey() {
+    private Map<String, AttributeValue> getLastExaminedKey(boolean removeHashKey) {
         Map<String, AttributeValue> generatedKey = new HashMap<String, AttributeValue>(3);  // hash, range, index keys
 
         if (!dynamoDBIterator.hasNext0()) {
@@ -220,6 +216,10 @@ public abstract class DynamoDBIterable<T> implements Iterable<T> {
         }
 
         for (String keyField : getKeyFields()) {
+            if (removeHashKey && keyField.equals(hashKeyField)) {
+                continue;
+            }
+
             generatedKey.put(keyField, dynamoDBIterator.getLastItem().get(keyField));
         }
 
