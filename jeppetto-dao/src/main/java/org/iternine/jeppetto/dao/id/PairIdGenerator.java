@@ -6,7 +6,7 @@ import org.iternine.jeppetto.dao.Pair;
 
 /**
  */
-public class PairGenerator<T1, T2> implements IdGenerator<Pair<T1, T2>> {
+public class PairIdGenerator<T1, T2> implements IdGenerator<Pair<T1, T2>> {
 
     //-------------------------------------------------------------
     // Variables - Private

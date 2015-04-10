@@ -16,6 +16,7 @@
 
 package org.iternine.jeppetto.dao.annotation;
 
+
 import org.iternine.jeppetto.dao.ProjectionType;
 
 import java.lang.annotation.ElementType;
@@ -23,11 +24,12 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 public @interface Projection {
 
-    public abstract String field() default "";
+    String field() default "";
 
-    public abstract ProjectionType type();
+    ProjectionType type();
 }

@@ -29,19 +29,19 @@ import java.lang.annotation.Target;
 @Target(ElementType.METHOD)
 public @interface DataAccessMethod {
 
-    public abstract OperationType operation() default OperationType.Read;
+    OperationType operation() default OperationType.Read;
 
-    public abstract Condition[] conditions() default {};
+    Condition[] conditions() default {};
 
-    public abstract Association[] associations() default {};
+    Association[] associations() default {};
 
-    public abstract Projection[] projections() default {};
+    Projection[] projections() default {};
 
-    public abstract Sort[] sorts() default {};
+    Sort[] sorts() default {};
 
-    public abstract boolean limitResults() default false;
+    boolean limitResults() default false;
 
-    public abstract boolean skipResults() default false;
+    boolean skipResults() default false;
 
-    public abstract boolean useAccessControlContextArgument() default false;
+    boolean useAccessControlContextArgument() default false;
 }

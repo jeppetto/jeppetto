@@ -29,7 +29,7 @@ import java.lang.annotation.ElementType;
 @Target(ElementType.ANNOTATION_TYPE)
 public @interface Sort {
 
-    public abstract String field();
+    String field();
 
-    public abstract SortDirection direction() default SortDirection.Ascending;
+    SortDirection direction() default SortDirection.Ascending;
 }

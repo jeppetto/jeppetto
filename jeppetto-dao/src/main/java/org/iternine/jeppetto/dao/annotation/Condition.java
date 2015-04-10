@@ -29,9 +29,9 @@ import java.lang.annotation.ElementType;
 @Target(ElementType.ANNOTATION_TYPE)
 public @interface Condition {
 
-    public abstract String field();
+    String field();
 
-    public abstract ConditionType type();
+    ConditionType type();
 
-//    public abstract String staticValue() default "";
+//    String staticValue() default "";
 }
