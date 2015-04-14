@@ -70,6 +70,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -105,14 +106,14 @@ public class DynamoDBQueryModelDAO<T, ID>
     private final IdGenerator<ID> idGenerator;
     private final boolean consistentRead;
     private final String optimisticLockField;
+    private final boolean enableScans;
 
     private final String hashKeyField;
     private final String rangeKeyField;
     private final String projectionExpression;
     private final Map<String, String> projectionExpressionNames;
-    private final Map<String, Map<String, String>> indexes;
-    private final Map<String, Map<String, String>> tableIndexOnly;
-    private final Map<String, Boolean> indexProjectsOverEntity;
+    private final Map<String, Map<String, IndexData>> indexes;
+    private final Map<String, Map<String, IndexData>> baseIndexOnly;
     private final Enhancer<T> persistableEnhancer;
     private final Enhancer<? extends T> updateObjectEnhancer;
     private final String uniqueIdConditionExpression;
@@ -136,6 +137,7 @@ public class DynamoDBQueryModelDAO<T, ID>
         this.idGenerator = (IdGenerator<ID>) daoProperties.get("idGenerator");
         this.consistentRead = Boolean.parseBoolean((String) daoProperties.get("consistentRead"));   // null okay - defaults to false
         this.optimisticLockField = (String) daoProperties.get("optimisticLockField");
+        this.enableScans = Boolean.parseBoolean((String) daoProperties.get("enableScans"));             // null okay - defaults to false
 
         TableDescription tableDescription = dynamoDB.describeTable(tableName).getTable();
 
@@ -154,68 +156,10 @@ public class DynamoDBQueryModelDAO<T, ID>
             this.projectionExpressionNames = Collections.emptyMap();
         }
 
-        this.indexProjectsOverEntity = new HashMap<String, Boolean>();
-
-        // Collect information about the local secondary indexes.  These will be added to the indexes map below.
-        Map<String, String> localIndexes;
-        List<LocalSecondaryIndexDescription> localSecondaryIndexes = tableDescription.getLocalSecondaryIndexes();
-        if (localSecondaryIndexes != null) {
-            localIndexes = new HashMap<String, String>(localSecondaryIndexes.size() + 1);
-
-            for (LocalSecondaryIndexDescription description : localSecondaryIndexes) {
-                String indexField = getKeyAttributeNames(description.getKeySchema()).getSecond();
-
-                localIndexes.put(indexField, description.getIndexName());
-
-                indexProjectsOverEntity.put(description.getIndexName(), description.getProjection().getProjectionType().equals("ALL")
-                                                                        || projectionExpressionBuilder != null
-                                                                           && projectionExpressionBuilder.isCoveredBy(description.getProjection()));
-            }
-
-            // We include the primary range key as a local index (w/o an index name) to make findUsingQueryModel() code below simpler
-            localIndexes.put(rangeKeyField, null);
-            localIndexes.put(null, null);
-        } else if (rangeKeyField != null) {
-            localIndexes = new HashMap<String, String>(2);
-
-            localIndexes.put(rangeKeyField, null);
-            localIndexes.put(null, null);
-        } else {
-            localIndexes = Collections.singletonMap(rangeKeyField, null);
-        }
-
-        // Process the global secondary indexes.  When done, add the local index information to the indexes map.
-        List<GlobalSecondaryIndexDescription> globalSecondaryIndexes = tableDescription.getGlobalSecondaryIndexes();
-        if (globalSecondaryIndexes != null) {
-            this.indexes = new HashMap<String, Map<String, String>>(globalSecondaryIndexes.size() + 1);
-
-            for (GlobalSecondaryIndexDescription description : globalSecondaryIndexes) {
-                Pair<String, String> indexFields = getKeyAttributeNames(description.getKeySchema());
-
-                if (!indexes.containsKey(indexFields.getFirst())) {
-                    indexes.put(indexFields.getFirst(), new HashMap<String, String>());
-                }
-
-                indexes.get(indexFields.getFirst()).put(indexFields.getSecond(), description.getIndexName());
-
-                indexProjectsOverEntity.put(description.getIndexName(), description.getProjection().getProjectionType().equals("ALL")
-                                                                        || projectionExpressionBuilder != null
-                                                                           && projectionExpressionBuilder.isCoveredBy(description.getProjection()));
-
-                if (!indexes.get(indexFields.getFirst()).containsKey(null)) {
-                    indexes.get(indexFields.getFirst()).put(null, description.getIndexName());
-                } else {
-                    logger.warn("Multiple GSIs with same hash key for table {}.  Unsure which index to use when no range key specified.",
-                                tableName);
-                }
-            }
-
-            indexes.put(hashKeyField, localIndexes);
-        } else {
-            this.indexes = Collections.singletonMap(hashKeyField, localIndexes);
-        }
-
-        this.tableIndexOnly = Collections.singletonMap(hashKeyField, Collections.singletonMap(rangeKeyField, (String) null));
+        List<String> keyFields = rangeKeyField == null ? Collections.singletonList(hashKeyField) : Arrays.asList(hashKeyField, rangeKeyField);
+        IndexData baseIndexData = new IndexData(null, keyFields, true);
+        this.baseIndexOnly = Collections.singletonMap(hashKeyField, Collections.singletonMap(rangeKeyField, baseIndexData));
+        this.indexes = processIndexes(tableDescription, projectionExpressionBuilder, baseIndexData);
         this.persistableEnhancer = EnhancerHelper.getPersistableEnhancer(entityClass);
 
         String updateObjectClassName = (String) daoProperties.get("updateObject");
@@ -508,12 +452,15 @@ public class DynamoDBQueryModelDAO<T, ID>
 
         if (conditionExpressionBuilder.hasHashKeyCondition()) {
             return queryItems(queryModel, conditionExpressionBuilder);
-        } else {
-            logger.warn("Condition does not specify a hash key -- using 'scan' to search.");
+        } else if (enableScans) {
+            logger.info("Condition does not specify a hash key -- using 'scan' to search.");
 
             conditionExpressionBuilder.convertRangeKeyConditionToExpression();
 
             return scanItems(queryModel, conditionExpressionBuilder);
+        } else {
+            throw new JeppettoException("Find cannot be satisfied without a scan and scans have not been enabled."
+                                        + "  Configure this DAO with 'enableScans' = true to allow this.");
         }
     }
 
@@ -545,9 +492,8 @@ public class DynamoDBQueryModelDAO<T, ID>
     public <U extends T> T updateUniqueUsingQueryModel(U updateObject, QueryModel queryModel)
             throws JeppettoException {
         UpdateExpressionBuilder updateExpressionBuilder = new UpdateExpressionBuilder((UpdateObject) updateObject);
-        // For referencing an object, we can only identify an item by its actual range key, not one of the index fields.  For the
-        // third parameter, pass in a singleton map that only contains the range field.
-        ConditionExpressionBuilder conditionExpressionBuilder = new ConditionExpressionBuilder(queryModel, tableIndexOnly);
+        // For referencing an object, we can only identify an item by its actual range key, not one of the index fields.
+        ConditionExpressionBuilder conditionExpressionBuilder = new ConditionExpressionBuilder(queryModel, baseIndexOnly);
         ResultFromUpdate resultFromUpdate = getResultFromUpdate(updateObject);
         Map<String, AttributeValue> key;
 
@@ -590,6 +536,85 @@ public class DynamoDBQueryModelDAO<T, ID>
     //-------------------------------------------------------------
     // Methods - Private
     //-------------------------------------------------------------
+
+    private Map<String, Map<String, IndexData>> processIndexes(TableDescription tableDescription,
+                                                               ProjectionExpressionBuilder projectionExpressionBuilder,
+                                                               IndexData baseIndexData) {
+        // Collect information about the local secondary indexes.  These will be included with the global indexes below.
+        Map<String, IndexData> localIndexes;
+        List<LocalSecondaryIndexDescription> localSecondaryIndexes = tableDescription.getLocalSecondaryIndexes();
+        if (localSecondaryIndexes != null) {
+            localIndexes = new HashMap<String, IndexData>(localSecondaryIndexes.size() + 2);
+
+            // We include these as local indexes to make findUsingQueryModel() code below simpler
+            localIndexes.put(rangeKeyField, baseIndexData);
+            localIndexes.put(null, baseIndexData);
+
+            for (LocalSecondaryIndexDescription description : localSecondaryIndexes) {
+                String indexField = getKeyAttributeNames(description.getKeySchema()).getSecond();
+                boolean projectsOverEntity = description.getProjection().getProjectionType().equals("ALL")
+                                             || projectionExpressionBuilder != null
+                                                && projectionExpressionBuilder.isCoveredBy(description.getProjection());
+
+                List<String> keyFields = new ArrayList<String>(baseIndexData.keyFields);
+                keyFields.add(indexField);
+
+                localIndexes.put(indexField, new IndexData(description.getIndexName(), keyFields, projectsOverEntity));
+            }
+        } else if (rangeKeyField != null) {
+            localIndexes = new HashMap<String, IndexData>(2);
+
+            localIndexes.put(rangeKeyField, baseIndexData);
+            localIndexes.put(null, baseIndexData);
+        } else {
+            localIndexes = Collections.singletonMap(null, baseIndexData);
+        }
+
+        // Process the global secondary indexes.  When done, add the local index information.
+        List<GlobalSecondaryIndexDescription> globalSecondaryIndexes = tableDescription.getGlobalSecondaryIndexes();
+        if (globalSecondaryIndexes != null) {
+            Map<String, Map<String, IndexData>> indexes = new HashMap<String, Map<String, IndexData>>(globalSecondaryIndexes.size() + 1);
+
+            for (GlobalSecondaryIndexDescription description : globalSecondaryIndexes) {
+                Pair<String, String> indexFields = getKeyAttributeNames(description.getKeySchema());
+                boolean projectsOverEntity = description.getProjection().getProjectionType().equals("ALL")
+                                             || projectionExpressionBuilder != null
+                                                && projectionExpressionBuilder.isCoveredBy(description.getProjection());
+
+                List<String> keyFields = new ArrayList<String>();
+                keyFields.add(indexFields.getFirst());
+                if (indexFields.getSecond() != null) {
+                    keyFields.add(indexFields.getSecond());
+                }
+                keyFields.add(hashKeyField);
+                if (rangeKeyField != null) {
+                    keyFields.add(rangeKeyField);
+                }
+
+                IndexData indexData = new IndexData(description.getIndexName(), keyFields, projectsOverEntity);
+
+                if (!indexes.containsKey(indexFields.getFirst())) {
+                    indexes.put(indexFields.getFirst(), new HashMap<String, IndexData>());
+                }
+
+                indexes.get(indexFields.getFirst()).put(indexFields.getSecond(), indexData);
+
+                // In case a query doesn't specify a range key, we still want to select an index for this hash key.
+                // If one has already been selected, pick one that projects over this entity to avoid extra DB reads.
+                IndexData noRangeKeyIndexData = indexes.get(indexFields.getFirst()).get(null);
+                if (noRangeKeyIndexData == null || !noRangeKeyIndexData.projectsOverEntity) {
+                    indexes.get(indexFields.getFirst()).put(null, indexData);
+                }
+            }
+
+            indexes.put(hashKeyField, localIndexes);
+
+            return indexes;
+        } else {
+            return Collections.singletonMap(hashKeyField, localIndexes);
+        }
+    }
+
 
     private void saveItem(DynamoDBPersistable dynamoDBPersistable) {
         generateIdIfNeeded(dynamoDBPersistable);
@@ -685,40 +710,51 @@ public class DynamoDBQueryModelDAO<T, ID>
             queryRequest.setLimit(queryModel.getMaxResults());
         }
 
+        List<String> keyFields = applyIndexAndGetKeyFields(conditionExpressionBuilder, queryRequest, queryModel.getSorts());
+        applyExpressions(conditionExpressionBuilder, queryRequest);
+
+        return new QueryIterable<T>(dynamoDB, persistableEnhancer, queryRequest, keyFields.get(0), keyFields);
+    }
+
+
+    private List<String> applyIndexAndGetKeyFields(ConditionExpressionBuilder conditionExpressionBuilder,
+                                                   QueryRequest queryRequest, List<Sort> sorts) {
         String hashKey = conditionExpressionBuilder.getHashKey();
         String rangeKey = conditionExpressionBuilder.getRangeKey();
-        String indexName;
+        IndexData indexData;
 
-        // DynamoDB can only sort on the effective range key.  If no range key is specified, let the sort key become the range key.  If a range
-        // key is specified, ensure the range key and sort key are the same.  In both cases, use the selected key to determine the index to use
-        // while querying.
-        List<Sort> sorts = queryModel.getSorts();
-        if (sorts != null && !sorts.isEmpty()) {
-            if (sorts.size() > 1) {
-                logger.warn("DynamoDB supports only one sort value.  Ignoring all but the first item.");
-            }
-
+        if (sorts == null || sorts.isEmpty()) {
+            indexData = indexes.get(hashKey).get(rangeKey);
+        } else if (sorts.size() == 1) {
             Sort sort = sorts.get(0);
             String sortKey = sort.getField();
 
-            if (rangeKey == null || rangeKey.equals(sortKey)) {
-                queryRequest.setScanIndexForward(sort.getSortDirection() == SortDirection.Ascending);
-                indexName = indexes.get(hashKey).get(sortKey);
-            } else {
-                logger.warn("Can only sort on the effective range key. Ignoring sort on " + sortKey);
-                indexName = indexes.get(hashKey).get(rangeKey);
+            // DynamoDB can only sort on the effective range key.  If a range key is specified, ensure the range key and
+            // sort key are the same.
+            if (rangeKey != null && !rangeKey.equals(sortKey)) {
+                throw new JeppettoException("DynamoDB can only sort on the effective range key. Unable to sort on: " + sortKey);
             }
+
+            queryRequest.setScanIndexForward(sort.getSortDirection() == SortDirection.Ascending);
+
+            // Index is based off the sort key
+            indexData = indexes.get(hashKey).get(sortKey);
         } else {
-            indexName = indexes.get(hashKey).get(rangeKey);
+            throw new JeppettoException("DynamoDB only supports one sort value.");
         }
 
-        if (indexName != null && !indexProjectsOverEntity.get(indexName)) {
-            logger.warn("Query using index {} incurs additional costs to fully fetch a {} type. Use a projected object DAO to avoid this overhead.",
-                        indexName, entityClass.getSimpleName());
+        if (indexData.indexName != null && !indexData.projectsOverEntity) {
+            logger.warn("Query using index {} incurs additional costs to fully fetch a {} type. Use a projected object"
+                        + " DAO to avoid this overhead.", indexData.indexName, entityClass.getSimpleName());
         }
 
-        queryRequest.setIndexName(indexName);
+        queryRequest.setIndexName(indexData.indexName);
 
+        return indexData.keyFields;
+    }
+
+
+    private void applyExpressions(ConditionExpressionBuilder conditionExpressionBuilder, QueryRequest queryRequest) {
         Map<String, String> expressionAttributeNames;
 
         queryRequest.setProjectionExpression(projectionExpression);
@@ -746,8 +782,6 @@ public class DynamoDBQueryModelDAO<T, ID>
         if (!expressionAttributeNames.isEmpty()) {
             queryRequest.setExpressionAttributeNames(expressionAttributeNames);
         }
-
-        return new QueryIterable<T>(dynamoDB, persistableEnhancer, queryRequest, hashKeyField, rangeKeyField, rangeKey);
     }
 
 
@@ -794,7 +828,9 @@ public class DynamoDBQueryModelDAO<T, ID>
             scanRequest.setExpressionAttributeNames(expressionAttributeNames);
         }
 
-        return new ScanIterable<T>(dynamoDB, persistableEnhancer, scanRequest, hashKeyField, rangeKeyField);
+        return new ScanIterable<T>(dynamoDB, persistableEnhancer, scanRequest,
+                                   rangeKeyField == null ? Collections.singleton(hashKeyField)
+                                                         : Arrays.asList(hashKeyField, rangeKeyField));
     }
 
 
@@ -865,7 +901,7 @@ public class DynamoDBQueryModelDAO<T, ID>
     }
 
 
-    public Map<String, AttributeValue> getKeyFrom(DynamoDBPersistable dynamoDBPersistable) {
+    private Map<String, AttributeValue> getKeyFrom(DynamoDBPersistable dynamoDBPersistable) {
         Map<String, AttributeValue> key;
 
         if (rangeKeyField != null) {
@@ -879,5 +915,22 @@ public class DynamoDBQueryModelDAO<T, ID>
         }
 
         return key;
+    }
+
+
+    //-------------------------------------------------------------
+    // Inner Classes
+    //-------------------------------------------------------------
+
+    public static class IndexData {
+        public String indexName;
+        public List<String> keyFields;
+        public boolean projectsOverEntity;
+
+        private IndexData(String indexName, List<String> keyFields, boolean projectsOverEntity) {
+            this.indexName = indexName;
+            this.keyFields = keyFields;
+            this.projectsOverEntity = projectsOverEntity;
+        }
     }
 }

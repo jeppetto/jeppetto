@@ -57,6 +57,7 @@
                 <entry key="db" value-ref="dynamoDb"/>
                 <entry key="projectionObject" value="true"/>
                 <entry key="tableName" value="SimpleObject"/>
+                <entry key="enableScans" value="true"/>
             </map>
         </constructor-arg>
     </bean>
@@ -70,7 +71,7 @@
             <map>
                 <entry key="db" value-ref="dynamoDb"/>
                 <entry key="idGenerator">
-                    <bean class="org.iternine.jeppetto.dao.id.PairGenerator">
+                    <bean class="org.iternine.jeppetto.dao.id.PairIdGenerator">
                         <property name="firstIdGenerator"><bean class="org.iternine.jeppetto.dao.id.UUIDGenerator"/></property>
                         <property name="secondIdGenerator"><bean class="org.iternine.jeppetto.dao.id.UUIDGenerator"/></property>
                     </bean>

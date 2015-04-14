@@ -17,6 +17,7 @@
 package org.iternine.jeppetto.dao.dynamodb.iterable;
 
 
+import org.iternine.jeppetto.dao.JeppettoException;
 import org.iternine.jeppetto.enhance.Enhancer;
 
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
@@ -26,9 +27,7 @@ import com.amazonaws.services.dynamodbv2.model.ScanResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -49,13 +48,11 @@ public class ScanIterable<T> extends DynamoDBIterable<T> {
     // Constructors
     //-------------------------------------------------------------
 
-    public ScanIterable(AmazonDynamoDB dynamoDB, Enhancer<T> enhancer, ScanRequest scanRequest,
-                        String hashKeyField, String rangeKeyField) {
-        super(dynamoDB, enhancer, hashKeyField);
+    public ScanIterable(AmazonDynamoDB dynamoDB, Enhancer<T> enhancer, ScanRequest scanRequest, Collection<String> keyFields) {
+        super(dynamoDB, enhancer);
 
         this.scanRequest = scanRequest;
-
-        this.keyFields = rangeKeyField == null ? Collections.singleton(hashKeyField) : Arrays.asList(hashKeyField, rangeKeyField);
+        this.keyFields = keyFields;
     }
 
 
@@ -98,5 +95,25 @@ public class ScanIterable<T> extends DynamoDBIterable<T> {
     @Override
     protected Collection<String> getKeyFields() {
         return keyFields;
+    }
+
+
+    @Override
+    protected String getHashKeyField() {
+        throw new JeppettoException("HashKeyField not used by ScanIterable");
+    }
+
+
+    //-------------------------------------------------------------
+    // Methods - Override
+    //-------------------------------------------------------------
+
+    @Override
+    public String getPosition(boolean removeHashKey) {
+        if (removeHashKey) {
+            throw new JeppettoException("ScanIterable doesn't support hash key removal.");
+        }
+
+        return super.getPosition(false);
     }
 }

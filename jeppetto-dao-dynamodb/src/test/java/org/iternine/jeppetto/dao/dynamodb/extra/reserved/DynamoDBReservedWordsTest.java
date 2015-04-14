@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.iternine.jeppetto.dao.dynamodb.extra.expression;
+package org.iternine.jeppetto.dao.dynamodb.extra.reserved;
 
 
 import org.iternine.jeppetto.dao.dynamodb.expression.DynamoDBReservedWords;

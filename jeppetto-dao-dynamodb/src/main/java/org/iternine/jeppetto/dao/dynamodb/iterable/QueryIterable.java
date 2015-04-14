@@ -27,8 +27,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -40,6 +38,7 @@ public class QueryIterable<T> extends DynamoDBIterable<T> {
     //-------------------------------------------------------------
 
     private QueryRequest queryRequest;
+    private String hashKeyField;
     private Collection<String> keyFields;
 
     private final Logger logger = LoggerFactory.getLogger(QueryIterable.class);
@@ -50,23 +49,12 @@ public class QueryIterable<T> extends DynamoDBIterable<T> {
     //-------------------------------------------------------------
 
     public QueryIterable(AmazonDynamoDB dynamoDB, Enhancer<T> enhancer, QueryRequest queryRequest,
-                         String hashKeyField, String rangeKeyField, String indexField) {
-        super(dynamoDB, enhancer, hashKeyField);
+                         String hashKeyField, Collection<String> keyFields) {
+        super(dynamoDB, enhancer);
 
         this.queryRequest = queryRequest;
-
-        if (rangeKeyField == null) {
-            this.keyFields = Collections.singleton(hashKeyField);
-        } else {
-            this.keyFields = new HashSet<String>(3);
-
-            keyFields.add(hashKeyField);
-            keyFields.add(rangeKeyField);
-
-            if (indexField != null) {
-                keyFields.add(indexField);
-            }
-        }
+        this.hashKeyField = hashKeyField;
+        this.keyFields = keyFields;
     }
 
 
@@ -109,5 +97,11 @@ public class QueryIterable<T> extends DynamoDBIterable<T> {
     @Override
     protected Collection<String> getKeyFields() {
         return keyFields;
+    }
+
+
+    @Override
+    protected String getHashKeyField() {
+        return hashKeyField;
     }
 }

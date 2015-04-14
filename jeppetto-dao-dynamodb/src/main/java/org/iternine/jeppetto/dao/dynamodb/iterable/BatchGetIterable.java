@@ -52,7 +52,7 @@ public class BatchGetIterable<T> extends DynamoDBIterable<T> {
     //-------------------------------------------------------------
 
     public BatchGetIterable(AmazonDynamoDB dynamoDB, Enhancer<T> enhancer, BatchGetItemRequest batchGetItemRequest, String tableName) {
-        super(dynamoDB, enhancer, null);
+        super(dynamoDB, enhancer);
 
         this.batchGetItemRequest = batchGetItemRequest;
         this.tableName = tableName;
@@ -102,5 +102,25 @@ public class BatchGetIterable<T> extends DynamoDBIterable<T> {
     @Override
     protected Collection<String> getKeyFields() {
         throw new JeppettoException("KeyFields not used by BatchGet");
+    }
+
+
+    @Override
+    protected String getHashKeyField() {
+        throw new JeppettoException("HashKeyField not used by BatchGet");
+    }
+
+
+    //-------------------------------------------------------------
+    // Methods - Override
+    //-------------------------------------------------------------
+
+    @Override
+    public String getPosition(boolean removeHashKey) {
+        if (removeHashKey) {
+            throw new JeppettoException("BatchGetIterable doesn't support hash key removal.");
+        }
+
+        return super.getPosition(false);
     }
 }

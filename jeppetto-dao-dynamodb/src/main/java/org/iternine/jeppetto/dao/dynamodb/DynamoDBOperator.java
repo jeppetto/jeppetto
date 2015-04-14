@@ -50,7 +50,11 @@ public enum DynamoDBOperator {
     private int argumentCount;
 
 
-    private DynamoDBOperator(ComparisonOperator comparisonOperator, int argumentCount) {
+    //-------------------------------------------------------------
+    // Constructor
+    //-------------------------------------------------------------
+
+    DynamoDBOperator(ComparisonOperator comparisonOperator, int argumentCount) {
         this.comparisonOperator = comparisonOperator;
         this.argumentCount = argumentCount;
     }

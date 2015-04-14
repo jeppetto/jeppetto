@@ -44,7 +44,6 @@ public abstract class DynamoDBIterable<T> implements Iterable<T> {
 
     private AmazonDynamoDB dynamoDB;
     private Enhancer<T> enhancer;
-    private String hashKeyField;
     private int limit = -1;
     private DynamoDBIterator dynamoDBIterator;
 
@@ -53,10 +52,9 @@ public abstract class DynamoDBIterable<T> implements Iterable<T> {
     // Constructors
     //-------------------------------------------------------------
 
-    public DynamoDBIterable(AmazonDynamoDB dynamoDB, Enhancer<T> enhancer, String hashKeyField) {
+    public DynamoDBIterable(AmazonDynamoDB dynamoDB, Enhancer<T> enhancer) {
         this.dynamoDB = dynamoDB;
         this.enhancer = enhancer;
-        this.hashKeyField = hashKeyField;
     }
 
 
@@ -71,6 +69,8 @@ public abstract class DynamoDBIterable<T> implements Iterable<T> {
     protected abstract boolean moreAvailable();
 
     protected abstract Collection<String> getKeyFields();
+
+    protected abstract String getHashKeyField();
 
 
     //-------------------------------------------------------------
@@ -154,8 +154,8 @@ public abstract class DynamoDBIterable<T> implements Iterable<T> {
             }
 
             if (hashKeyValue != null) {
-                // TODO: support types other than just 'S'?
-                exclusiveStartKey.put(hashKeyField, new AttributeValue(hashKeyValue));
+                // TODO: support types other than just 'S'
+                exclusiveStartKey.put(getHashKeyField(), new AttributeValue(hashKeyValue));
             }
 
             setExclusiveStartKey(exclusiveStartKey);
@@ -209,14 +209,14 @@ public abstract class DynamoDBIterable<T> implements Iterable<T> {
     //-------------------------------------------------------------
 
     private Map<String, AttributeValue> getLastExaminedKey(boolean removeHashKey) {
-        Map<String, AttributeValue> generatedKey = new HashMap<String, AttributeValue>(3);  // hash, range, index keys
+        Map<String, AttributeValue> generatedKey = new HashMap<String, AttributeValue>(getKeyFields().size());
 
         if (!dynamoDBIterator.hasNext0()) {
             return null;
         }
 
         for (String keyField : getKeyFields()) {
-            if (removeHashKey && keyField.equals(hashKeyField)) {
+            if (removeHashKey && keyField.equals(getHashKeyField())) {
                 continue;
             }
 

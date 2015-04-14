@@ -22,6 +22,7 @@ import org.iternine.jeppetto.dao.QueryModel;
 import org.iternine.jeppetto.dao.dynamodb.ConversionUtil;
 import org.iternine.jeppetto.dao.dynamodb.DynamoDBConstraint;
 import org.iternine.jeppetto.dao.dynamodb.DynamoDBOperator;
+import org.iternine.jeppetto.dao.dynamodb.DynamoDBQueryModelDAO.IndexData;
 
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.dynamodbv2.model.ComparisonOperator;
@@ -90,7 +91,7 @@ public class ConditionExpressionBuilder extends ExpressionBuilder {
     }
 
 
-    public ConditionExpressionBuilder(QueryModel queryModel, Map<String, Map<String, String>> indexes) {
+    public ConditionExpressionBuilder(QueryModel queryModel, Map<String, Map<String, IndexData>> indexes) {
         super(true);
 
         if (queryModel.getConditions() != null) {

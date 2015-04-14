@@ -43,6 +43,7 @@
             <map>
                 <entry key="db" value-ref="dynamoDb"/>
                 <entry key="idGenerator"><bean class="org.iternine.jeppetto.dao.id.UUIDGenerator"/></entry>
+                <entry key="enableScans" value="true"/>
             </map>
         </constructor-arg>
     </bean>
