@@ -620,8 +620,11 @@ public enum DynamoDBReservedWords {
     //-------------------------------------------------------------
 
     public static boolean isReserved(String word) {
-        return Character.isDigit(word.charAt(0))
-                || reservedWords.contains(word.toLowerCase())
-                || nonWordCharacter.matcher(word).find() && !allowablePatterns.matcher(word).matches();
+        char ch = word.charAt(0);
+
+        return Character.isDigit(ch)
+               || ch == '_'
+               || reservedWords.contains(word.toLowerCase())
+               || nonWordCharacter.matcher(word).find() && !allowablePatterns.matcher(word).matches();
     }
 }
