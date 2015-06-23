@@ -205,7 +205,7 @@ public class DynamoDBQueryModelDAO<T, ID>
         GetItemResult result;
 
         try {
-            GetItemRequest getItemRequest = new GetItemRequest(tableName, getKeyFrom(id));
+            GetItemRequest getItemRequest = new GetItemRequest(tableName, getKeyFrom(id), consistentRead);
 
             getItemRequest.setProjectionExpression(projectionExpression);
 
@@ -241,6 +241,7 @@ public class DynamoDBQueryModelDAO<T, ID>
 
         KeysAndAttributes keysAndAttributes = new KeysAndAttributes().withKeys(keys);
 
+        keysAndAttributes.setConsistentRead(consistentRead);
         keysAndAttributes.setProjectionExpression(projectionExpression);
 
         if (!projectionExpressionNames.isEmpty()) {
