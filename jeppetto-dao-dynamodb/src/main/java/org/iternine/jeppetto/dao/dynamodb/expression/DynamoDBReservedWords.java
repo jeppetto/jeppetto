@@ -612,7 +612,6 @@ public enum DynamoDBReservedWords {
     }};
 
     private static Pattern nonWordCharacter = Pattern.compile("\\W");
-    private static Pattern allowablePatterns = Pattern.compile("\\[\\d+\\]|\\w+\\.\\w+");
 
 
     //-------------------------------------------------------------
@@ -625,6 +624,6 @@ public enum DynamoDBReservedWords {
         return Character.isDigit(ch)
                || ch == '_'
                || reservedWords.contains(word.toLowerCase())
-               || nonWordCharacter.matcher(word).find() && !allowablePatterns.matcher(word).matches();
+               || nonWordCharacter.matcher(word).find();
     }
 }
