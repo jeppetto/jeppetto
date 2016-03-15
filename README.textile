@@ -1,5 +1,3 @@
 h2. Jeppetto
 
 Information and documentation about Jeppetto can be found on the "wiki":https://github.com/jeppetto/jeppetto/wiki.
-
-Jeppetto uses git-flow.  The 'master' branch reflects the latest released code, while 'develop' has pre-release features.
