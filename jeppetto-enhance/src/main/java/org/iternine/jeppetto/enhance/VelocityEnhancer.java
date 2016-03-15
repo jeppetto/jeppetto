@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2011 Jeppetto and Jonathan Thompson
+ * Copyright (c) 2011-2014 Jeppetto and Jonathan Thompson
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *    http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -33,21 +33,14 @@ import java.io.StringWriter;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 
 public abstract class VelocityEnhancer<T> extends Enhancer<T> {
-
-    //-------------------------------------------------------------
-    // Variables - Private
-    //-------------------------------------------------------------
-
-    private Map<String, Object> contextItems;
-
 
     //-------------------------------------------------------------
     // Variables - Private - Static
@@ -87,18 +80,14 @@ public abstract class VelocityEnhancer<T> extends Enhancer<T> {
     }
 
 
-    public VelocityEnhancer(Class<T> baseClass, Map<String, Object> contextItems) {
-        super(baseClass);
-
-        this.contextItems = contextItems;
-    }
-
-
     //-------------------------------------------------------------
     // Methods - Abstract - Protected
     //-------------------------------------------------------------
 
     protected abstract String getTemplateLocation();
+
+
+    protected abstract boolean shouldEnhanceMethod(CtMethod method);
 
 
     //-------------------------------------------------------------
@@ -122,19 +111,17 @@ public abstract class VelocityEnhancer<T> extends Enhancer<T> {
             velocityContext.put("getters", findGetters(original));
             velocityContext.put("abstractMethods", findAbstractMethods(original));
 
-            if (contextItems != null) {
-                for (Map.Entry<String, Object> contextItem : contextItems.entrySet()) {
-                    velocityContext.put(contextItem.getKey(), contextItem.getValue());
-                }
+            Map<String, Object> contextItems = getAdditionalContextItems();
+
+            for (Map.Entry<String, Object> contextItem : contextItems.entrySet()) {
+                velocityContext.put(contextItem.getKey(), contextItem.getValue());
             }
 
             StringWriter writer = new StringWriter();
             engine.getTemplate(getTemplateLocation()).merge(velocityContext, writer);
 
             logger.debug("Enhanced {} to form new class {} with source:\n{}",
-                         new Object[] { baseClass.getSimpleName(),
-                                        templateHelper.clsName(),
-                                        writer });
+                         baseClass.getSimpleName(), templateHelper.clsName(), writer);
 
             return ClassLoadingUtil.toClass(templateHelper.compile());
         } catch (Exception e) {
@@ -146,6 +133,15 @@ public abstract class VelocityEnhancer<T> extends Enhancer<T> {
                 original.detach();
             }
         }
+    }
+
+
+    //-------------------------------------------------------------
+    // Methods - Protected
+    //-------------------------------------------------------------
+
+    protected Map<String, Object> getAdditionalContextItems() {
+        return new HashMap<String, Object>();
     }
 
 
@@ -165,26 +161,27 @@ public abstract class VelocityEnhancer<T> extends Enhancer<T> {
 
 
     private CtMethod[] findGetters(CtClass superClass)
-            throws NotFoundException {
+            throws NotFoundException, ClassNotFoundException {
         List<CtMethod> getters = new ArrayList<CtMethod>();
         String objectFullName = Object.class.getName();
         Set<String> handledMethods = new HashSet<String>();
 
-        for (CtMethod originalMethod : getMethodsFrom(superClass)) {
-            String methodName = originalMethod.getName();
+        for (CtMethod method : getMethodsFrom(superClass)) {
+            String methodName = method.getName();
             boolean methodIsGetter = methodName.startsWith("get") || methodName.startsWith("is");
 
             // Validate the method is a valid, overridable getter
             if (!handledMethods.contains(methodName)
                 && methodIsGetter
-                && !originalMethod.getDeclaringClass().getName().equals(objectFullName)
-                && !Modifier.isFinal(originalMethod.getModifiers())
-                && !Modifier.isAbstract(originalMethod.getModifiers())
-                && originalMethod.getParameterTypes().length == 0
-                && setterExists(superClass, extractFieldName(methodName))) {
+                && !method.getDeclaringClass().getName().equals(objectFullName)
+                && !Modifier.isFinal(method.getModifiers())
+                && !Modifier.isAbstract(method.getModifiers())
+                && method.getParameterTypes().length == 0
+                && setterExists(superClass, extractFieldName(methodName))
+                && shouldEnhanceMethod(method)) {
 
                 handledMethods.add(methodName);
-                getters.add(originalMethod);
+                getters.add(method);
             }
         }
 
@@ -195,9 +192,9 @@ public abstract class VelocityEnhancer<T> extends Enhancer<T> {
     private CtMethod[] findAbstractMethods(CtClass superClass) {
         List<CtMethod> abstractMethods = new ArrayList<CtMethod>();
 
-        for (CtMethod originalMethod : getMethodsFrom(superClass)) {
-            if (Modifier.isAbstract(originalMethod.getModifiers())) {
-                abstractMethods.add(originalMethod);
+        for (CtMethod method : getMethodsFrom(superClass)) {
+            if (Modifier.isAbstract(method.getModifiers())) {
+                abstractMethods.add(method);
             }
         }
 
@@ -206,18 +203,18 @@ public abstract class VelocityEnhancer<T> extends Enhancer<T> {
 
 
     private String extractFieldName(String from) {
-        final String sub;
+        final String result;
 
         if (from.startsWith("is")) {
-            sub = from.substring(2);
+            result = from.substring(2);
         } else {
-            sub = from.substring(3);
+            result = from.substring(3);
         }
 
-        if (sub.length() > 1) {
-            return sub.substring(0, 1).toLowerCase().concat(sub.substring(1));
+        if (result.length() > 1) {
+            return result.substring(0, 1).toLowerCase().concat(result.substring(1));
         } else {
-            return sub.toLowerCase();
+            return result.toLowerCase();
         }
     }
 

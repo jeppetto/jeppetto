@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011 Jeppetto and Jonathan Thompson
+ * Copyright (c) 2011-2014 Jeppetto and Jonathan Thompson
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,7 +41,8 @@ public enum JDBCCondition {
     Within(" IN "),
     Between(" BETWEEN ? AND ? "),
     IsNull(" IS NULL "),
-    IsNotNull(" IS NOT NULL ");
+    IsNotNull(" IS NOT NULL "),
+    BeginsWith(" LIKE ");
 
 
     //-------------------------------------------------------------
@@ -92,6 +93,12 @@ public enum JDBCCondition {
         case IsNull:
         case IsNotNull:
             // No parameters
+
+            break;
+
+        case BeginsWith:
+            // TODO: Escape argsIterator.next()
+            jdbcConstraint.setParameter1(argsIterator.next().toString() + '%');
 
             break;
 

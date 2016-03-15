@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2011 Jeppetto and Jonathan Thompson
+ * Copyright (c) 2011-2014 Jeppetto and Jonathan Thompson
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *    http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -86,9 +86,32 @@ public interface QueryModelDAO<T, ID> extends GenericDAO<T, ID> {
 
 
     /**
+     * Apply the set of changes described in the update object to a single persisted
+     * item that match the specified QueryModel.
      *
+     * @param updateObject that describes the set of changes to be applied.
+     * @param queryModel that contains the criteria for items to update
+     *
+     * @return The item that was updated.
+     *
+     * @throws JeppettoException if any underlying failure occurs
      */
-    ReferenceSet<T> referenceUsingQueryModel(QueryModel queryModel)
+    <U extends T> T updateUniqueUsingQueryModel(U updateObject, QueryModel queryModel)
+            throws JeppettoException;
+
+
+    /**
+     * Apply the set of changes described in the update object to persisted items that
+     * match the specified QueryModel.
+     *
+     * @param updateObject that describes the set of changes to be applied.
+     * @param queryModel that contains the criteria for items to update
+     *
+     * @return Iterable of items that were updated.
+     *
+     * @throws JeppettoException if any underlying failure occurs
+     */
+    <U extends T> Iterable<T> updateUsingQueryModel(U updateObject, QueryModel queryModel)
             throws JeppettoException;
 
 
@@ -104,9 +127,7 @@ public interface QueryModelDAO<T, ID> extends GenericDAO<T, ID> {
      *
      * @return corresponding Condition object
      */
-    Condition buildCondition(String conditionField,
-                             ConditionType conditionType,
-                             Iterator argsIterator);
+    Condition buildCondition(String conditionField, ConditionType conditionType, Iterator argsIterator);
 
 
     /**
@@ -121,7 +142,5 @@ public interface QueryModelDAO<T, ID> extends GenericDAO<T, ID> {
      *
      * @return corresponding Projection object
      */
-    Projection buildProjection(String projectionField,
-                               ProjectionType projectionType,
-                               Iterator argsIterator);
+    Projection buildProjection(String projectionField, ProjectionType projectionType, Iterator argsIterator);
 }

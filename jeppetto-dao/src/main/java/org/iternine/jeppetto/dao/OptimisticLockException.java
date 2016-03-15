@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011 Jeppetto and Jonathan Thompson
+ * Copyright (c) 2011-2014 Jeppetto and Jonathan Thompson
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,17 +27,17 @@ public class OptimisticLockException extends JeppettoException {
     }
 
 
-    public OptimisticLockException(String s) {
-        super(s);
+    public OptimisticLockException(String message) {
+        super(message);
     }
 
 
-    public OptimisticLockException(Throwable throwable) {
-        super(throwable);
+    public OptimisticLockException(Throwable cause) {
+        super(cause);
     }
 
 
-    public OptimisticLockException(String s, Throwable throwable) {
-        super(s, throwable);
+    public OptimisticLockException(String message, Throwable cause) {
+        super(message, cause);
     }
 }

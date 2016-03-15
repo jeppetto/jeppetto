@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2011 Jeppetto and Jonathan Thompson
+ * Copyright (c) 2011-2014 Jeppetto and Jonathan Thompson
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *    http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -24,6 +24,7 @@ import org.iternine.jeppetto.dao.AccessControlException;
 import org.iternine.jeppetto.dao.AccessType;
 import org.iternine.jeppetto.dao.Condition;
 import org.iternine.jeppetto.dao.ConditionType;
+import org.iternine.jeppetto.dao.FailedBatchException;
 import org.iternine.jeppetto.dao.JeppettoException;
 import org.iternine.jeppetto.dao.NoSuchItemException;
 import org.iternine.jeppetto.dao.OptimisticLockException;
@@ -31,7 +32,6 @@ import org.iternine.jeppetto.dao.Projection;
 import org.iternine.jeppetto.dao.ProjectionType;
 import org.iternine.jeppetto.dao.QueryModel;
 import org.iternine.jeppetto.dao.QueryModelDAO;
-import org.iternine.jeppetto.dao.ReferenceSet;
 import org.iternine.jeppetto.dao.Sort;
 import org.iternine.jeppetto.dao.SortDirection;
 import org.iternine.jeppetto.dao.TooManyItemsException;
@@ -42,22 +42,27 @@ import org.hibernate.NonUniqueObjectException;
 import org.hibernate.Query;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
+import org.hibernate.StaleObjectStateException;
 import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Order;
 import org.hibernate.criterion.ProjectionList;
 import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
-import org.hibernate.engine.SessionFactoryImplementor;
-import org.hibernate.engine.TypedValue;
-import org.hibernate.impl.CriteriaImpl;
+import org.hibernate.engine.spi.SessionFactoryImplementor;
+import org.hibernate.engine.spi.TypedValue;
+import org.hibernate.internal.CriteriaImpl;
 import org.hibernate.loader.criteria.CriteriaQueryTranslator;
 import org.hibernate.type.StringType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -88,6 +93,8 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
     private AccessControlHelper accessControlHelper;
     private AccessControlContextProvider accessControlContextProvider;
     private String idField = "id";      // TODO: Allow for configuration...
+
+    private static final Logger logger = LoggerFactory.getLogger(HibernateQueryModelDAO.class);
 
 
     //-------------------------------------------------------------
@@ -162,7 +169,11 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
             throws OptimisticLockException, JeppettoException {
         try {
             getCurrentSession().saveOrUpdate(entity);
+
+            flush();
         } catch (org.hibernate.OptimisticLockException e) {
+            throw new OptimisticLockException(e);
+        } catch (StaleObjectStateException e) {
             throw new OptimisticLockException(e);
         } catch (HibernateException e) {
             throw new JeppettoException(e);
@@ -196,23 +207,41 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
 
     @Override
     public void deleteByIds(ID... ids)
-            throws JeppettoException {
+            throws FailedBatchException, JeppettoException {
+        Map<ID, Exception> failedDeletes = new LinkedHashMap<ID, Exception>();
+
         for (ID id : ids) {
-            deleteById(id);
+            try {
+                deleteById(id);
+            } catch (Exception e) {
+                failedDeletes.put(id, e);
+            }
+        }
+
+        if (failedDeletes.size() > 0) {
+            // TODO: fix emptyList()...
+            throw new FailedBatchException("Unable to delete all items", Collections.emptyList(), failedDeletes);
         }
     }
 
 
     @Override
-    public ReferenceSet<T> referenceByIds(ID... ids) {
-        throw new RuntimeException("referenceByIds not yet implemented");
+    public <U extends T> U getUpdateObject() {
+        throw new RuntimeException("getUpdateObject not yet implemented");
     }
 
 
     @Override
-    public void updateReferences(ReferenceSet<T> referenceSet, T updateObject)
+    public <U extends T> T updateById(U updateObject, ID id)
             throws JeppettoException {
-        throw new RuntimeException("updateReferences not yet implemented");
+        throw new RuntimeException("updateById not yet implemented");
+    }
+
+
+    @Override
+    public <U extends T> Iterable<T> updateByIds(U updateObject, ID... ids)
+            throws FailedBatchException, JeppettoException {
+        throw new RuntimeException("updateByIds not yet implemented");
     }
 
 
@@ -309,16 +338,21 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
 
 
     @Override
-    public ReferenceSet<T> referenceUsingQueryModel(QueryModel queryModel)
+    public <U extends T> T updateUniqueUsingQueryModel(U updateObject, QueryModel queryModel)
             throws JeppettoException {
-        throw new RuntimeException("referenceUsingQueryModel not yet implemented");
+        throw new RuntimeException("updateUniqueUsingQueryModel not yet implemented");
     }
 
 
     @Override
-    public Condition buildCondition(String conditionField,
-                                    ConditionType conditionType,
-                                    Iterator argsIterator) {
+    public <U extends T> Iterable<T> updateUsingQueryModel(U updateObject, QueryModel queryModel)
+            throws JeppettoException {
+        throw new RuntimeException("updateUsingQueryModel not yet implemented");
+    }
+
+
+    @Override
+    public Condition buildCondition(String conditionField, ConditionType conditionType, Iterator argsIterator) {
         Condition condition = new Condition();
 
         condition.setField(conditionField);
@@ -367,6 +401,11 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
         case Within:
             condition.setConstraint(Restrictions.in(conditionField, (Collection) argsIterator.next()));
             break;
+
+        case BeginsWith:
+            // TODO: Escape argsIterator.next()
+            condition.setConstraint(Restrictions.like(conditionField, argsIterator.next().toString() + '%'));
+            break;
         }
 
         return condition;
@@ -374,9 +413,7 @@ public class HibernateQueryModelDAO<T, ID extends Serializable>
 
 
     @Override
-    public Projection buildProjection(String projectionField,
-                                      ProjectionType projectionType,
-                                      Iterator argsIterator) {
+    public Projection buildProjection(String projectionField, ProjectionType projectionType, Iterator argsIterator) {
         Projection projection = new Projection();
 
         projection.setField(projectionField);

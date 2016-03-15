@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011 Jeppetto and Jonathan Thompson
+ * Copyright (c) 2011-2014 Jeppetto and Jonathan Thompson
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,8 @@
 
 package org.iternine.jeppetto.dao;
 
+
+import org.iternine.jeppetto.dao.id.BaseNIdGenerator;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -43,5 +45,17 @@ public class DAOBuilderTest {
         Assert.assertTrue(t.size() > 1);
         sampleDAO.findByFieldOne(0);
         sampleDAO.findByFieldOneGreaterThan(1);
+    }
+
+
+    @Test
+    public void idTest() {
+        BaseNIdGenerator baseNIdGenerator = new BaseNIdGenerator(64, BaseNIdGenerator.BASE62_CHARACTERS);
+
+        for (int i = 0; i < 100; i++) {
+            String id = baseNIdGenerator.generateId();
+
+            System.out.println(id);
+        }
     }
 }

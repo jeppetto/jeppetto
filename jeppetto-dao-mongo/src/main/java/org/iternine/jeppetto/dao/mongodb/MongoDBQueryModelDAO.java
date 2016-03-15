@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2011 Jeppetto and Jonathan Thompson
+ * Copyright (c) 2011-2014 Jeppetto and Jonathan Thompson
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *    http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -24,6 +24,7 @@ import org.iternine.jeppetto.dao.AccessControlDAO;
 import org.iternine.jeppetto.dao.AccessType;
 import org.iternine.jeppetto.dao.Condition;
 import org.iternine.jeppetto.dao.ConditionType;
+import org.iternine.jeppetto.dao.FailedBatchException;
 import org.iternine.jeppetto.dao.JeppettoException;
 import org.iternine.jeppetto.dao.NoSuchItemException;
 import org.iternine.jeppetto.dao.OptimisticLockException;
@@ -31,7 +32,6 @@ import org.iternine.jeppetto.dao.Projection;
 import org.iternine.jeppetto.dao.ProjectionType;
 import org.iternine.jeppetto.dao.QueryModel;
 import org.iternine.jeppetto.dao.QueryModelDAO;
-import org.iternine.jeppetto.dao.ReferenceSet;
 import org.iternine.jeppetto.dao.Sort;
 import org.iternine.jeppetto.dao.SortDirection;
 import org.iternine.jeppetto.dao.TooManyItemsException;
@@ -55,6 +55,7 @@ import com.mongodb.DBCursor;
 import com.mongodb.DBDecoder;
 import com.mongodb.DBDecoderFactory;
 import com.mongodb.DBObject;
+import com.mongodb.DuplicateKeyException;
 import com.mongodb.MongoException;
 import com.mongodb.WriteConcern;
 import org.bson.types.ObjectId;
@@ -172,6 +173,7 @@ public class MongoDBQueryModelDAO<T, ID>
 //    private boolean saveNulls;
     private WriteConcern defaultWriteConcern;
     private Logger queryLogger;
+    private Enhancer<T> updateObjectEnhancer;
 
 
     //-------------------------------------------------------------
@@ -214,6 +216,8 @@ public class MongoDBQueryModelDAO<T, ID>
         if (Boolean.parseBoolean((String) daoProperties.get("showQueries"))) {
             queryLogger = LoggerFactory.getLogger(getClass());
         }
+
+        this.updateObjectEnhancer = EnhancerHelper.getUpdateObjectEnhancer(getCollectionClass());
     }
 
 
@@ -331,7 +335,7 @@ public class MongoDBQueryModelDAO<T, ID>
 
     @Override
     public void deleteByIds(ID... ids)
-            throws JeppettoException {
+            throws FailedBatchException, JeppettoException {
         QueryModel queryModel = new QueryModel();
         queryModel.addCondition(buildIdCondition(Arrays.asList(ids)));
 
@@ -344,7 +348,26 @@ public class MongoDBQueryModelDAO<T, ID>
 
 
     @Override
-    public ReferenceSet<T> referenceByIds(ID... ids) {
+    public <U extends T> U getUpdateObject() {
+        T updateObject = updateObjectEnhancer.newInstance();
+
+        ((UpdateObject) updateObject).setPrefix("");    // Root object, so start with an empty prefix.
+
+        //noinspection unchecked
+        return (U) updateObject;
+    }
+
+
+    @Override
+    public <U extends T> T updateById(U updateObject, ID id)
+            throws JeppettoException {
+        throw new RuntimeException("To be implemented using findAndModify...");
+    }
+
+
+    @Override
+    public <U extends T> Iterable<T> updateByIds(U updateObject, ID... ids)
+            throws FailedBatchException, JeppettoException {
         QueryModel queryModel = new QueryModel();
         queryModel.addCondition(buildIdCondition(Arrays.asList(ids)));
 
@@ -352,39 +375,9 @@ public class MongoDBQueryModelDAO<T, ID>
             queryModel.setAccessControlContext(accessControlContextProvider.getCurrent());
         }
 
-        return new MongoDBReferenceSet<T>(buildQueryObject(queryModel, AccessType.ReadWrite),
-                                          EnhancerHelper.<T>getUpdateObjectEnhancer(getCollectionClass()));
-    }
+        updateUsingQueryModel(updateObject, queryModel);
 
-
-    @Override
-    public void updateReferences(ReferenceSet<T> referenceSet, T updateObject)
-            throws JeppettoException {
-        if (!UpdateObject.class.isAssignableFrom(updateObject.getClass())) {
-            throw new JeppettoException("updateObject's type is not 'UpdateObject'.  Did it come from referenceSet.getUpdateObject()?");
-        }
-
-        DBObject updateClause = ((UpdateObject) updateObject).getUpdateClause();
-        DBObject identifyingQuery = ((MongoDBReferenceSet<T>) referenceSet).getIdentifyingQuery();
-
-        if (updateClause.keySet().size() == 0) {
-            if (queryLogger != null) {
-                queryLogger.debug("Bypassing update identified by {}; no changes", identifyingQuery.toMap());
-            }
-
-            return;
-        }
-
-        if (queryLogger != null) {
-            queryLogger.debug("Reference-based update of {} identified by {} with document {}",
-                              new Object[] { getCollectionClass().getSimpleName(), identifyingQuery.toMap(), updateClause.toMap() } );
-        }
-
-        try {
-            dbCollection.update(identifyingQuery, updateClause, false, true, getWriteConcern());
-        } catch (MongoException e) {
-            throw new JeppettoException(e);
-        }
+        return null;    // TODO: implement...also, deal w/ modified FailedBatchException
     }
 
 
@@ -521,10 +514,38 @@ public class MongoDBQueryModelDAO<T, ID>
 
 
     @Override
-    public ReferenceSet<T> referenceUsingQueryModel(QueryModel queryModel)
+    public <U extends T> T updateUniqueUsingQueryModel(U updateObject, QueryModel queryModel)
             throws JeppettoException {
-        return new MongoDBReferenceSet<T>(buildQueryObject(queryModel, AccessType.ReadWrite),
-                                          EnhancerHelper.<T>getUpdateObjectEnhancer(getCollectionClass()));
+        throw new RuntimeException("To be implemented w/ findAndModify...");
+    }
+
+
+    @Override
+    public <U extends T> Iterable<T> updateUsingQueryModel(U updateObject, QueryModel queryModel)
+            throws JeppettoException {
+        DBObject updateClause = ((UpdateObject) updateObject).getUpdateClause();
+        DBObject identifyingQuery = buildQueryObject(queryModel, AccessType.ReadWrite);
+
+        if (updateClause.keySet().size() == 0) {
+            if (queryLogger != null) {
+                queryLogger.debug("Bypassing update identified by {}; no changes", identifyingQuery.toMap());
+            }
+
+            return Collections.emptyList();
+        }
+
+        if (queryLogger != null) {
+            queryLogger.debug("Reference-based update of {} identified by {} with document {}",
+                              getCollectionClass().getSimpleName(), identifyingQuery.toMap(), updateClause.toMap());
+        }
+
+        try {
+            dbCollection.update(identifyingQuery, updateClause, false, true, getWriteConcern());
+        } catch (MongoException e) {
+            throw new JeppettoException(e);
+        }
+
+        return null;    // TODO: implement...
     }
 
 
@@ -849,15 +870,13 @@ public class MongoDBQueryModelDAO<T, ID>
         }
 
         if (queryLogger != null) {
-            queryLogger.debug("Saving {} identified by {} with document {}",
-                              new Object[] { getCollectionClass().getSimpleName(),
-                                             identifyingQuery.toMap(),
-                                             optimalDbo.toMap() } );
+            queryLogger.debug("Saving {} identified by {} with document {}", getCollectionClass().getSimpleName(),
+                              identifyingQuery.toMap(), optimalDbo.toMap());
         }
 
         try {
             dbCollection.update(identifyingQuery, optimalDbo, true, false, getWriteConcern());
-        } catch (MongoException.DuplicateKey e) {
+        } catch (DuplicateKeyException e) {
             if (optimisticLockEnabled && e.getMessage().contains("$_id_")) {
                 Integer localOptimisticLockVersion = (Integer) dbo.get(OPTIMISTIC_LOCK_VERSION_FIELD) - 1;
 
@@ -992,6 +1011,7 @@ public class MongoDBQueryModelDAO<T, ID>
             }
 
             try {
+                //noinspection unchecked
                 clazz.getMethod("set".concat(upperCaseFieldName), method.getReturnType());
             } catch (NoSuchMethodException e) {
                 continue;
@@ -1077,45 +1097,43 @@ public class MongoDBQueryModelDAO<T, ID>
     }
 
 
-    private Map<String, Set<String>> ensureIndexes(List<String> uniqueIndexes, final boolean unique) {
-        if (uniqueIndexes == null || uniqueIndexes.size() == 0) {
+    private Map<String, Set<String>> ensureIndexes(List<String> indexes, final boolean unique) {
+        if (indexes == null || indexes.size() == 0) {
             return Collections.emptyMap();
         }
 
         Map<String, Set<String>> result = new HashMap<String, Set<String>>();
 
-        for (final String uniqueIndex : uniqueIndexes) {
-            final DBObject index = new BasicDBObject();
-            String[] indexFields = uniqueIndex.split(",");
+        BasicDBObject options = new BasicDBObject();
+        options.put("unique", unique);
+        options.put("background", Boolean.TRUE);
+
+        for (final String index : indexes) {
+            final DBObject keys = new BasicDBObject();
+            String[] indexFields = index.split(",");
 
             for (String indexField : indexFields) {
                 indexField = indexField.trim();
 
                 if (indexField.startsWith("+")) {
-                    index.put(indexField.substring(1), 1);
+                    keys.put(indexField.substring(1), 1);
                 } else if (indexField.startsWith("-")) {
-                    index.put(indexField.substring(1), -1);
+                    keys.put(indexField.substring(1), -1);
                 } else {
-                    index.put(indexField, 1);
+                    keys.put(indexField, 1);
                 }
             }
 
-            result.put(uniqueIndex, index.keySet());
+            result.put(index, keys.keySet());
 
             if (queryLogger != null) {
-                queryLogger.debug("Ensuring index {} on {}",
-                                  new Object[] { index.toMap(), getCollectionClass().getSimpleName() } );
+                queryLogger.debug("Ensuring index {} on {}", keys.toMap(), getCollectionClass().getSimpleName());
             }
 
-            dbCollection.ensureIndex(index, createIndexName(uniqueIndex), unique);
+            dbCollection.createIndex(keys, options);
         }
 
         return result;
-    }
-
-
-    private String createIndexName(String indexSpec) {
-        return indexSpec.replace(',', '-');
     }
 
 

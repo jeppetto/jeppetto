@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011 Jeppetto and Jonathan Thompson
+ * Copyright (c) 2011-2014 Jeppetto and Jonathan Thompson
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,17 +27,17 @@ public class AccessControlException extends JeppettoException {
     }
 
 
-    public AccessControlException(String s) {
-        super(s);
+    public AccessControlException(String message) {
+        super(message);
     }
 
 
-    public AccessControlException(Throwable throwable) {
-        super(throwable);
+    public AccessControlException(Throwable cause) {
+        super(cause);
     }
 
 
-    public AccessControlException(String s, Throwable throwable) {
-        super(s, throwable);
+    public AccessControlException(String message, Throwable cause) {
+        super(message, cause);
     }
 }

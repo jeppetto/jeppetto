@@ -1,0 +1,78 @@
+<?xml version="1.0"?>
+<!--
+  ~ Copyright (c) 2011-2014 Jeppetto and Jonathan Thompson
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~    http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
+<!DOCTYPE hibernate-mapping PUBLIC
+        "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+        "http://www.hibernate.org/dtd/hibernate-mapping-3.0.dtd">
+<hibernate-mapping package="org.iternine.jeppetto">
+
+    <class name="org.iternine.jeppetto.dao.test.SimpleObject" optimistic-lock="dirty" dynamic-update="true">
+        <id name="id" length="32">
+            <generator class="org.iternine.jeppetto.dao.hibernate.UUIDIdentifierGenerator"/>
+        </id>
+
+        <property name="intValue"/>
+        <property name="anotherIntValue"/>
+        <property name="longValue"/>
+        <property name="stringValue"/>
+
+        <many-to-one name="relatedObject" column="relatedObjectId" unique="true" not-null="false" cascade="all" lazy="false"/>
+
+        <bag name="relatedObjects" cascade="all" lazy="false">
+            <key column="simpleObjectId"/>
+            <one-to-many class="org.iternine.jeppetto.dao.test.RelatedObject"/>
+        </bag>
+
+        <set name="relatedObjectSet" cascade="all" lazy="false">
+            <key column="simpleObjectId"/>
+            <one-to-many class="org.iternine.jeppetto.dao.test.RelatedObject"/>
+        </set>
+
+        <map name="stringMap" table="StringMap" lazy="false" cascade="all" >
+            <key column="simpleObjectId"/>
+            <map-key type="string" column="key"/>
+            <element type="string" column="item"/>
+        </map>
+
+        <property name="simpleEnum">
+            <type name="org.hibernate.type.EnumType">
+                <param name="enumClass">org.iternine.jeppetto.dao.test.SimpleEnum</param>
+                <param name="type">12</param>
+            </type>
+        </property>
+
+        <bag name="stringList" table="Strings" cascade="all" lazy="false">
+            <key column="simpleObjectId"/>
+            <element type="string" column="item"/>
+        </bag>
+
+        <set name="stringSet" table="Strings" cascade="all" lazy="false">
+            <key column="simpleObjectId"/>
+            <element type="string" column="item"/>
+        </set>
+    </class>
+
+    <class name="org.iternine.jeppetto.dao.test.RelatedObject">
+        <id name="id" length="32">
+            <generator class="org.iternine.jeppetto.dao.hibernate.UUIDIdentifierGenerator"/>
+        </id>
+
+        <property name="relatedStringValue"/>
+        <property name="relatedIntValue"/>
+    </class>
+
+</hibernate-mapping>

@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2011 Jeppetto and Jonathan Thompson
+ * Copyright (c) 2011-2014 Jeppetto and Jonathan Thompson
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *    http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,8 +18,8 @@ package org.iternine.jeppetto.dao.mongodb;
 
 
 import org.iternine.jeppetto.dao.NoSuchItemException;
-import org.iternine.jeppetto.test.SimpleObject;
-import org.iternine.jeppetto.test.SimpleObjectDAO;
+import org.iternine.jeppetto.dao.test.SimpleObject;
+import org.iternine.jeppetto.dao.test.core.DynamicDAO;
 import org.iternine.jeppetto.testsupport.MongoDatabaseProvider;
 import org.iternine.jeppetto.testsupport.TestContext;
 
@@ -39,7 +39,7 @@ public class MongoSessionTest {
     //-------------------------------------------------------------
 
     private TestContext testContext;
-    private SimpleObjectDAO simpleObjectDAO;
+    private DynamicDAO dynamicDAO;
 
 
     //-------------------------------------------------------------
@@ -52,7 +52,7 @@ public class MongoSessionTest {
                                       "MongoDAOTest.properties",
                                       new MongoDatabaseProvider());
 
-        simpleObjectDAO = (SimpleObjectDAO) testContext.getBean("simpleObjectDAO");
+        dynamicDAO = (DynamicDAO) testContext.getBean("mongoDynamicDAO");
     }
 
 
@@ -77,10 +77,10 @@ public class MongoSessionTest {
             SimpleObject simpleObject = new SimpleObject();
             simpleObject.setIntValue(1234);
 
-            simpleObjectDAO.save(simpleObject);
+            dynamicDAO.save(simpleObject);
 
-            Object obj1 = simpleObjectDAO.findById(simpleObject.getId());
-            Object obj2 = simpleObjectDAO.findById(simpleObject.getId());
+            Object obj1 = dynamicDAO.findById(simpleObject.getId());
+            Object obj2 = dynamicDAO.findById(simpleObject.getId());
             assertSame(obj1, obj2);
         } finally {
             MongoDBSession.remove();
@@ -98,10 +98,10 @@ public class MongoSessionTest {
             SimpleObject simpleObject = new SimpleObject();
             simpleObject.setIntValue(1234);
 
-            simpleObjectDAO.save(simpleObject);
+            dynamicDAO.save(simpleObject);
 
-            SimpleObject fromCache1 = simpleObjectDAO.findByIntValue(1234);
-            SimpleObject fromCache2 = simpleObjectDAO.findById(simpleObject.getId());
+            SimpleObject fromCache1 = dynamicDAO.findByIntValue(1234);
+            SimpleObject fromCache2 = dynamicDAO.findById(simpleObject.getId());
 
             assertNotNull(fromCache1);
             assertNotNull(fromCache2);
@@ -123,11 +123,11 @@ public class MongoSessionTest {
         SimpleObject simpleObject = new SimpleObject();
         simpleObject.setIntValue(1234);
 
-        simpleObjectDAO.save(simpleObject);
+        dynamicDAO.save(simpleObject);
 
         MongoDBSession.flush();
 
-        SimpleObject resultObject = simpleObjectDAO.findById(simpleObject.getId());
+        SimpleObject resultObject = dynamicDAO.findById(simpleObject.getId());
 
         assertEquals(resultObject.getId(), simpleObject.getId());
 
@@ -142,7 +142,7 @@ public class MongoSessionTest {
             MongoDBSession.create();
             SimpleObject obj = new SimpleObject();
             obj.setIntValue(-i);
-            simpleObjectDAO.save(obj);
+            dynamicDAO.save(obj);
         }
         MongoDBSession.flush();
         for (int i = 0; i < n; i++) {

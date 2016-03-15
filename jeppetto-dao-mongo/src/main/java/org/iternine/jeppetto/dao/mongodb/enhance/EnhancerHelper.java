@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2011 Jeppetto and Jonathan Thompson
+ * Copyright (c) 2011-2014 Jeppetto and Jonathan Thompson
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *    http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,9 +17,10 @@
 package org.iternine.jeppetto.dao.mongodb.enhance;
 
 
+import org.iternine.jeppetto.dao.EntityVelocityEnhancer;
+import org.iternine.jeppetto.dao.updateobject.UpdateObjectVelocityEnhancer;
 import org.iternine.jeppetto.enhance.Enhancer;
 import org.iternine.jeppetto.enhance.NoOpEnhancer;
-import org.iternine.jeppetto.enhance.VelocityEnhancer;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -64,7 +65,7 @@ public class EnhancerHelper {
 
                 dirtyableDBObjectEnhancers.put(baseClass, enhancer);
             } else {
-                enhancer = new VelocityEnhancer<T>(baseClass) {
+                enhancer = new EntityVelocityEnhancer<T>(baseClass) {
                     //-------------------------------------------------------------
                     // Implementation - Enhancer
                     //-------------------------------------------------------------
@@ -118,10 +119,7 @@ public class EnhancerHelper {
 
                 updateObjectEnhancers.put(baseClass, enhancer);
             } else {
-                Map<String, Object> contextItems = new HashMap<String, Object>();
-                contextItems.put("updateObjectHelper", new UpdateObjectHelper());
-
-                enhancer = new VelocityEnhancer<T>(baseClass, contextItems) {
+                enhancer = new UpdateObjectVelocityEnhancer<T>(baseClass) {
                     //-------------------------------------------------------------
                     // Implementation - Enhancer
                     //-------------------------------------------------------------
@@ -139,6 +137,16 @@ public class EnhancerHelper {
                     @Override
                     protected String getTemplateLocation() {
                         return "org/iternine/jeppetto/dao/mongodb/enhance/updateObject.vm";
+                    }
+
+
+                    @Override
+                    protected Map<String, Object> getAdditionalContextItems() {
+                        Map<String, Object> contextItems = super.getAdditionalContextItems();
+
+                        contextItems.put("updateObjectHelper", new UpdateObjectHelper());
+
+                        return contextItems;
                     }
                 };
 

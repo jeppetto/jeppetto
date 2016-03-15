@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2011-2014 Jeppetto and Jonathan Thompson
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~    http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd">
+
+    <!-- =================== DataSource =================== -->
+
+    <bean id="dataSource" class="org.springframework.jdbc.datasource.SingleConnectionDataSource" destroy-method="closeConnection">
+        <property name="driverClassName" value="${hibernateDAOTest.jdbc.driverClass}"/>
+        <property name="url" value="${hibernateDAOTest.jdbc.url}"/>
+        <property name="username" value="${hibernateDAOTest.jdbc.user}"/>
+        <property name="password" value="${hibernateDAOTest.jdbc.password}"/>
+        <property name="suppressClose" value="true"/>
+    </bean>
+
+
+    <!-- =================== LiquiBase =================== -->
+
+    <bean id="liquibase" class="liquibase.integration.spring.SpringLiquibase">
+        <property name="dataSource" ref="dataSource"/>
+        <property name="changeLog" value="classpath:migrations/test.changelog.xml"/>
+    </bean>
+
+
+    <!-- =================== SessionFactory =================== -->
+
+    <bean id="sessionFactory" class="org.springframework.orm.hibernate4.LocalSessionFactoryBean" depends-on="liquibase">
+        <property name="dataSource" ref="dataSource"/>
+        <property name="mappingResources">
+            <list>
+                <value>hbm/SimpleObject.hbm.xml</value>
+            </list>
+        </property>
+        <property name="hibernateProperties">
+            <props>
+                <prop key="hibernate.bytecode.use_reflection_optimizer">true</prop>
+                <!--suppress SpringModelInspection -->
+                <prop key="hibernate.dialect">${hibernateDAOTest.hibernate.dialect}</prop>
+                <prop key="hibernate.show_sql">false</prop>
+                <prop key="hibernate.format_sql">true</prop>
+                <prop key="hibernate.hbm2ddl.auto">validate</prop>
+            </props>
+        </property>
+    </bean>
+
+    <bean name="transactionManager" class="org.springframework.orm.hibernate4.HibernateTransactionManager">
+        <property name="sessionFactory" ref="sessionFactory"/>
+    </bean>
+
+
+    <!-- =================== Data Access Objects =================== -->
+
+    <bean id="hibernateDynamicDAO" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+        <property name="proxyInterfaces">
+            <list>
+                <bean class="java.lang.Class" factory-method="forName">
+                    <constructor-arg value="org.iternine.jeppetto.dao.test.core.DynamicDAO"/>
+                </bean>
+            </list>
+        </property>
+        <property name="target">
+            <bean class="org.iternine.jeppetto.dao.DAOBuilder" factory-method="buildDAO">
+                <constructor-arg index="0" value="org.iternine.jeppetto.dao.test.SimpleObject"/>
+                <constructor-arg index="1" value="org.iternine.jeppetto.dao.test.core.DynamicDAO"/>
+                <constructor-arg index="2" value="org.iternine.jeppetto.dao.hibernate.HibernateQueryModelDAO"/>
+                <constructor-arg index="3">
+                    <map>
+                        <entry key="sessionFactory" value-ref="sessionFactory"/>
+                    </map>
+                </constructor-arg>
+            </bean>
+        </property>
+        <property name="transactionManager" ref="transactionManager"/>
+        <property name="transactionAttributes">
+            <props>
+                <prop key="*">PROPAGATION_REQUIRED</prop>
+            </props>
+        </property>
+    </bean>
+
+</beans>

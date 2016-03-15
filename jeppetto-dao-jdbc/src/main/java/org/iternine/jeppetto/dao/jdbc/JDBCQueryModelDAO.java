@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011 Jeppetto and Jonathan Thompson
+ * Copyright (c) 2011-2014 Jeppetto and Jonathan Thompson
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ package org.iternine.jeppetto.dao.jdbc;
 import org.iternine.jeppetto.dao.AccessControlContextProvider;
 import org.iternine.jeppetto.dao.Condition;
 import org.iternine.jeppetto.dao.ConditionType;
+import org.iternine.jeppetto.dao.FailedBatchException;
 import org.iternine.jeppetto.dao.JeppettoException;
 import org.iternine.jeppetto.dao.NoSuchItemException;
 import org.iternine.jeppetto.dao.OptimisticLockException;
@@ -27,7 +28,6 @@ import org.iternine.jeppetto.dao.Projection;
 import org.iternine.jeppetto.dao.ProjectionType;
 import org.iternine.jeppetto.dao.QueryModel;
 import org.iternine.jeppetto.dao.QueryModelDAO;
-import org.iternine.jeppetto.dao.ReferenceSet;
 import org.iternine.jeppetto.dao.Sort;
 import org.iternine.jeppetto.dao.SortDirection;
 import org.iternine.jeppetto.dao.TooManyItemsException;
@@ -35,6 +35,9 @@ import org.iternine.jeppetto.dao.id.IdGenerator;
 import org.iternine.jeppetto.dao.jdbc.enhance.EnhancerHelper;
 import org.iternine.jeppetto.dao.jdbc.enhance.JDBCPersistable;
 import org.iternine.jeppetto.enhance.Enhancer;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.sql.DataSource;
 
@@ -46,6 +49,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -66,7 +70,7 @@ import java.util.Map;
 // TODO: transaction support
 // TODO: better 'iterable' support
 // TODO: other id generation schemes
-// TODO: dirtyable support
+// TODO: persistable support
 // TODO: move EnhancerHelper to jeppetto-enhance
 // TODO: olv support
 public class JDBCQueryModelDAO<T, ID>
@@ -81,6 +85,8 @@ public class JDBCQueryModelDAO<T, ID>
     private DataSource dataSource;
     private IdGenerator<ID> idGenerator;
     private AccessControlContextProvider accessControlContextProvider;
+
+    private static final Logger logger = LoggerFactory.getLogger(JDBCQueryModelDAO.class);
 
 
     //-------------------------------------------------------------
@@ -188,23 +194,41 @@ public class JDBCQueryModelDAO<T, ID>
 
     @Override
     public void deleteByIds(ID... ids)
-            throws JeppettoException {
+            throws FailedBatchException, JeppettoException {
+        Map<ID, Exception> failedDeletes = new LinkedHashMap<ID, Exception>();
+
         for (ID id : ids) {
-            deleteById(id);
+            try {
+                deleteById(id);
+            } catch (Exception e) {
+                failedDeletes.put(id, e);
+            }
+        }
+
+        if (failedDeletes.size() > 0) {
+            // TODO: fix emptyList()...
+            throw new FailedBatchException("Unable to delete all items", Collections.emptyList(), failedDeletes);
         }
     }
 
 
     @Override
-    public ReferenceSet<T> referenceByIds(ID... ids) {
-        throw new RuntimeException("referenceByIds not yet implemented");
+    public <U extends T> U getUpdateObject() {
+        throw new RuntimeException("getUpdateObject not yet implemented");
     }
 
 
     @Override
-    public void updateReferences(ReferenceSet<T> referenceSet, T updateObject)
+    public <U extends T> T updateById(U updateObject, ID id)
             throws JeppettoException {
-        throw new RuntimeException("updateReferences not yet implemented");
+        throw new RuntimeException("updateById not yet implemented");
+    }
+
+
+    @Override
+    public <U extends T> Iterable<T> updateByIds(U updateObject, ID... ids)
+            throws FailedBatchException, JeppettoException {
+        throw new RuntimeException("updateByIds not yet implemented");
     }
 
 
@@ -301,9 +325,16 @@ public class JDBCQueryModelDAO<T, ID>
 
 
     @Override
-    public ReferenceSet<T> referenceUsingQueryModel(QueryModel queryModel)
+    public <U extends T> T updateUniqueUsingQueryModel(U updateObject, QueryModel queryModel)
             throws JeppettoException {
-        throw new RuntimeException("referenceUsingQueryModel not yet implemented");
+        throw new RuntimeException("updateUniqueUsingQueryModel not yet implemented");
+    }
+
+
+    @Override
+    public <U extends T> Iterable<T> updateUsingQueryModel(U updateObject, QueryModel queryModel)
+            throws JeppettoException {
+        throw new RuntimeException("updateUsingQueryModel not yet implemented");
     }
 
 

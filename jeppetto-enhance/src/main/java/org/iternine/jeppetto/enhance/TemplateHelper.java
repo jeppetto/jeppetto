@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2011 Jeppetto and Jonathan Thompson
+ * Copyright (c) 2011-2014 Jeppetto and Jonathan Thompson
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *    http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -85,7 +85,7 @@ public class TemplateHelper {
     //-------------------------------------------------------------
 
     public TemplateHelper cls(String name) {
-        String newClassName = new StringBuilder(name).append("$").append(COUNT.getAndIncrement()).toString();
+        String newClassName = name + "$" + COUNT.getAndIncrement();
 
         thisClass = pool.makeClass(newClassName);
         className = thisClass.getSimpleName();
@@ -171,15 +171,12 @@ public class TemplateHelper {
     }
 
 
-    public String asSetter(CtMethod getter) {
-        String getterName = getter.getName();
-        String key = keyFor(getterName);
-
-        return String.format("set%s%s", Character.toUpperCase(key.charAt(0)), key.substring(1));
+    public String asSetter(String field) {
+        return String.format("set%s%s", Character.toUpperCase(field.charAt(0)), field.substring(1));
     }
 
 
-    public String keyFor(String getterName) {
+    public String fieldFor(String getterName) {
         String sub;
 
         if (getterName.startsWith("is")) {
@@ -197,16 +194,24 @@ public class TemplateHelper {
     public Class<?> returnTypeOf(CtMethod method)
             throws ClassNotFoundException, NoSuchMethodException {
         Method rawMethod = getRawMethod(method);
+        Pair<Class<?>, Class<?>[]> genericTypePair = getGenericTypePair(rawMethod.getGenericReturnType());
 
-        return getGenericTypePair(rawMethod.getGenericReturnType()).getFirst();
+        return genericTypePair.getFirst();
     }
 
 
-    public Class<?>[] returnTypeParamsOf(CtMethod method)
+    public Class<?> collectionType(CtMethod method)
             throws ClassNotFoundException, NoSuchMethodException {
         Method rawMethod = getRawMethod(method);
+        Pair<Class<?>, Class<?>[]> genericTypePair = getGenericTypePair(rawMethod.getGenericReturnType());
+        Class<?>[] returnTypeParams = genericTypePair.getSecond();
 
-        return getGenericTypePair(rawMethod.getGenericReturnType()).getSecond();
+        if (returnTypeParams.length == 0) {
+            return null;
+        }
+
+        // return either the only (if there is one) or the 2nd (if there are two) type parameters.
+        return returnTypeParams[returnTypeParams.length - 1];
     }
 
 

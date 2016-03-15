@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2011 Jeppetto and Jonathan Thompson
+ * Copyright (c) 2011-2014 Jeppetto and Jonathan Thompson
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *    http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -106,32 +106,51 @@ public interface GenericDAO<T, ID> {
      *
      * @param ids of the objects to delete.
      *
+     * @throws FailedBatchException if some (or all) of the ids were not successfully deleted.  The exception
+     *                              contains a list of the ids that failed to delete.
      * @throws JeppettoException if any underlying failure occurs
      */
     void deleteByIds(ID... ids)
+            throws FailedBatchException, JeppettoException;
+
+
+    /**
+     * Get an object that can be used to capture a set of changes to be applied to one ore more
+     * persisted objects.
+     *
+     * @return An update object that is either a T or a subclass of T
+     *
+     * @throws JeppettoException if any underlying failure occurs
+     */
+    <U extends T> U getUpdateObject();
+
+
+    /**
+     * Apply the set of changes described in the update object to the persisted item with the
+     * specified id.
+     *
+     * @param updateObject that describes the set of changes to be applied.
+     * @param id of the object to update.
+     *
+     * @throws JeppettoException if any underlying failure occurs
+     */
+    <U extends T> T updateById(U updateObject, ID id)
             throws JeppettoException;
 
 
     /**
-     * Build a ReferenceSet to persisted objects with the passed in id values.
+     * Apply the set of changes described in the update object to persisted items with the
+     * specified ids.
      *
-     * @param ids of the objects to reference.
+     * @param updateObject that describes the set of changes to be applied.
+     * @param ids of the objects to update.
      *
+     * @throws FailedBatchException if some (or all) of the referenced items were not successfully updated.
+     *                              The exception contains a list of the ids that failed to update.
      * @throws JeppettoException if any underlying failure occurs
      */
-    ReferenceSet<T> referenceByIds(ID... ids);
-
-
-    /**
-     * Update the objects referenced by the referenceSet with the changes in the updateObject.
-     *
-     * @param referenceSet containing references to stored items
-     * @param updateObject the changes to make on references objects
-     *
-     * @throws JeppettoException if any underlying failure occurs
-     */
-    void updateReferences(ReferenceSet<T> referenceSet, T updateObject)
-            throws JeppettoException;
+    <U extends T> Iterable<T> updateByIds(U updateObject, ID... ids)
+            throws FailedBatchException, JeppettoException;
 
 
     /**

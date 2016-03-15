@@ -1,0 +1,234 @@
+#* @vtlvariable name="getters" type="javassist.CtMethod[]" *#
+#* @vtlvariable name="base" type="javassist.CtClass" *#
+#* @vtlvariable name="_" type="org.iternine.jeppetto.enhance.TemplateHelper" *#
+#set( $baseName = $base.getName() )
+#set( $Q = '"')
+public $_.cls("${baseName}$DynamoDBPersistable").ext($base).impl("org.iternine.jeppetto.dao.dynamodb.DynamoDBPersistable") {
+
+    #set( $thisName = $_.clsName() )
+
+    //-------------------------------------------------------------
+    // Variables - Private
+    //-------------------------------------------------------------
+
+    $_.field("private final $baseName __delegate;")
+    $_.field("private final java.util.Set __dirtyFields = new java.util.HashSet();")
+    $_.field("private final java.util.Map __extraValues = new java.util.HashMap();")
+    $_.field("private java.util.Set __fields = new java.util.HashSet(java.util.Arrays.asList(new String[] {
+        #foreach ( $getter in $getters )
+            ${Q}$_.fieldFor($getter.getName())${Q}#if( $velocityHasNext ),#end
+        #end
+    }));")
+    $_.field("private String __storeIdentifier;")
+
+
+    //-------------------------------------------------------------
+    // Constructors
+    //-------------------------------------------------------------
+
+    $_.ctor("
+    public $thisName() {
+        __delegate = null;
+    }")
+
+
+    $_.ctor("
+    public $thisName($baseName delegate) {
+        __delegate = delegate;
+    }")
+
+
+    //-------------------------------------------------------------
+    // Methods - Overrides
+    //-------------------------------------------------------------
+
+    #foreach ( $getter in $getters )
+    #set( $getterName = $getter.getName() )
+    #set( $field = $_.fieldFor($getterName) )
+    #set( $setterName = $_.asSetter($field) )
+    #set( $returnType = $getter.getReturnType().getName() )
+
+    $_.method("
+    public $returnType $getterName() {
+        return (__delegate == null) ? super.$getterName() : __delegate.$getterName();
+    }")
+
+
+    $_.method("
+    public void $setterName($returnType value) {
+        __dirtyFields.add(${Q}$field${Q});
+
+        if (__delegate == null) {
+            super.$setterName(value);
+        } else {
+            __delegate.$setterName(value);
+        }
+    }")
+    #end
+
+
+    $_.method("
+    public String toString() {
+        return (__delegate == null) ? super.toString() : __delegate.toString();
+    }")
+
+
+    //-------------------------------------------------------------
+    // Implementation - Persistable
+    //-------------------------------------------------------------
+
+    $_.method("
+    public void __markPersisted(String storeIdentifier) {
+        __dirtyFields.clear();
+
+        #foreach ( $getter in $getters )
+        #set ( $getterName = $getter.getName() )
+        #set ( $returnType = $_.returnTypeOf($getter) )
+
+        #if ( !$returnType.isPrimitive() && !$returnType.isEnum() && $returnType.getName() != 'java.lang.String' )
+        #set ( $variableName = $_.fieldFor($getterName) )
+
+        Object __$variableName = $getterName();
+
+        if (__$variableName instanceof org.iternine.jeppetto.dao.persistable.Persistable) {
+            ((org.iternine.jeppetto.dao.persistable.Persistable) __$variableName).__markPersisted(storeIdentifier);
+        }
+        #end
+        #end
+
+        this.__storeIdentifier = storeIdentifier;
+    }")
+
+
+    $_.method("
+    public boolean __isPersisted(String storeIdentifier) {
+        return storeIdentifier.equals(this.__storeIdentifier);
+    }")
+
+
+    $_.method("
+    public boolean __isDirty() {
+        if (__dirtyFields.size() > 0) {
+            return true;
+        }
+
+        #foreach( $getter in $getters )
+        #set ( $getterName = $getter.getName() )
+        #set ( $returnType = $_.returnTypeOf($getter) )
+
+        #if ( !$returnType.isPrimitive() && !$returnType.isEnum() && $returnType.getName() != 'java.lang.String' )
+        #set ( $variableName = $_.fieldFor($getterName) )
+
+        Object __$variableName = $getterName();
+
+        if (__$variableName instanceof org.iternine.jeppetto.dao.persistable.Persistable
+            && ((org.iternine.jeppetto.dao.persistable.Persistable) __$variableName).__isDirty()) {
+            return true;
+        }
+        #end
+        #end
+
+    return false;
+    }")
+
+
+    $_.method("
+    public java.util.Iterator __getDirtyFields() {
+        if (__storeIdentifier == null) {
+            return __fields.iterator();
+        }
+
+        java.util.Set dirtyFields = new java.util.HashSet(__dirtyFields);
+
+        #foreach( $getter in $getters )
+        #set ( $getterName = $getter.getName() )
+        #set ( $returnType = $_.returnTypeOf($getter) )
+
+        #if ( !$returnType.isPrimitive() && !$returnType.isEnum() && $returnType.getName() != 'java.lang.String' )
+        #set ( $variableName = $_.fieldFor($getterName) )
+
+        Object __$variableName = $getterName();
+
+        if (__$variableName instanceof org.iternine.jeppetto.dao.persistable.Persistable
+            && ((org.iternine.jeppetto.dao.persistable.Persistable) __$variableName).__isDirty()) {
+            dirtyFields.add(${Q}$variableName${Q});
+        }
+        #end
+        #end
+
+        return dirtyFields.iterator();
+    }")
+
+
+    $_.method("
+    public Object __getDelegate() {
+        return __delegate;
+    }")
+
+
+    //-------------------------------------------------------------
+    // Implementation - DynamoDBPersistable
+    //-------------------------------------------------------------
+
+    $_.method("
+    public Object __get(String field) {
+        #foreach ( $getter in $getters )
+        #set ( $getterName = $getter.getName() )
+        #set ( $field = $_.fieldFor($getterName) )
+        #set ( $returnType = $_.returnTypeOf($getter) )
+        if (${Q}$field${Q}.equals(field)) {
+            #if ( $returnType.isPrimitive() )
+            return $_.wrapperNameFor($returnType) .valueOf(this.$getterName());
+            #else
+            return this.$getterName();
+            #end
+        }
+        #end
+
+        return (com.amazonaws.services.dynamodbv2.model.AttributeValue) __extraValues.get(field);
+    }")
+
+
+    $_.method("
+    public void __put(String field, com.amazonaws.services.dynamodbv2.model.AttributeValue v) {
+        #foreach ( $getter in $getters )
+        #set ( $field = $_.fieldFor($getter.getName()) )
+        #set ( $setterName = $_.asSetter($field) )
+        #set ( $returnType = $_.returnTypeOf($getter) )
+        #set ( $returnTypeName = $returnType.getName() )
+        #set ( $collectionType = $_.collectionType($getter) )
+        if (${Q}$field${Q}.equals(field)) {
+            #if ( $returnType.isPrimitive() )
+            Object o = org.iternine.jeppetto.dao.dynamodb.ConversionUtil.fromAttributeValue(v, ${returnTypeName}.class, null);
+    
+            ## Need coercion logic?
+            this.$setterName((($_.wrapperNameFor($returnType)) o).${returnTypeName}Value());
+            #elseif ( !$collectionType )    ## in VTL, null evaluates to false
+            Object o = org.iternine.jeppetto.dao.dynamodb.ConversionUtil.fromAttributeValue(v, ${returnTypeName}.class, null);
+    
+            this.$setterName(($returnTypeName) o);
+            #else
+            Object o = org.iternine.jeppetto.dao.dynamodb.ConversionUtil.fromAttributeValue(v, ${returnTypeName}.class, $collectionType.getName() .class);
+    
+            this.$setterName(($returnTypeName) o);
+            #end
+    
+            return;
+        }
+        #end
+    
+        __fields.add(field);
+        __dirtyFields.add(field);
+        __extraValues.put(field, v);
+    }")
+
+
+    $_.method("
+    public void __putAll(java.util.Map itemMap) {
+        for (java.util.Iterator iterator = itemMap.keySet().iterator(); iterator.hasNext(); ) {
+            String field = (String) iterator.next();
+
+            __put(field, (com.amazonaws.services.dynamodbv2.model.AttributeValue) itemMap.get(field));
+        }
+    }")
+}

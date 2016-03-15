@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2011 Jeppetto and Jonathan Thompson
+ * Copyright (c) 2011-2014 Jeppetto and Jonathan Thompson
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *    http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -44,6 +44,7 @@ public enum MongoDBOperator {
     Between(null),
     IsNull(null),
     IsNotNull(null),
+    BeginsWith(null),
     ElementMatches("$elemMatch");
 
 
@@ -106,6 +107,10 @@ public enum MongoDBOperator {
             notNullConstraint.put("$not", new BasicDBObject("$type", 10));
 
             return notNullConstraint;
+
+        case BeginsWith:
+            // TODO: Escape argsIterator.next()
+            return new BasicDBObject("$regex", "^" + argsIterator.next() + ".*");
 
         default:
             throw new IllegalArgumentException("Unexpected enumeration: " + this);

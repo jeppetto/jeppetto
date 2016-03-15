@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011 Jeppetto and Jonathan Thompson
+ * Copyright (c) 2011-2014 Jeppetto and Jonathan Thompson
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,17 +27,17 @@ public class JeppettoException extends RuntimeException {
     }
 
 
-    public JeppettoException(String s) {
-        super(s);
+    public JeppettoException(String message) {
+        super(message);
     }
 
 
-    public JeppettoException(Throwable throwable) {
-        super(throwable);
+    public JeppettoException(Throwable cause) {
+        super(cause);
     }
 
 
-    public JeppettoException(String s, Throwable throwable) {
-        super(s, throwable);
+    public JeppettoException(String message, Throwable cause) {
+        super(message, cause);
     }
 }

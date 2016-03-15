@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011 Jeppetto and Jonathan Thompson
+ * Copyright (c) 2011-2014 Jeppetto and Jonathan Thompson
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -141,21 +141,36 @@ public class DummyQueryModelDAO<T, ID>
 
 
     @Override
-    public ReferenceSet<T> referenceUsingQueryModel(QueryModel queryModel)
+    public <U extends T> U getUpdateObject() {
+        return null;
+    }
+
+
+    @Override
+    public <U extends T> T updateById(U updateObject, ID id)
             throws JeppettoException {
         return null;
     }
 
 
     @Override
-    public ReferenceSet<T> referenceByIds(ID... id) {
+    public <U extends T> Iterable<T> updateByIds(U updateObject, ID... ids)
+            throws FailedBatchException, JeppettoException {
         return null;
     }
 
 
     @Override
-    public void updateReferences(ReferenceSet<T> referenceSet, T entityUpdates)
+    public <U extends T> T updateUniqueUsingQueryModel(U updateObject, QueryModel queryModel)
             throws JeppettoException {
+        return null;
+    }
+
+
+    @Override
+    public <U extends T> Iterable<T> updateUsingQueryModel(U updateObject, QueryModel queryModel)
+            throws JeppettoException {
+        return null;
     }
 
 

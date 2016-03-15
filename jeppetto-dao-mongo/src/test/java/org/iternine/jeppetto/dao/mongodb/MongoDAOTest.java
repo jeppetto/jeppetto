@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2011 Jeppetto and Jonathan Thompson
+ * Copyright (c) 2011-2014 Jeppetto and Jonathan Thompson
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *    http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,16 +20,15 @@ package org.iternine.jeppetto.dao.mongodb;
 import org.iternine.jeppetto.dao.GenericDAO;
 import org.iternine.jeppetto.dao.NoSuchItemException;
 import org.iternine.jeppetto.dao.mongodb.enhance.DirtyableDBObject;
-import org.iternine.jeppetto.test.RelatedObject;
-import org.iternine.jeppetto.test.SimpleEnum;
-import org.iternine.jeppetto.test.SimpleObject;
+import org.iternine.jeppetto.dao.test.RelatedObject;
+import org.iternine.jeppetto.dao.test.SimpleEnum;
+import org.iternine.jeppetto.dao.test.SimpleObject;
 import org.iternine.jeppetto.testsupport.MongoDatabaseProvider;
 import org.iternine.jeppetto.testsupport.TestContext;
 
 import com.mongodb.DBObject;
 import org.bson.types.ObjectId;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -60,12 +59,12 @@ public class MongoDAOTest {
 
     @Before
     public void setUp() {
-        testContext = new TestContext("MongoDAOTest.spring.xml",
+        testContext = new TestContext("MongoGenericDAOTest.spring.xml",
                                       "MongoDAOTest.properties",
                                       new MongoDatabaseProvider());
 
         //noinspection unchecked
-        simpleObjectDAO = (GenericDAO<SimpleObject, String>) testContext.getBean("simpleObjectMongoQueryModelDAO");
+        simpleObjectDAO = (GenericDAO<SimpleObject, String>) testContext.getBean("mongoGenericDAO");
     }
 
 
@@ -85,6 +84,7 @@ public class MongoDAOTest {
     public void saveAndFindById()
             throws NoSuchItemException {
         SimpleObject simpleObject = new SimpleObject();
+
         simpleObject.setIntValue(1234);
 
         simpleObjectDAO.save(simpleObject);
@@ -92,9 +92,12 @@ public class MongoDAOTest {
         assertNotNull(simpleObject.getId());
 
         SimpleObject resultObject = simpleObjectDAO.findById(simpleObject.getId());
+
         assertEquals(resultObject.getId(), simpleObject.getId());
         assertDirty(resultObject, false);
+
         resultObject.setIntValue(4321);
+
         assertDirty(resultObject, true);
     }
 
@@ -104,14 +107,18 @@ public class MongoDAOTest {
             throws NoSuchItemException {
         SimpleObject simpleObject = new SimpleObject();
         simpleObject.setIntValue(1234);
+
         simpleObjectDAO.save(simpleObject);
 
         SimpleObject resultObject;
 
         resultObject = simpleObjectDAO.findById(simpleObject.getId());
+
         assertDirty(resultObject, false);
         assertEquals(1234, resultObject.getIntValue());
+
         resultObject.setSimpleEnum(SimpleEnum.EnumValue);
+
         assertDirty(resultObject, true);
 
         simpleObjectDAO.save(resultObject);
@@ -119,10 +126,13 @@ public class MongoDAOTest {
         assertDirty(resultObject, false);
 
         resultObject = simpleObjectDAO.findById(simpleObject.getId());
+
         assertDirty(resultObject, false);
         assertEquals(1234, resultObject.getIntValue());
         assertEquals(SimpleEnum.EnumValue, resultObject.getSimpleEnum());
+
         resultObject.setIntValue(9876);
+
         assertDirty(resultObject, true);
 
         simpleObjectDAO.save(resultObject);
@@ -130,6 +140,7 @@ public class MongoDAOTest {
         assertDirty(resultObject, false);
 
         resultObject = simpleObjectDAO.findById(simpleObject.getId());
+
         assertDirty(resultObject, false);
         assertEquals(9876, resultObject.getIntValue());
     }
@@ -147,32 +158,43 @@ public class MongoDAOTest {
         simpleObject.getStringMap().put("foo", "bar");
         simpleObject.setRelatedObjectMap(new HashMap<String, RelatedObject>());
         simpleObject.getRelatedObjectMap().put("foo", relatedObject);
+
         simpleObjectDAO.save(simpleObject);
 
         SimpleObject resultObject;
 
         resultObject = simpleObjectDAO.findById(simpleObject.getId());
+
         assertEquals("bar", resultObject.getStringMap().get("foo"));
         assertDirty(resultObject, false);
+
         resultObject.getStringMap().put("baz", "bat");
+
         assertDirty(resultObject, true);
 
         simpleObjectDAO.save(resultObject);
 
         resultObject = simpleObjectDAO.findById(simpleObject.getId());
+
         assertEquals("bar", resultObject.getStringMap().get("foo"));
         assertEquals("bat", resultObject.getStringMap().get("baz"));
         assertDirty(resultObject, false);
+
         resultObject.getStringMap().putAll(new HashMap<String, String>());
+
         assertDirty(resultObject, false);
+
         resultObject.getRelatedObjectMap().put("baz", relatedObject);
+
         assertDirty(resultObject, true);
+
         resultObject.addToRelatedObjectSet(new RelatedObject());
         resultObject.addToRelatedObjectSet(new RelatedObject());
 
         simpleObjectDAO.save(resultObject);
 
         resultObject = simpleObjectDAO.findById(simpleObject.getId());
+
         assertEquals(5678, resultObject.getRelatedObjectMap().get("baz").getRelatedIntValue());
     }
 
@@ -180,15 +202,19 @@ public class MongoDAOTest {
     @Test
     public void objectIsWellBehavedDBObject()
             throws NoSuchItemException {
-
         SimpleObject pojo = new SimpleObject();
         pojo.setIntValue(1234);
         pojo.setSimpleEnum(SimpleEnum.EnumValue);
+
         simpleObjectDAO.save(pojo);
+
         pojo = simpleObjectDAO.findById(pojo.getId());
+
         DBObject dbo = (DBObject) pojo;
+
         assertEquals(pojo.getId(), dbo.get("_id").toString());
         assertEquals("EnumValue", dbo.get("simpleEnum"));
+
         Set<String> knownFields = new HashSet<String>();
         Collections.addAll(knownFields, "_id",
                                         "testBoolean",
@@ -204,102 +230,20 @@ public class MongoDAOTest {
                                         "simpleEnum",
                                         "intValue",
                                         "longValue",
+                                        "doubleValue",
+                                        "stringValue",
                                         "anotherIntValue");
+
         assertEquals(knownFields, dbo.keySet());
+
         ObjectId newId = ObjectId.get();
         dbo.put("_id", newId);
+
         assertEquals(newId, dbo.get("_id"));
         assertEquals("EnumValue", dbo.removeField("simpleEnum"));
         assertFalse(dbo.keySet().contains("simpleEnum"));
     }
 
-
-    @Test
-    public void saveAndFindWithMapOfStringToString() throws NoSuchItemException {
-        SimpleObject simpleObject = new SimpleObject();
-        simpleObject.setStringMap(new HashMap<String, String>());
-        simpleObject.getStringMap().put("foo", "bar");
-        simpleObjectDAO.save(simpleObject);
-        SimpleObject resultObject = simpleObjectDAO.findById(simpleObject.getId());
-        assertEquals("bar", resultObject.getStringMap().get("foo"));
-    }
-
-
-    @Test
-    public void saveAndFindComplexObject()
-            throws NoSuchItemException {
-        SimpleObject simpleObject = new SimpleObject();
-        simpleObject.setIntValue(1234);
-
-        RelatedObject relatedObject = new RelatedObject();
-        relatedObject.setRelatedIntValue(5678);
-
-        simpleObject.setRelatedObject(relatedObject);
-        simpleObject.addRelatedObject(relatedObject);
-
-        simpleObject.addRelatedObject("foo", relatedObject);
-        simpleObject.addRelatedObject("bar", relatedObject);
-
-        simpleObjectDAO.save(simpleObject);
-
-        SimpleObject resultObject = simpleObjectDAO.findById(simpleObject.getId());
-
-        assertEquals(resultObject.getId(), simpleObject.getId());
-        RelatedObject[] objects = resultObject.getRelatedObjects().toArray(new RelatedObject[1]);
-        assertEquals(relatedObject.getRelatedIntValue(),
-                            objects[0].getRelatedIntValue());
-        assertEquals(relatedObject.getRelatedIntValue(),
-                            resultObject.getRelatedObject().getRelatedIntValue());
-        Assert.assertTrue(simpleObject.getRelatedObjectMap().containsKey("foo"));
-        Assert.assertTrue(simpleObject.getRelatedObjectMap().containsKey("bar"));
-        assertEquals(simpleObject.getRelatedObjectMap().get("foo").getRelatedIntValue(),
-                            simpleObject.getRelatedObjectMap().get("bar").getRelatedIntValue());
-    }
-
-
-    @Test(expected = NoSuchItemException.class)
-    public void saveAndDelete()
-            throws NoSuchItemException {
-        SimpleObject simpleObject = new SimpleObject();
-        simpleObject.setIntValue(1234);
-
-        simpleObjectDAO.save(simpleObject);
-
-        SimpleObject resultObject = simpleObjectDAO.findById(simpleObject.getId());
-
-        assertEquals(resultObject.getId(), simpleObject.getId());
-
-        simpleObjectDAO.delete(simpleObject);
-
-        simpleObjectDAO.findById(simpleObject.getId());
-    }
-
-
-    @Test
-    public void saveMultipleAndFindAll()
-            throws NoSuchItemException {
-        SimpleObject simpleObject = new SimpleObject();
-        simpleObject.setIntValue(1234);
-
-        simpleObjectDAO.save(simpleObject);
-
-        SimpleObject simpleObject2 = new SimpleObject();
-        simpleObject2.setIntValue(5678);
-
-        simpleObjectDAO.save(simpleObject2);
-
-        Iterable<SimpleObject> results = simpleObjectDAO.findAll();
-
-        int resultCount = 0;
-        // noinspection UnusedDeclaration
-        for (SimpleObject ignore : results) {
-            resultCount++;
-        }
-
-        Assert.assertTrue(resultCount >= 2);
-
-        // check for existence of objects?
-    }
 
     private void assertDirty(Object obj, boolean dirty) {
         assertTrue(obj instanceof DirtyableDBObject);

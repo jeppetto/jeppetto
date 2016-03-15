@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011 Jeppetto and Jonathan Thompson
+ * Copyright (c) 2011-2014 Jeppetto and Jonathan Thompson
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,9 +17,9 @@
 package org.iternine.jeppetto.dao.jdbc.enhance;
 
 
+import org.iternine.jeppetto.dao.EntityVelocityEnhancer;
 import org.iternine.jeppetto.enhance.Enhancer;
 import org.iternine.jeppetto.enhance.NoOpEnhancer;
-import org.iternine.jeppetto.enhance.VelocityEnhancer;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -55,7 +55,7 @@ public class EnhancerHelper {
             if (JDBCPersistable.class.isAssignableFrom(baseClass)) {
                 enhancer = new NoOpEnhancer<T>(baseClass);
             } else {
-                enhancer = new VelocityEnhancer<T>(baseClass) {
+                enhancer = new EntityVelocityEnhancer<T>(baseClass) {
                     //-------------------------------------------------------------
                     // Implementation - Enhancer
                     //-------------------------------------------------------------

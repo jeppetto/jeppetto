@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2011-2014 Jeppetto and Jonathan Thompson
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~    http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd">
+
+    <!-- =================== Mongo Server =================== -->
+
+    <bean id="mongo" class="com.mongodb.MongoClient" destroy-method="close">
+        <constructor-arg index="0" value="${mongodb.host}"/>
+        <constructor-arg index="1" value="${mongodb.port}"/>
+    </bean>
+
+
+    <!-- =================== Mongo DBs =================== -->
+
+    <bean id="mongoDb" class="com.mongodb.DB" factory-bean="mongo" factory-method="getDB">
+        <constructor-arg index="0" value="${mongodb.dbname}"/>
+    </bean>
+
+
+    <!-- =================== Mongo DAOs =================== -->
+
+    <bean id="updateObjectDAO" class="org.iternine.jeppetto.dao.DAOBuilder" factory-method="buildDAO">
+        <constructor-arg index="0" value="org.iternine.jeppetto.dao.test.SimpleObject"/>
+        <constructor-arg index="1" value="org.iternine.jeppetto.dao.test.updateobject.UpdateObjectDAO"/>
+        <constructor-arg index="2" value="org.iternine.jeppetto.dao.mongodb.MongoDBQueryModelDAO"/>
+        <constructor-arg index="3">
+            <map>
+                <entry key="db" value-ref="mongoDb"/>
+                <entry key="uniqueIndexes">
+                    <list>
+                        <value>intValue</value>
+                    </list>
+                </entry>
+                <entry key="optimisticLockEnabled" value="true"/>
+                <entry key="showQueries" value="true"/>
+            </map>
+        </constructor-arg>
+    </bean>
+
+</beans>
