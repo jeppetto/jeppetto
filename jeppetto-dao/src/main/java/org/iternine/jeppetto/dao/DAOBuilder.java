@@ -585,6 +585,8 @@ public class DAOBuilder {
                 sb.append(  "\n    return ((Number) projectUsingQueryModel(queryModel)).intValue();");
             } else if ("long".equals(returnTypeName)) {
                 sb.append(  "\n    return ((Number) projectUsingQueryModel(queryModel)).longValue();");
+            } else if ("double".equals(returnTypeName)) {
+                sb.append(  "\n    return ((Number) projectUsingQueryModel(queryModel)).doubleValue();");
             } else {
                 if (Iterable.class.isAssignableFrom(Class.forName(returnTypeName))) {
                     sb.append(  "\n    return ($r) findUsingQueryModel(queryModel);");
@@ -592,9 +594,7 @@ public class DAOBuilder {
                     sb.append("\n    return ($r) projectUsingQueryModel(queryModel);");
                 }
             }
-        } catch (NotFoundException e) {
-            throw new RuntimeException(e);
-        } catch (ClassNotFoundException e) {
+        } catch (NotFoundException | ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
     }

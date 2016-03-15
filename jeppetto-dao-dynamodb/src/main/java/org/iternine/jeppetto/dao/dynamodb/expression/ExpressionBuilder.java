@@ -87,6 +87,10 @@ public abstract class ExpressionBuilder {
 
     protected String getExpressionAttributeName(String attributeName) {
         if (DynamoDBReservedWords.isReserved(attributeName)) {
+            if (expressionAttributeNames.containsKey(attributeName)) {
+                return expressionAttributeNames.get(attributeName);
+            }
+
             String expressionAttributeName = getExpressionAttributeNamePrefix() + expressionAttributeNameCounter++;
 
             expressionAttributeNames.put(expressionAttributeName, attributeName);

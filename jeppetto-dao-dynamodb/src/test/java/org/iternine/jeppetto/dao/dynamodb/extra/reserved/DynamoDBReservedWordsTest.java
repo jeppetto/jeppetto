@@ -32,11 +32,11 @@ public class DynamoDBReservedWordsTest {
     @Test
     public void checkBuilder() {
         Assert.assertTrue(DynamoDBReservedWords.isReserved("application/json"));
+        Assert.assertTrue(DynamoDBReservedWords.isReserved("application.json"));
         Assert.assertTrue(DynamoDBReservedWords.isReserved("32"));
         Assert.assertTrue(DynamoDBReservedWords.isReserved("4a"));
         Assert.assertTrue(DynamoDBReservedWords.isReserved("_foobar"));
 
-        Assert.assertFalse(DynamoDBReservedWords.isReserved("application.json"));
         Assert.assertFalse(DynamoDBReservedWords.isReserved("a4"));
         Assert.assertFalse(DynamoDBReservedWords.isReserved("foo_bar"));
         Assert.assertFalse(DynamoDBReservedWords.isReserved("foobar_"));

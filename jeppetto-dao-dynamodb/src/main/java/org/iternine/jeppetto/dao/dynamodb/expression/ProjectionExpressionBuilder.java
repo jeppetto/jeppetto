@@ -102,7 +102,7 @@ public class ProjectionExpressionBuilder extends ExpressionBuilder {
         }
 
         for (String nonKeyAttribute : nonKeyAttributes) {
-            expressionStringBuilder.append(", ").append(getExpressionAttributeName(nonKeyAttribute));
+            expressionStringBuilder.append(", ").append(nonKeyAttribute);
         }
 
         this.expression = expressionStringBuilder.toString();
@@ -168,8 +168,7 @@ public class ProjectionExpressionBuilder extends ExpressionBuilder {
             String field = entry.getKey();
             Class fieldClass = entry.getValue();
 
-            if (DIRECTLY_PROJECTED_TYPES.contains(fieldClass)
-                || Collection.class.isAssignableFrom(fieldClass)) {
+            if (DIRECTLY_PROJECTED_TYPES.contains(fieldClass) || Collection.class.isAssignableFrom(fieldClass)) {
                 fields.add(field);
             } else {
                 collectFields(fieldClass, field + ".", fields);
@@ -217,7 +216,7 @@ public class ProjectionExpressionBuilder extends ExpressionBuilder {
 
             String field = upperCaseFieldName.substring(0, 1).toLowerCase().concat(upperCaseFieldName.substring(1));
 
-            fieldMap.put(fieldPrefix + field, method.getReturnType());
+            fieldMap.put(fieldPrefix + getExpressionAttributeName(field), method.getReturnType());
         }
 
         return fieldMap;

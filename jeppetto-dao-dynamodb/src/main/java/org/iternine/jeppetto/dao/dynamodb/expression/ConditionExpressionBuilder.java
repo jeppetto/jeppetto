@@ -107,7 +107,7 @@ public class ConditionExpressionBuilder extends ExpressionBuilder {
                            && RANGE_KEY_COMPARISON_OPERATORS.contains(comparisonOperator)) {
                     this.rangeKeyCondition = condition;
                 } else {
-                    add(condition.getField(), dynamoDBConstraint);
+                    add(getExpressionAttributeName(condition.getField()), dynamoDBConstraint);
                 }
             }
         }
@@ -115,7 +115,7 @@ public class ConditionExpressionBuilder extends ExpressionBuilder {
         if (queryModel.getAssociationConditions() != null) {
             for (Map.Entry<String, List<Condition>> associationConditions : queryModel.getAssociationConditions().entrySet()) {
                 for (Condition condition : associationConditions.getValue()) {
-                    add(associationConditions.getKey() + "." + condition.getField(), (DynamoDBConstraint) condition.getConstraint());
+                    add(getExpressionAttributeName(associationConditions.getKey(), condition.getField()), (DynamoDBConstraint) condition.getConstraint());
                 }
             }
         }
@@ -163,7 +163,7 @@ public class ConditionExpressionBuilder extends ExpressionBuilder {
         if (rangeKeyCondition == null) {
             return Collections.singletonMap(hashKeyCondition.getField(), ((DynamoDBConstraint) hashKeyCondition.getConstraint()).asCondition());
         } else {
-            Map<String, com.amazonaws.services.dynamodbv2.model.Condition> keyConditions = new HashMap<String, com.amazonaws.services.dynamodbv2.model.Condition>();
+            Map<String, com.amazonaws.services.dynamodbv2.model.Condition> keyConditions = new HashMap<>();
 
             keyConditions.put(hashKeyCondition.getField(), ((DynamoDBConstraint) hashKeyCondition.getConstraint()).asCondition());
             keyConditions.put(rangeKeyCondition.getField(), ((DynamoDBConstraint) rangeKeyCondition.getConstraint()).asCondition());
@@ -196,7 +196,7 @@ public class ConditionExpressionBuilder extends ExpressionBuilder {
             return;
         }
 
-        add(rangeKeyCondition.getField(), (DynamoDBConstraint) rangeKeyCondition.getConstraint());
+        add(getExpressionAttributeName(rangeKeyCondition.getField()), (DynamoDBConstraint) rangeKeyCondition.getConstraint());
     }
 
 
@@ -207,7 +207,7 @@ public class ConditionExpressionBuilder extends ExpressionBuilder {
             key = Collections.singletonMap(hashKeyCondition.getField(),
                                            ConversionUtil.toAttributeValue(((DynamoDBConstraint) hashKeyCondition.getConstraint()).getValues()[0]));
         } else {
-            key = new HashMap<String, AttributeValue>(2);
+            key = new HashMap<>(2);
 
             key.put(hashKeyCondition.getField(), ConversionUtil.toAttributeValue(((DynamoDBConstraint) hashKeyCondition.getConstraint()).getValues()[0]));
             key.put(rangeKeyCondition.getField(), ConversionUtil.toAttributeValue(((DynamoDBConstraint) rangeKeyCondition.getConstraint()).getValues()[0]));
@@ -218,7 +218,7 @@ public class ConditionExpressionBuilder extends ExpressionBuilder {
 
 
     public ConditionExpressionBuilder with(String field, DynamoDBConstraint constraint) {
-        add(field, constraint);
+        add(getExpressionAttributeName(field), constraint);
 
         return this;
     }
@@ -228,12 +228,30 @@ public class ConditionExpressionBuilder extends ExpressionBuilder {
     // Methods - Private
     //-------------------------------------------------------------
 
-    private void add(String attribute, DynamoDBConstraint constraint) {
+    private String getExpressionAttributeName(String association, String attributeName) {
+        StringBuilder sb = new StringBuilder();
+
+        if (association.contains(".")) {
+            String[] associationParts = association.split(".");
+
+            for (String associationPart : associationParts) {
+                sb.append(getExpressionAttributeName(associationPart));
+                sb.append('.');
+            }
+        } else {
+            sb.append(getExpressionAttributeName(association));
+            sb.append('.');
+        }
+
+        return sb.append(getExpressionAttributeName(attributeName)).toString();
+    }
+
+
+    private void add(String expressionAttributeName, DynamoDBConstraint constraint) {
         if (expression.length() > 0) {
             expression.append(" and ");
         }
 
-        String expressionAttributeName = getExpressionAttributeName(attribute);
         String operatorExpression = OPERATOR_EXPRESSIONS.get(constraint.getOperator());
         int argumentCount = constraint.getOperator().getArgumentCount();
         Object[] values = constraint.getValues();

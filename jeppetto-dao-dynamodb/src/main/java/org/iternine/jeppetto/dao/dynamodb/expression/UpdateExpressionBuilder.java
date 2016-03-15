@@ -31,6 +31,7 @@ import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 
 /**
@@ -43,6 +44,7 @@ public class UpdateExpressionBuilder extends ExpressionBuilder {
 
     private static final String EXPRESSION_ATTRIBUTE_VALUE_PREFIX = ":u";
     private static final String EXPRESSION_ATTRIBUTE_NAME_PREFIX = "#u";
+    private static final Pattern ARRAY_PATTERN = Pattern.compile("\\[\\d+\\]");
 
 
     //-------------------------------------------------------------
@@ -171,7 +173,15 @@ public class UpdateExpressionBuilder extends ExpressionBuilder {
 
     private void extractUpdateDetails(UpdateObject updateObject, String prefix) {
         for (Map.Entry<String, Object> updateEntry : updateObject.__getUpdates().entrySet()) {
-            String fullyQualifiedField = prefix + getExpressionAttributeName(updateEntry.getKey());
+            String field = updateEntry.getKey();
+            String fullyQualifiedField;
+
+            if (prefix != null && !prefix.endsWith(".") && ARRAY_PATTERN.matcher(field).matches()) {
+                fullyQualifiedField = prefix + field;
+            } else {
+                fullyQualifiedField = prefix + getExpressionAttributeName(field);
+            }
+
             Object object = updateEntry.getValue();
 
             if (object == null) {
