@@ -50,12 +50,23 @@ public class DAOBuilderTest {
 
     @Test
     public void idTest() {
-        BaseNIdGenerator baseNIdGenerator = new BaseNIdGenerator(64, BaseNIdGenerator.BASE62_CHARACTERS);
+        double base10 = (Math.log(10) / Math.log(2));
+        double base16 = (Math.log(16) / Math.log(2));
+        double base36 = (Math.log(36) / Math.log(2));
+        double base62 = (Math.log(62) / Math.log(2));
 
-        for (int i = 0; i < 100; i++) {
-            String id = baseNIdGenerator.generateId();
-
-            System.out.println(id);
+        System.out.println(" c\t|  base10\t|  base16\t|  base36\t|  base64");
+        System.out.println("---------------------------------------------------");
+        for (int c = 1; c <= 64; c++) {
+            System.out.println(String.format("%2d\t|  %6.2f\t|  %6.2f\t|  %6.2f\t|  %6.2f", c, c * base10, c * base16, c * base36, c * base62));
         }
+
+//        BaseNIdGenerator baseNIdGenerator = new BaseNIdGenerator(128, BaseNIdGenerator.BASE36_CHARACTERS);
+//
+//        for (int i = 0; i < 100; i++) {
+//            String id = baseNIdGenerator.generateId();
+//
+//            System.out.println(id);
+//        }
     }
 }
