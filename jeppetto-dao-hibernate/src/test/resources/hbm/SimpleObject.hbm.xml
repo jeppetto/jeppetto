@@ -29,6 +29,7 @@
         <property name="anotherIntValue"/>
         <property name="longValue"/>
         <property name="stringValue"/>
+        <property name="bytes"/>
 
         <many-to-one name="relatedObject" column="relatedObjectId" unique="true" not-null="false" cascade="all" lazy="false"/>
 

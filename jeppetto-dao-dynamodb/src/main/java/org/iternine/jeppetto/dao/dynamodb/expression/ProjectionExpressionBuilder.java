@@ -150,7 +150,7 @@ public class ProjectionExpressionBuilder extends ExpressionBuilder {
         case KEYS_ONLY:
             return nonKeyAttributes.isEmpty();
         case INCLUDE:
-            return nonKeyAttributes.containsAll(projection.getNonKeyAttributes());
+            return projection.getNonKeyAttributes().containsAll(nonKeyAttributes);
         }
 
         return Boolean.FALSE;

@@ -230,10 +230,11 @@ public class DynamoDBQueryModelDAO<T, ID>
     }
 
 
+    @SafeVarargs
     @Override
-    public Iterable<T> findByIds(ID... ids)
+    public final Iterable<T> findByIds(ID... ids)
             throws JeppettoException {
-        Collection<Map<String, AttributeValue>> keys = new ArrayList<Map<String, AttributeValue>>();
+        Collection<Map<String, AttributeValue>> keys = new ArrayList<>();
 
         for (ID id : ids) {
             keys.add(getKeyFrom(id));
@@ -250,7 +251,7 @@ public class DynamoDBQueryModelDAO<T, ID>
 
         BatchGetItemRequest batchGetItemRequest = new BatchGetItemRequest().withRequestItems(Collections.singletonMap(tableName, keysAndAttributes));
 
-        return new BatchGetIterable<T>(dynamoDB, persistableEnhancer, batchGetItemRequest, tableName);
+        return new BatchGetIterable<>(dynamoDB, persistableEnhancer, batchGetItemRequest, tableName);
     }
 
 
@@ -335,11 +336,12 @@ public class DynamoDBQueryModelDAO<T, ID>
     }
 
 
+    @SafeVarargs
     @Override
-    public void deleteByIds(ID... ids)
+    public final void deleteByIds(ID... ids)
             throws FailedBatchException, JeppettoException {
-        List<ID> succeeded = new ArrayList<ID>();
-        Map<ID, Exception> failed = new LinkedHashMap<ID, Exception>();
+        List<ID> succeeded = new ArrayList<>();
+        Map<ID, Exception> failed = new LinkedHashMap<>();
 
         for (ID id : ids) {
             try {
@@ -372,11 +374,12 @@ public class DynamoDBQueryModelDAO<T, ID>
     }
 
 
+    @SafeVarargs
     @Override
-    public <U extends T> Iterable<T> updateByIds(U updateObject, ID... ids)
+    public final <U extends T> Iterable<T> updateByIds(U updateObject, ID... ids)
             throws FailedBatchException, JeppettoException {
         List<?> succeeded;
-        Map<ID, Exception> failed = new LinkedHashMap<ID, Exception>();
+        Map<ID, Exception> failed = new LinkedHashMap<>();
         ResultFromUpdate resultFromUpdate = getResultFromUpdate(updateObject);
 
         if (resultFromUpdate == ResultFromUpdate.ReturnNone) {
@@ -545,7 +548,7 @@ public class DynamoDBQueryModelDAO<T, ID>
         Map<String, IndexData> localIndexes;
         List<LocalSecondaryIndexDescription> localSecondaryIndexes = tableDescription.getLocalSecondaryIndexes();
         if (localSecondaryIndexes != null) {
-            localIndexes = new HashMap<String, IndexData>(localSecondaryIndexes.size() + 2);
+            localIndexes = new HashMap<>(localSecondaryIndexes.size() + 2);
 
             // We include these as local indexes to make findUsingQueryModel() code below simpler
             localIndexes.put(rangeKeyField, baseIndexData);
@@ -557,13 +560,13 @@ public class DynamoDBQueryModelDAO<T, ID>
                                              || projectionExpressionBuilder != null
                                                 && projectionExpressionBuilder.isCoveredBy(description.getProjection());
 
-                List<String> keyFields = new ArrayList<String>(baseIndexData.keyFields);
+                List<String> keyFields = new ArrayList<>(baseIndexData.keyFields);
                 keyFields.add(indexField);
 
                 localIndexes.put(indexField, new IndexData(description.getIndexName(), keyFields, projectsOverEntity));
             }
         } else if (rangeKeyField != null) {
-            localIndexes = new HashMap<String, IndexData>(2);
+            localIndexes = new HashMap<>(2);
 
             localIndexes.put(rangeKeyField, baseIndexData);
             localIndexes.put(null, baseIndexData);
@@ -574,7 +577,7 @@ public class DynamoDBQueryModelDAO<T, ID>
         // Process the global secondary indexes.  When done, add the local index information.
         List<GlobalSecondaryIndexDescription> globalSecondaryIndexes = tableDescription.getGlobalSecondaryIndexes();
         if (globalSecondaryIndexes != null) {
-            Map<String, Map<String, IndexData>> indexes = new HashMap<String, Map<String, IndexData>>(globalSecondaryIndexes.size() + 1);
+            Map<String, Map<String, IndexData>> indexes = new HashMap<>(globalSecondaryIndexes.size() + 1);
 
             for (GlobalSecondaryIndexDescription description : globalSecondaryIndexes) {
                 Pair<String, String> indexFields = getKeyAttributeNames(description.getKeySchema());
@@ -582,7 +585,7 @@ public class DynamoDBQueryModelDAO<T, ID>
                                              || projectionExpressionBuilder != null
                                                 && projectionExpressionBuilder.isCoveredBy(description.getProjection());
 
-                List<String> keyFields = new ArrayList<String>();
+                List<String> keyFields = new ArrayList<>();
                 keyFields.add(indexFields.getFirst());
                 if (indexFields.getSecond() != null) {
                     keyFields.add(indexFields.getSecond());
@@ -646,8 +649,8 @@ public class DynamoDBQueryModelDAO<T, ID>
                 expressionAttributeValues = updateExpressionBuilder.getExpressionAttributeValues();
                 expressionAttributeNames = updateExpressionBuilder.getExpressionAttributeNames();
             } else {
-                expressionAttributeValues = new LinkedHashMap<String, AttributeValue>();
-                expressionAttributeNames = new LinkedHashMap<String, String>();
+                expressionAttributeValues = new LinkedHashMap<>();
+                expressionAttributeNames = new LinkedHashMap<>();
 
                 expressionAttributeValues.putAll(updateExpressionBuilder.getExpressionAttributeValues());
                 expressionAttributeNames.putAll(updateExpressionBuilder.getExpressionAttributeNames());
@@ -714,7 +717,7 @@ public class DynamoDBQueryModelDAO<T, ID>
         List<String> keyFields = applyIndexAndGetKeyFields(conditionExpressionBuilder, queryRequest, queryModel.getSorts());
         applyExpressions(conditionExpressionBuilder, queryRequest);
 
-        return new QueryIterable<T>(dynamoDB, persistableEnhancer, queryRequest, keyFields.get(0), keyFields);
+        return new QueryIterable<>(dynamoDB, persistableEnhancer, queryRequest, keyFields.get(0), keyFields);
     }
 
 
@@ -767,15 +770,7 @@ public class DynamoDBQueryModelDAO<T, ID>
                 queryRequest.setExpressionAttributeValues(conditionExpressionBuilder.getExpressionAttributeValues());
             }
 
-            if (projectionExpressionNames.isEmpty()) {
-                expressionAttributeNames = conditionExpressionBuilder.getExpressionAttributeNames();
-            } else if (conditionExpressionBuilder.getExpressionAttributeNames().isEmpty()) {
-                expressionAttributeNames = projectionExpressionNames;
-            } else {
-                expressionAttributeNames = new LinkedHashMap<String, String>();
-                expressionAttributeNames.putAll(conditionExpressionBuilder.getExpressionAttributeNames());
-                expressionAttributeNames.putAll(projectionExpressionNames);
-            }
+            expressionAttributeNames = getExpressionAttributeNames(conditionExpressionBuilder);
         } else {
             expressionAttributeNames = projectionExpressionNames;
         }
@@ -812,15 +807,7 @@ public class DynamoDBQueryModelDAO<T, ID>
                 scanRequest.setExpressionAttributeValues(conditionExpressionBuilder.getExpressionAttributeValues());
             }
 
-            if (projectionExpressionNames.isEmpty()) {
-                expressionAttributeNames = conditionExpressionBuilder.getExpressionAttributeNames();
-            } else if (conditionExpressionBuilder.getExpressionAttributeNames().isEmpty()) {
-                expressionAttributeNames = projectionExpressionNames;
-            } else {
-                expressionAttributeNames = new LinkedHashMap<String, String>();
-                expressionAttributeNames.putAll(conditionExpressionBuilder.getExpressionAttributeNames());
-                expressionAttributeNames.putAll(projectionExpressionNames);
-            }
+            expressionAttributeNames = getExpressionAttributeNames(conditionExpressionBuilder);
         } else {
             expressionAttributeNames = projectionExpressionNames;
         }
@@ -829,9 +816,26 @@ public class DynamoDBQueryModelDAO<T, ID>
             scanRequest.setExpressionAttributeNames(expressionAttributeNames);
         }
 
-        return new ScanIterable<T>(dynamoDB, persistableEnhancer, scanRequest,
-                                   rangeKeyField == null ? Collections.singleton(hashKeyField)
-                                                         : Arrays.asList(hashKeyField, rangeKeyField));
+        return new ScanIterable<>(dynamoDB, persistableEnhancer, scanRequest,
+                                  rangeKeyField == null ? Collections.singleton(hashKeyField)
+                                                        : Arrays.asList(hashKeyField, rangeKeyField));
+    }
+
+
+    private Map<String, String> getExpressionAttributeNames(ConditionExpressionBuilder conditionExpressionBuilder) {
+        Map<String, String> expressionAttributeNames;
+
+        if (projectionExpressionNames.isEmpty()) {
+            expressionAttributeNames = conditionExpressionBuilder.getExpressionAttributeNames();
+        } else if (conditionExpressionBuilder.getExpressionAttributeNames().isEmpty()) {
+            expressionAttributeNames = projectionExpressionNames;
+        } else {
+            expressionAttributeNames = new LinkedHashMap<>();
+            expressionAttributeNames.putAll(conditionExpressionBuilder.getExpressionAttributeNames());
+            expressionAttributeNames.putAll(projectionExpressionNames);
+        }
+
+        return expressionAttributeNames;
     }
 
 
@@ -872,7 +876,7 @@ public class DynamoDBQueryModelDAO<T, ID>
 
 
     private Pair<String, String> getKeyAttributeNames(List<KeySchemaElement> keySchema) {
-        Pair<String, String> keyAttributes = new Pair<String, String>();
+        Pair<String, String> keyAttributes = new Pair<>();
 
         for (KeySchemaElement keySchemaElement : keySchema) {
             if (keySchemaElement.getKeyType().equals(KeyType.HASH.name())) {
@@ -890,7 +894,7 @@ public class DynamoDBQueryModelDAO<T, ID>
         Map<String, AttributeValue> key;
 
         if (Pair.class.isAssignableFrom(id.getClass())) {
-            key = new HashMap<String, AttributeValue>(2);
+            key = new HashMap<>(2);
 
             key.put(hashKeyField, getAttributeValue(((Pair) id).getFirst()));
             key.put(rangeKeyField, getAttributeValue(((Pair) id).getSecond()));
@@ -906,13 +910,12 @@ public class DynamoDBQueryModelDAO<T, ID>
         Map<String, AttributeValue> key;
 
         if (rangeKeyField != null) {
-            key = new HashMap<String, AttributeValue>(2);
+            key = new HashMap<>(2);
 
             key.put(hashKeyField, ConversionUtil.toAttributeValue(dynamoDBPersistable.__get(hashKeyField)));
             key.put(rangeKeyField, ConversionUtil.toAttributeValue(dynamoDBPersistable.__get(rangeKeyField)));
         } else {
-            key = Collections.singletonMap(hashKeyField, ConversionUtil.toAttributeValue(dynamoDBPersistable.__get(
-                    hashKeyField)));
+            key = Collections.singletonMap(hashKeyField, ConversionUtil.toAttributeValue(dynamoDBPersistable.__get(hashKeyField)));
         }
 
         return key;
@@ -924,9 +927,9 @@ public class DynamoDBQueryModelDAO<T, ID>
     //-------------------------------------------------------------
 
     public static class IndexData {
-        public String indexName;
-        public List<String> keyFields;
-        public boolean projectsOverEntity;
+        String indexName;
+        List<String> keyFields;
+        boolean projectsOverEntity;
 
         private IndexData(String indexName, List<String> keyFields, boolean projectsOverEntity) {
             this.indexName = indexName;

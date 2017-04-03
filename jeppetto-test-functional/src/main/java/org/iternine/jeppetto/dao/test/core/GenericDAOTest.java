@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -84,10 +85,13 @@ public abstract class GenericDAOTest {
     @Test
     public void saveAndFindWithBasicFields()
             throws NoSuchItemException {
+        byte[] bytes = "hello jeppetto".getBytes();
+
         SimpleObject simpleObject = new SimpleObject();
         simpleObject.setIntValue(5);
         simpleObject.setLongValue(100l);
         simpleObject.setSimpleEnum(SimpleEnum.EnumValue);
+        simpleObject.setBytes(bytes);
 
         getGenericDAO().save(simpleObject);
 
@@ -97,6 +101,7 @@ public abstract class GenericDAOTest {
         assertEquals(5, resultObject.getIntValue());
         assertEquals(100l, resultObject.getLongValue());
         assertEquals(SimpleEnum.EnumValue, resultObject.getSimpleEnum());
+        assertEquals("hello jeppetto", new String(resultObject.getBytes()));
     }
 
 

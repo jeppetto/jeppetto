@@ -47,6 +47,7 @@ public class SimpleObject {
     private Map<String, String> stringMap;
     private Set<String> stringSet;
     private SimpleEnum simpleEnum;
+    private byte[] bytes;
     private int transientValue;
 
 
@@ -149,7 +150,7 @@ public class SimpleObject {
 
     public void addRelatedObject(RelatedObject relatedObject) {
         if (relatedObjects == null) {
-            relatedObjects = new ArrayList<RelatedObject>();
+            relatedObjects = new ArrayList<>();
         }
 
         relatedObjects.add(relatedObject);
@@ -168,7 +169,7 @@ public class SimpleObject {
 
     public void addRelatedObject(String key, RelatedObject relatedObject) {
         if (relatedObjectMap == null) {
-            relatedObjectMap = new HashMap<String, RelatedObject>();
+            relatedObjectMap = new HashMap<>();
         }
 
         relatedObjectMap.put(key, relatedObject);
@@ -195,6 +196,16 @@ public class SimpleObject {
     }
 
 
+    public byte[] getBytes() {
+        return bytes;
+    }
+
+
+    public void setBytes(byte[] bytes) {
+        this.bytes = bytes;
+    }
+
+
     @Transient
     public int getTransientValue() {
         return transientValue;
@@ -208,7 +219,7 @@ public class SimpleObject {
 
     public void addToStringList(String string) {
         if (stringList == null) {
-            stringList = new ArrayList<String>();
+            stringList = new ArrayList<>();
         }
 
         stringList.add(string);
@@ -237,7 +248,7 @@ public class SimpleObject {
 
     public void addToStringSet(String string) {
         if (stringSet == null) {
-            stringSet = new HashSet<String>();
+            stringSet = new HashSet<>();
         }
 
         stringSet.add(string);
@@ -266,7 +277,7 @@ public class SimpleObject {
 
     public void addToRelatedObjectSet(RelatedObject relatedObject) {
         if (relatedObjectSet == null) {
-            relatedObjectSet = new HashSet<RelatedObject>();
+            relatedObjectSet = new HashSet<>();
         }
 
         relatedObjectSet.add(relatedObject);

@@ -173,8 +173,6 @@ public class ConversionUtil {
 
     public static Object fromAttributeValue(final AttributeValue attributeValue, final Class targetType,
                                             final Class collectionType) {
-        // TODO: byte[]
-
         if (String.class.isAssignableFrom(targetType)) {
             return attributeValue.getS();
         } else if (Integer.class.isAssignableFrom(targetType) || int.class.isAssignableFrom(targetType)) {
@@ -191,6 +189,8 @@ public class ConversionUtil {
             return attributeValue.getS().charAt(0);
         } else if (Byte.class.isAssignableFrom(targetType) || byte.class.isAssignableFrom(targetType)) {
             return Byte.valueOf(attributeValue.getN());
+        } else if (Byte[].class.isAssignableFrom(targetType) || byte[].class.isAssignableFrom(targetType)) {
+            return attributeValue.getB().array();
         } else if (Short.class.isAssignableFrom(targetType) || short.class.isAssignableFrom(targetType)) {
             return Short.valueOf(attributeValue.getN());
         } else if (Date.class.isAssignableFrom(targetType)) {

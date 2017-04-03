@@ -32,6 +32,7 @@
             <column name="stringValue" type="VARCHAR(255)"/>
             <column name="relatedObjectId" type="VARCHAR(32)"/>
             <column name="simpleEnum" type="VARCHAR(255)"/>
+            <column name="bytes" type="BLOB"/>
         </createTable>
 
         <createTable tableName="RelatedObject">
