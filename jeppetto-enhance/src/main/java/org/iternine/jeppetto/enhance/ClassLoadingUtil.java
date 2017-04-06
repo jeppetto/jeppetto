@@ -31,7 +31,7 @@ import java.util.concurrent.locks.ReentrantLock;
 /**
  * Provides utility methods for defining javassist {@code CtClass} objects in
  * arbitrary {@code ClassLoader}s.
- * <p/>
+ * <p>
  * This class is needed to define classes that sub-class those loaded in the system
  * classloader. For example, given a class {@code Foo}, and the code:
  * <pre>
@@ -42,14 +42,14 @@ import java.util.concurrent.locks.ReentrantLock;
  * The last line of this sample code would throw a ClassCastException because Foo, on the left,
  * was loaded by the system classloader and MyFooExtension, on the right, was loaded in
  * another classloader.
- * <p/>
+ * <p>
  * To work around this, use this utility:
  * <pre>
  * CtClass myFooExtension = ...; // same as above
  * Class cls = ClassLoadingUtil.toClass(myFooExtension, Foo.class.getClassLoader(), null);
  * Foo foo = (Foo) cls.newInstance();
  * </pre>
- * </p>
+ * <p>
  * And enjoy!
  */
 public final class ClassLoadingUtil {

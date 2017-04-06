@@ -23,9 +23,11 @@ import org.iternine.jeppetto.dao.AccessControlDAO;
 /**
  * Is equivalent to:
  *
- * @AccessControl(
- *     creators = { @Creator( type = Creator.Type.Identified, grantedAccess = AccessType.ReadWrite ),
- *                  @Creator( type = Creator.Type.Anonymous, grantedAccess = **ignored** ) } )
+ * <pre>
+ * {@literal @}AccessControl(
+ *     creators = { {@literal @}Creator( type = Creator.Type.Identified, grantedAccess = AccessType.ReadWrite ),
+ *                  {@literal @}Creator( type = Creator.Type.Anonymous, grantedAccess = **ignored** ) } )
+ * </pre>
  */
 public interface DefaultAccessObjectDAO extends AccessControlDAO<DefaultAccessObject, String> {
 }
