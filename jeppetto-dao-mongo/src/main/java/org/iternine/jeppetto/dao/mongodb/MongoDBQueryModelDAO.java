@@ -78,14 +78,14 @@ import java.util.regex.Pattern;
 
 /**
  * Provides a QueryModelDAO implementation for Mongo.
- * <p/>
+ * <p>
  * This QueryModelDAO implementation for MongoDB provides bi-directional ODM (Object to Document Mapping) as well
  * as the rich query capabilities found in the core org.iternine.jeppetto.dao package.
  *
- * Instantiation requires a daoProperties Map<String, Object> that will look for the following keys (and expected
+ * Instantiation requires a daoProperties {@code Map<String, Object>} that will look for the following keys (and expected
  * values):
  *
- * <table>
+ * <table summary="">
  *   <tr>
  *     <td>Key</td>
  *     <td>Required?</td>
@@ -109,12 +109,12 @@ import java.util.regex.Pattern;
  *   <tr>
  *     <td>uniqueIndexes</td>
  *     <td>No</td>
- *     <td>List<String> of various MongoDB index values that will be ensured to exist and must be unique.</td>
+ *     <td>{@code List<String>} of various MongoDB index values that will be ensured to exist and must be unique.</td>
  *   </tr>
  *   <tr>
  *     <td>nonUniqueIndexes</td>
  *     <td>No</td>
- *     <td>List<String> of various MongoDB index values that will be ensured to exist and need not be unique.</td>
+ *     <td>{@code List<String>} of various MongoDB index values that will be ensured to exist and need not be unique.</td>
  *   </tr>
  *   <tr>
  *     <td>optimisticLockEnabled</td>

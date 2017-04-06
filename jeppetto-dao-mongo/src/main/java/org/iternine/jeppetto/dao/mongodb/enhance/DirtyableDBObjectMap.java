@@ -33,7 +33,7 @@ import java.util.Set;
 
 
 /**
- * Despite the lack of explicit generic types, this acts like a Map<String, Object> due to the way
+ * Despite the lack of explicit generic types, this acts like a {@code Map<String, Object>} due to the way
  * MongoDB expects the keys to be expressed.  ClassCastExceptions may occur if this is violated.
  */
 @SuppressWarnings({ "unchecked" })
