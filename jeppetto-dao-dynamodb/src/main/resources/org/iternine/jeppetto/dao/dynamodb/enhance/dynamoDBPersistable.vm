@@ -197,6 +197,12 @@ public $_.cls("${baseName}$DynamoDBPersistable").ext($base).impl("org.iternine.j
         #set ( $returnType = $_.returnTypeOf($getter) )
         #set ( $returnTypeName = $returnType.getName() )
         #set ( $collectionType = $_.collectionType($getter) )
+
+        ## Special case blobs
+        #if ( $returnTypeName == '[B')
+            #set ( $returnTypeName = 'byte[]' )
+        #end
+
         if (${Q}$field${Q}.equals(field)) {
             #if ( $returnType.isPrimitive() )
             Object o = org.iternine.jeppetto.dao.dynamodb.ConversionUtil.fromAttributeValue(v, ${returnTypeName}.class, null);
