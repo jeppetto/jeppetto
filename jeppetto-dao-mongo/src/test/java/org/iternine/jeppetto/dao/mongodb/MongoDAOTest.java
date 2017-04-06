@@ -228,6 +228,7 @@ public class MongoDAOTest {
                                         "stringMap",
                                         "stringSet",
                                         "simpleEnum",
+                                        "bytes",
                                         "intValue",
                                         "longValue",
                                         "doubleValue",

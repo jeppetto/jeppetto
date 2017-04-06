@@ -877,7 +877,7 @@ public class MongoDBQueryModelDAO<T, ID>
         try {
             dbCollection.update(identifyingQuery, optimalDbo, true, false, getWriteConcern());
         } catch (DuplicateKeyException e) {
-            if (optimisticLockEnabled && e.getMessage().contains("$_id_")) {
+            if (optimisticLockEnabled && (e.getMessage().contains("$_id_") || e.getMessage().contains("\"E11000 duplicate key error"))) {
                 Integer localOptimisticLockVersion = (Integer) dbo.get(OPTIMISTIC_LOCK_VERSION_FIELD) - 1;
 
                 if (localOptimisticLockVersion == 0) {

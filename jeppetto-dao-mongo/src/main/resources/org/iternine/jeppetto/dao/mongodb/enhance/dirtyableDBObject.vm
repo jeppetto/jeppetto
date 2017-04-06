@@ -113,9 +113,14 @@ public $_.cls("${baseName}$DirtyableDBObject").ext($base).impl("org.iternine.jep
         #set ( $returnType = $_.returnTypeOf($getter) )
         #set ( $returnTypeName = $returnType.getName() )
 
+        ## Special case blobs
+        #if ( $returnTypeName == '[B')
+            #set ( $returnTypeName = 'byte[]' )
+        #end
+
         #if ( $getter.getName() == 'getId' )
         if (${Q}_id${Q}.equals(key)) {
-            #if ( $returnType.getName() == 'java.lang.String')
+            #if ( $returnTypeName == 'java.lang.String')
             this.$setterName((v instanceof org.bson.types.ObjectId) ? ((org.bson.types.ObjectId) v).toString() : (String) v);
             #elseif ( $returnType.isPrimitive() )
             ## Need coercion logic?
@@ -129,12 +134,12 @@ public $_.cls("${baseName}$DirtyableDBObject").ext($base).impl("org.iternine.jep
         #else
         if (${Q}$field${Q}.equals(key)) {
             #if ( $returnType.isPrimitive() )
-                ## Need coercion logic?
-                this.$setterName((($_.wrapperNameFor($returnType)) v).${returnTypeName}Value());
+            ## Need coercion logic?
+            this.$setterName((($_.wrapperNameFor($returnType)) v).${returnTypeName}Value());
             #elseif ( $returnType.isEnum() )
-                this.$setterName((v == null) ? null : (${returnTypeName}) java.lang.Enum.valueOf(${returnTypeName}.class, String.valueOf(v)));
+            this.$setterName((v == null) ? null : (${returnTypeName}) java.lang.Enum.valueOf(${returnTypeName}.class, String.valueOf(v)));
             #else
-                this.$setterName(($returnTypeName) org.iternine.jeppetto.dao.mongodb.enhance.DBObjectUtil.fromObject(${returnTypeName}.class, v));
+            this.$setterName(($returnTypeName) org.iternine.jeppetto.dao.mongodb.enhance.DBObjectUtil.fromObject(${returnTypeName}.class, v));
             #end
             return v;
         }

@@ -27,6 +27,12 @@ public $_.cls("${baseName}$UpdateObject").ext($base).impl("org.iternine.jeppetto
     #set ( $returnType = $_.returnTypeOf($getter) )
     #set ( $returnTypeName = $returnType.getName() )
 
+    ## Special case blobs
+    #if ( $returnTypeName == '[B')
+        #set ( $returnTypeName = 'byte[]' )
+    #end
+
+
     #if ( !$updateObjectHelper.needsNoConversion($returnType) )
     $_.method("
     public $returnTypeName $getterName() {
